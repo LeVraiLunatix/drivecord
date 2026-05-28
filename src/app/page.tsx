@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import DarkVeil from "@/components/ui/dark-veil";
+import GooeyNav from "@/components/ui/gooey-nav";
+
+const navItems = [
+  { label: "Accueil", href: "/" },
+  { label: "Se connecter", href: "/login" },
+  { label: "Commencer", href: "/register" },
+];
 
 const features = [
   {
@@ -87,14 +94,16 @@ export default function Home() {
             <CloudUpload className="size-5 text-primary" />
             drivecord
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <GooeyNav
+              items={navItems}
+              initialActiveIndex={0}
+              particleCount={12}
+              particleDistances={[80, 8]}
+              animationTime={500}
+              timeVariance={250}
+            />
             <ThemeToggle />
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/login">Se connecter</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/register">Commencer</Link>
-            </Button>
           </div>
         </div>
       </header>
