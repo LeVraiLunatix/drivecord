@@ -7,8 +7,10 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    // Pooled connection for app queries (Neon pooler)
-    url: process.env["DATABASE_URL"]!,
-    // directUrl is not a prisma.config.ts option in Prisma 7; use DATABASE_URL only here.
+    // For migrations: use the DIRECT (non-pooled) Neon URL.
+    // Neon's pooler (PgBouncer) doesn't support the DDL commands Prisma migrate needs.
+    // DIRECT_URL = postgresql://user:pass@host.neon.tech/db  (no "-pooler" in hostname)
+    // DATABASE_URL = postgresql://user:pass@host-pooler.neon.tech/db  (for app runtime)
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"]!,
   },
 });

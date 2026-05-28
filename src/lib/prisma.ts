@@ -9,6 +9,7 @@
  * and would open a fresh connection pool every time. We pin one instance to
  * the global object to avoid exhausting Neon's connection limit.
  */
+import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
@@ -20,8 +21,8 @@ declare global {
 function createPrismaClient(): PrismaClient {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL environment variable is not set.");
-  const adapter = new PrismaPg(url);
-  // PrismaClient in v7 has the adapter in its options
+  const pool = new Pool({ connectionString: url });
+  const adapter = new PrismaPg(pool);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return new PrismaClient({ adapter } as any);
 }
