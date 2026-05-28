@@ -114,11 +114,11 @@ export default function Home() {
           {/* WebGL background — canvas positions itself absolute within section */}
           <DarkVeil
             className="-z-10"
-            hueShift={240}
-            speed={0.35}
-            warpAmount={0.25}
-            noiseIntensity={0.03}
-            resolutionScale={0.65}
+            hueShift={0}
+            speed={0.4}
+            warpAmount={0.5}
+            noiseIntensity={0.02}
+            resolutionScale={0.75}
           />
           {/* Fade edges */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-48 bg-gradient-to-t from-background to-transparent" />

@@ -131,11 +131,15 @@ export default function DarkVeil({
     const resize = () => {
       const w = parent.clientWidth;
       const h = parent.clientHeight;
-      renderer.setSize(w * resolutionScale, h * resolutionScale);
-      program.uniforms.uResolution.value.set(w, h);
-      // ogl's setSize() stamps pixel values onto canvas.style.
-      // We display at the container's full CSS size (upscaling from the
-      // lower-res render buffer) so the canvas covers the entire section.
+      const bufW = Math.round(w * resolutionScale);
+      const bufH = Math.round(h * resolutionScale);
+      renderer.setSize(bufW, bufH);
+      // uResolution MUST match the WebGL buffer size (not the CSS display
+      // size). The shader maps gl_FragCoord.xy / uResolution → UV [0,1],
+      // so if uResolution were the larger CSS size the UV range would only
+      // cover resolutionScale fraction of the canvas and the rest would be black.
+      program.uniforms.uResolution.value.set(bufW, bufH);
+      // ogl stamps pixel values; override to display at full container size.
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
     };
