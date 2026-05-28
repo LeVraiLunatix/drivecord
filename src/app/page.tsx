@@ -85,7 +85,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* ── Nav ── */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 overflow-hidden border-b border-border/40 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <Link
             href="/"
