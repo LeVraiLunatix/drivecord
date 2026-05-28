@@ -131,6 +131,10 @@ export default function DarkVeil({
       const h = parent.clientHeight;
       renderer.setSize(w * resolutionScale, h * resolutionScale);
       program.uniforms.uResolution.value.set(w, h);
+      // ogl's setSize() stamps pixel values onto canvas.style — override back
+      // to CSS fill so the canvas stretches to cover the container.
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
     };
 
     window.addEventListener("resize", resize);
