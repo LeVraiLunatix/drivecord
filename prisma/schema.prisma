@@ -1,0 +1,90 @@
+// Auth.js v5 + Discloud schema
+// Generator: Prisma 7 (output to src/generated/prisma)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Auth.js required tables ───────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  /// bcrypt hash — null for OAuth-only accounts
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  webhooks Webhook[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ── Discloud models ───────────────────────────────────────────────────────────
+
+/// One per Discord webhook, linked to a user account.
+/// The URL is stored AES-256-GCM encrypted (server-side key).
+model Webhook {
+  id           String   @id @default(cuid())
+  userId       String
+  /// SHA-256 of the webhook URL — same as the local Drive.id
+  driveId      String
+  /// AES-256-GCM encrypted webhook URL (base64)
+  encryptedUrl String
+  name         String
+  channelId    String
+  guildId      String?
+  createdAt    DateTime @default(now())
+  lastOpenedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, driveId])
+}
