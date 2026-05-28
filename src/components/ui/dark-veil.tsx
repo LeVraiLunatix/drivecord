@@ -83,6 +83,7 @@ interface DarkVeilProps {
   scanlineFrequency?: number;
   warpAmount?: number;
   resolutionScale?: number;
+  className?: string;
 }
 
 export default function DarkVeil({
@@ -93,6 +94,7 @@ export default function DarkVeil({
   scanlineFrequency = 0,
   warpAmount = 0,
   resolutionScale = 1,
+  className,
 }: DarkVeilProps) {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -131,10 +133,11 @@ export default function DarkVeil({
       const h = parent.clientHeight;
       renderer.setSize(w * resolutionScale, h * resolutionScale);
       program.uniforms.uResolution.value.set(w, h);
-      // ogl's setSize() stamps pixel values onto canvas.style — override back
-      // to CSS fill so the canvas stretches to cover the container.
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
+      // ogl's setSize() stamps pixel values onto canvas.style.
+      // We display at the container's full CSS size (upscaling from the
+      // lower-res render buffer) so the canvas covers the entire section.
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
     };
 
     window.addEventListener("resize", resize);
@@ -174,7 +177,8 @@ export default function DarkVeil({
   return (
     <canvas
       ref={ref}
-      style={{ width: "100%", height: "100%", display: "block" }}
+      className={className}
+      style={{ position: "absolute", top: 0, left: 0, display: "block" }}
     />
   );
 }

@@ -111,19 +111,18 @@ export default function Home() {
       <main className="flex flex-1 flex-col">
         {/* ── Hero ── */}
         <section className="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden px-6 py-24 text-center">
-          {/* WebGL background — full section fill */}
-          <div className="absolute inset-0 -z-10">
-            <DarkVeil
-              hueShift={240}
-              speed={0.35}
-              warpAmount={0.25}
-              noiseIntensity={0.03}
-              resolutionScale={0.65}
-            />
-          </div>
+          {/* WebGL background — canvas positions itself absolute within section */}
+          <DarkVeil
+            className="-z-10"
+            hueShift={240}
+            speed={0.35}
+            warpAmount={0.25}
+            noiseIntensity={0.03}
+            resolutionScale={0.65}
+          />
           {/* Fade edges */}
-          <div className="absolute inset-x-0 bottom-0 -z-10 h-48 bg-gradient-to-t from-background to-transparent" />
-          <div className="absolute inset-x-0 top-0 -z-10 h-24 bg-gradient-to-b from-background to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-48 bg-gradient-to-t from-background to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24 bg-gradient-to-b from-background to-transparent" />
 
           <div className="flex flex-col items-center gap-6">
             <Badge
