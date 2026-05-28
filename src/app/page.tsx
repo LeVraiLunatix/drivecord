@@ -7,7 +7,7 @@ import {
   Sparkles,
   Zap,
   ArrowRight,
-  Github,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -239,7 +239,7 @@ export default function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Github className="size-4" />
+                  <ExternalLink className="size-4" />
                   Code source
                 </Link>
               </Button>
