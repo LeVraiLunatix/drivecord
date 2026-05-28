@@ -3,12 +3,12 @@ import { db } from "./db";
 import type { Drive } from "./schema";
 
 /** Where we remember which drive the user last opened. */
-const ACTIVE_DRIVE_KEY = "discloud:activeDriveId";
+const ACTIVE_DRIVE_KEY = "drivecord:activeDriveId";
 
 /** Custom event fired in-tab whenever the active drive id changes.
  *  The browser's `storage` event only fires for OTHER tabs, so we use this
  *  alongside it to keep hooks in sync within the same tab. */
-const ACTIVE_DRIVE_EVENT = "discloud:active-drive-changed";
+const ACTIVE_DRIVE_EVENT = "drivecord:active-drive-changed";
 
 export const ACTIVE_DRIVE_EVENT_NAME = ACTIVE_DRIVE_EVENT;
 

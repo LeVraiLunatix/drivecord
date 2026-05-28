@@ -27,10 +27,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Discloud — Stockage de fichiers via Discord",
+  title: "Drivecord — Stockage de fichiers via Discord",
   description:
     "Un clone moderne et amélioré de Disbox : stockage illimité via webhooks Discord, chiffrement E2EE, partage par lien, PWA.",
-  applicationName: "Discloud",
+  applicationName: "Drivecord",
   authors: [{ name: "Lunatix" }],
 };
 

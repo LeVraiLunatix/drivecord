@@ -1,5 +1,5 @@
 /**
- * IndexedDB schema for Discloud.
+ * IndexedDB schema for Drivecord.
  *
  * One DB across all drives. Entities reference the parent drive via `driveId`.
  * - `drives`  : one row per webhook (the "account")
@@ -27,7 +27,7 @@ export type Drive = {
   channelId: string;
   /** Discord guild ID, if known. */
   guildId?: string;
-  /** When this drive was added in Discloud. */
+  /** When this drive was added in Drivecord. */
   createdAt: number;
   /** Last time the user opened this drive. */
   lastOpenedAt: number;

@@ -76,7 +76,7 @@ export default function RegisterPage() {
         toast.success("Compte créé ! Connecte-toi maintenant.");
         router.push("/login");
       } else {
-        toast.success("Bienvenue sur Discloud !");
+        toast.success("Bienvenue sur Drivecord !");
         router.push("/drive");
         router.refresh();
       }
@@ -95,7 +95,7 @@ export default function RegisterPage() {
             className="flex items-center gap-2 font-mono text-xl font-semibold tracking-tight"
           >
             <CloudUpload className="size-6 text-primary" />
-            discloud
+            drivecord
           </Link>
           <p className="text-sm text-muted-foreground">
             Crée un compte pour sauvegarder tes webhooks.

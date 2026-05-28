@@ -63,7 +63,7 @@ export default function SetupPage() {
           Connecte un webhook Discord
         </h1>
         <p className="text-muted-foreground">
-          Discloud utilise un webhook Discord comme « compte ». Crée-en un dans
+          Drivecord utilise un webhook Discord comme « compte ». Crée-en un dans
           un salon dédié, colle l&apos;URL ci-dessous, et tu es prêt à uploader.
         </p>
       </div>
@@ -117,7 +117,7 @@ export default function SetupPage() {
               admin).
             </li>
             <li>
-              Crée un salon dédié, par exemple <code>#discloud-storage</code>.
+              Crée un salon dédié, par exemple <code>#drivecord-storage</code>.
             </li>
             <li>
               <strong>Paramètres du salon → Intégrations → Webhooks → Nouveau

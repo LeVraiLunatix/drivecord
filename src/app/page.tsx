@@ -58,7 +58,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2 font-mono text-lg font-semibold tracking-tight">
             <CloudUpload className="size-5 text-primary" />
-            discloud
+            drivecord
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -82,7 +82,7 @@ export default function Home() {
             .
           </h1>
           <p className="max-w-2xl text-balance text-base text-muted-foreground sm:text-lg">
-            Discloud est une réinvention moderne de Disbox. Stockage illimité
+            Drivecord est une réinvention moderne de Disbox. Stockage illimité
             via webhooks Discord, chiffrement de bout en bout, partage public,
             previews et PWA — le tout dans une interface soignée.
           </p>

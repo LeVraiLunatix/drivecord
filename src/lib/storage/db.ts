@@ -7,7 +7,7 @@ import type {
 } from "./schema";
 
 /**
- * The Discloud IndexedDB database.
+ * The Drivecord IndexedDB database.
  *
  * Versioning policy: bump the version + add a `db.version(N).stores({...}).upgrade()`
  * whenever the schema changes. Never mutate an existing version block.
@@ -18,14 +18,14 @@ import type {
  *  - `[driveId+trashed]` powers the trash view.
  *  - `*tags` is a multi-entry index — each array element becomes its own key.
  */
-export class DiscloudDB extends Dexie {
+export class DrivecordDB extends Dexie {
   drives!: EntityTable<Drive, "id">;
   folders!: EntityTable<FolderEntry, "id">;
   files!: EntityTable<FileEntry, "id">;
   shares!: EntityTable<ShareEntry, "id">;
 
   constructor() {
-    super("discloud");
+    super("drivecord");
     this.version(1).stores({
       drives: "id, createdAt, lastOpenedAt",
       folders:
@@ -38,14 +38,14 @@ export class DiscloudDB extends Dexie {
 }
 
 /** Module-level singleton (one Dexie instance per page). */
-let _db: DiscloudDB | null = null;
+let _db: DrivecordDB | null = null;
 
-export function db(): DiscloudDB {
+export function db(): DrivecordDB {
   if (typeof window === "undefined") {
     // Dexie can technically work in workers, but during Next.js SSR there is
     // no IndexedDB. Calling this on the server is a bug.
-    throw new Error("DiscloudDB.db() called on the server");
+    throw new Error("DrivecordDB.db() called on the server");
   }
-  if (!_db) _db = new DiscloudDB();
+  if (!_db) _db = new DrivecordDB();
   return _db;
 }

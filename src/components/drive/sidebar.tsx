@@ -75,7 +75,7 @@ export function DriveSidebar({ section, onSectionChange, onNavigateRoot, activeT
         className="flex items-center gap-2 px-2 py-1 text-base font-semibold tracking-tight"
       >
         <CloudUpload className="size-5 text-primary" />
-        discloud
+        drivecord
       </Link>
 
       <DropdownMenu>

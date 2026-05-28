@@ -20,7 +20,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google,
 
     Resend({
-      from: process.env.EMAIL_FROM ?? "Discloud <noreply@discloud.app>",
+      from: process.env.EMAIL_FROM ?? "Drivecord <noreply@drivecord.app>",
     }),
 
     Credentials({

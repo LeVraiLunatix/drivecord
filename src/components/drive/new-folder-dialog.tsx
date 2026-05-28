@@ -56,7 +56,7 @@ export function NewFolderDialog({ open, onOpenChange, driveId, parentId }: Props
           <DialogTitle>Nouveau dossier</DialogTitle>
           <DialogDescription>
             Crée un dossier virtuel pour organiser tes fichiers. Discord n&apos;a
-            pas de notion de dossiers — c&apos;est une vue côté Discloud.
+            pas de notion de dossiers — c&apos;est une vue côté Drivecord.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">

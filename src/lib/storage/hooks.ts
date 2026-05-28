@@ -32,7 +32,7 @@ export function useActiveDriveId(): [string | null, (id: string | null) => void]
   React.useEffect(() => {
     // Cross-tab updates: the browser `storage` event fires in OTHER tabs.
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "discloud:activeDriveId") setId(e.newValue);
+      if (e.key === "drivecord:activeDriveId") setId(e.newValue);
     };
     // Same-tab updates: a custom event we dispatch from setActiveDriveId.
     const onCustom = (e: Event) => {

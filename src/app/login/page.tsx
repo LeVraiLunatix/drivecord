@@ -117,7 +117,7 @@ function LoginContent() {
             className="flex items-center gap-2 font-mono text-xl font-semibold tracking-tight"
           >
             <CloudUpload className="size-6 text-primary" />
-            discloud
+            drivecord
           </Link>
           <p className="text-sm text-muted-foreground">
             Connecte-toi pour accéder à tes drives.

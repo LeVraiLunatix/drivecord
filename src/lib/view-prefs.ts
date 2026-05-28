@@ -13,10 +13,10 @@ export type SortField = "name" | "date" | "size" | "type";
 export type SortDir = "asc" | "desc";
 export type FilterKind = "all" | FileKind;
 
-const K_VIEW = "discloud:view-mode";
-const K_SORT_FIELD = "discloud:sort-field";
-const K_SORT_DIR = "discloud:sort-dir";
-const K_FILTER = "discloud:filter-kind";
+const K_VIEW = "drivecord:view-mode";
+const K_SORT_FIELD = "drivecord:sort-field";
+const K_SORT_DIR = "drivecord:sort-dir";
+const K_FILTER = "drivecord:filter-kind";
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
