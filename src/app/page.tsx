@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import DarkVeil from "@/components/ui/dark-veil";
 
 const features = [
   {
@@ -70,7 +71,20 @@ export default function Home() {
       </header>
 
       <main className="flex flex-1 flex-col">
-        <section className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-6 py-24 text-center">
+        <section className="relative flex w-full flex-col items-center gap-6 overflow-hidden px-6 py-24 text-center">
+          {/* WebGL background */}
+          <div className="absolute inset-0 -z-10">
+            <DarkVeil
+              hueShift={240}
+              speed={0.4}
+              warpAmount={0.3}
+              noiseIntensity={0.04}
+              resolutionScale={0.6}
+            />
+          </div>
+          {/* bottom fade to background */}
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent -z-10" />
+
           <Badge variant="secondary" className="font-mono">
             v0.1 — phase 1
           </Badge>
