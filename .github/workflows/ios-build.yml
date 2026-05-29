@@ -102,55 +102,31 @@ jobs:
           echo "IPA size: $(du -sh Drivecord.ipa)"
           echo "ipa_size=$IPA_SIZE" >> $GITHUB_ENV
 
-      # ── Update AltStore source version ────────────────────────────────────────
-      - name: Update altstore-source.json
-        run: |
-          SIZE=$(stat -f%z Drivecord.ipa)
-          DATE=$(date +%Y-%m-%d)
-          # Only update size and date — version must match CFBundleShortVersionString (1.0)
-          python3 - <<PYEOF
-          import json
-          with open('altstore-source.json', encoding='ascii') as f:
-              src = json.load(f)
-          src['apps'][0]['versions'][0]['size'] = ${SIZE}
-          src['apps'][0]['versions'][0]['date'] = '${DATE}'
-          with open('altstore-source.json', 'w', encoding='ascii') as f:
-              json.dump(src, f, indent=2, ensure_ascii=True)
-          PYEOF
-          python3 -c "import json; json.load(open('altstore-source.json'))" && echo "JSON valid"
-          cat altstore-source.json
-
-      # Update the public Gist with the new version info
-      # Requires GIST_TOKEN secret (PAT with 'gist' scope)
-      # Setup: GitHub → Settings → Developer settings → Personal access tokens → gist scope
-      - name: Update AltStore Gist
+      # ── Update source.json in the PUBLIC repo (size + date) ──────────────────
+      # The AltStore source lives at drivecord-releases/source.json.
+      # Version stays "1.0" (must match CFBundleShortVersionString).
+      - name: Update public source.json
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
         run: |
-          GIST_ID="675fae65b1a5de3c86eb9b82c511e83b"
-          CONTENT=$(cat altstore-source.json)
-          ESCAPED=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))" <<< "$CONTENT")
-          RESULT=$(curl -s -X PATCH \
-            -H "Authorization: token $GIST_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/gists/$GIST_ID" \
-            -d "{\"files\":{\"gistfile1.txt\":{\"content\":$ESCAPED}}}")
-          echo "$RESULT" | python3 -c "
-          import json,sys
-          d=json.load(sys.stdin)
-          if 'updated_at' in d:
-              print('Gist updated at:', d['updated_at'])
-          else:
-              print('Error:', d.get('message','unknown'))
-          "
-
-      - name: Commit updated source to repo
-        run: |
+          SIZE=$(stat -f%z Drivecord.ipa)
+          DATE=$(date +%Y-%m-%d)
+          git clone "https://x-access-token:${GIST_TOKEN}@github.com/LeVraiLunatix/drivecord-releases.git" /tmp/rel
+          python3 - <<PYEOF
+          import json
+          with open('/tmp/rel/source.json', encoding='ascii') as f:
+              src = json.load(f)
+          src['apps'][0]['versions'][0]['size'] = ${SIZE}
+          src['apps'][0]['versions'][0]['date'] = '${DATE}'
+          with open('/tmp/rel/source.json', 'w', encoding='ascii') as f:
+              json.dump(src, f, indent=2, ensure_ascii=True)
+          PYEOF
+          cd /tmp/rel
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add altstore-source.json
-          git diff --staged --quiet || git commit -m "chore: update AltStore source to build ${{ github.run_number }}"
-          git pull --rebase && git push || true
+          git add source.json
+          git diff --staged --quiet || git commit -m "chore: update source size/date (build ${{ github.run_number }})"
+          git push || true
 
       # ── GitHub Release dans le repo PUBLIC drivecord-releases ────────────────
       # Le repo privé ne permet pas le téléchargement sans auth.
