@@ -62,16 +62,36 @@ async function convertHeic(blob: Blob): Promise<Blob> {
 
 // ── Video sub-component ────────────────────────────────────────────────────────
 
+/**
+ * VideoPreview tries the original blob URL first.
+ * If the browser can't play it (wrong container/codec), it automatically
+ * retries with a video/mp4-typed version (mp4FallbackUrl).
+ * This handles .mov from iPhones: H.264 bytes are identical in QT and MP4
+ * containers, but Chrome refuses video/quicktime while accepting video/mp4.
+ */
 function VideoPreview({
   blobUrl,
-  mimeType,
+  mp4FallbackUrl,
   onDownload,
 }: {
   blobUrl: string;
-  mimeType: string;
+  mp4FallbackUrl: string | null;
   onDownload: () => void;
 }) {
+  const [useFallback, setUseFallback] = React.useState(false);
   const [cannotPlay, setCannotPlay] = React.useState(false);
+
+  const activeUrl = useFallback && mp4FallbackUrl ? mp4FallbackUrl : blobUrl;
+
+  const handleError = React.useCallback(() => {
+    if (!useFallback && mp4FallbackUrl) {
+      // First failure: retry as video/mp4
+      setUseFallback(true);
+    } else {
+      // Already retried (or no fallback): give up, show download
+      setCannotPlay(true);
+    }
+  }, [useFallback, mp4FallbackUrl]);
 
   if (cannotPlay) {
     return (
@@ -93,27 +113,16 @@ function VideoPreview({
     );
   }
 
-  // Provide explicit type hint so browser can decide early if it can play.
-  // Use video/mp4 as fallback — many .mov files are H.264 inside a QuickTime container.
-  const sources: string[] = [];
-  if (mimeType) sources.push(mimeType);
-  if (!sources.includes("video/mp4")) sources.push("video/mp4");
-  if (!sources.includes("video/quicktime")) sources.push("video/quicktime");
-
   return (
     <video
-      key={blobUrl}
+      key={activeUrl}
+      src={activeUrl}
       controls
       autoPlay
       playsInline
       className="max-h-full max-w-full rounded shadow-2xl"
-      onError={() => setCannotPlay(true)}
-    >
-      {/* Try with declared MIME type first, then fallbacks */}
-      {sources.map((t) => (
-        <source key={t} src={blobUrl} type={t} />
-      ))}
-    </video>
+      onError={handleError}
+    />
   );
 }
 
@@ -130,6 +139,8 @@ export function PreviewModal({
   const client = useDiscordClient();
 
   const [blobUrl, setBlobUrl] = React.useState<string | null>(null);
+  /** Pre-built video/mp4-typed URL for .mov fallback (null if not applicable). */
+  const [mp4FallbackUrl, setMp4FallbackUrl] = React.useState<string | null>(null);
   const [text, setText] = React.useState<string | null>(null);
   const [loadState, setLoadState] = React.useState<LoadState>("idle");
   const [errorMsg, setErrorMsg] = React.useState<string>("");
@@ -164,10 +175,8 @@ export function PreviewModal({
   React.useEffect(() => {
     if (!file || !client) return;
 
-    setBlobUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
+    setBlobUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    setMp4FallbackUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
     setText(null);
     setErrorMsg("");
     setConvertingHeic(false);
@@ -202,17 +211,20 @@ export function PreviewModal({
           setConvertingHeic(false);
         }
 
-        // ── MOV / QuickTime → relabel as video/mp4 ────────────────────────
-        // Chrome refuses video/quicktime even when the codec is H.264.
-        // Retyping the blob as video/mp4 lets Chrome's decoder process the
-        // same bytes — works for all H.264 .mov (every iPhone video).
-        // HEVC .mov will still fail at the codec level; VideoPreview handles that.
-        if (QUICKTIME_EXTS.has(ext) || file.mimeType === "video/quicktime") {
-          finalBlob = new Blob([finalBlob], { type: "video/mp4" });
-        }
-
         const url = URL.createObjectURL(finalBlob);
         setBlobUrl(url);
+
+        // ── MOV / QuickTime → pre-build mp4 fallback URL ──────────────────
+        // On PC, Chrome may play video/quicktime directly via system codecs.
+        // On Android/other, it can't → VideoPreview retries with this URL.
+        // We prepare it upfront (same bytes, different MIME) so the retry
+        // is instant with no extra download.
+        if (QUICKTIME_EXTS.has(ext) || file.mimeType === "video/quicktime") {
+          const mp4Blob = new Blob([finalBlob], { type: "video/mp4" });
+          setMp4FallbackUrl(URL.createObjectURL(mp4Blob));
+        } else {
+          setMp4FallbackUrl(null);
+        }
 
         const kind = kindOf(file.filename, file.mimeType);
         if (isTextKind(kind)) {
@@ -231,13 +243,11 @@ export function PreviewModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file?.id]);
 
-  // Revoke on unmount
+  // Revoke blob URLs on unmount
   React.useEffect(() => {
     return () => {
-      setBlobUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
+      setBlobUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+      setMp4FallbackUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
     };
   }, []);
 
@@ -338,11 +348,11 @@ export function PreviewModal({
           />
         )}
 
-        {/* Video — with unsupported-codec fallback */}
+        {/* Video — tries original, auto-retries as mp4 for .mov if needed */}
         {loadState === "done" && kind === "video" && blobUrl && (
           <VideoPreview
             blobUrl={blobUrl}
-            mimeType={file?.mimeType ?? ""}
+            mp4FallbackUrl={mp4FallbackUrl}
             onDownload={handleDownload}
           />
         )}
