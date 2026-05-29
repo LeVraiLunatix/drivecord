@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import DarkVeil from "@/components/ui/dark-veil";
+import { BetaBanner } from "@/components/beta-banner";
 
 /**
  * Dedicated home screen for the NATIVE APP (logged-out users).
@@ -52,11 +53,9 @@ export function AppHome() {
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-64 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
-      {/* Theme toggle — top right, clears the status bar */}
-      <div
-        className="absolute right-3 z-10"
-        style={{ top: "max(0.75rem, calc(env(safe-area-inset-top) + 0.25rem))" }}
-      >
+      {/* Beta banner (top) + theme toggle */}
+      <BetaBanner />
+      <div className="flex justify-end px-3 pt-2">
         <ThemeToggle />
       </div>
 
@@ -65,11 +64,7 @@ export function AppHome() {
         variants={v ?? container}
         initial="hidden"
         animate="show"
-        className="flex flex-1 flex-col items-center justify-center px-7 text-center"
-        style={{
-          paddingTop: "max(2rem, calc(env(safe-area-inset-top) + 1rem))",
-          paddingBottom: "max(2rem, calc(env(safe-area-inset-bottom) + 1rem))",
-        }}
+        className="flex flex-1 flex-col items-center justify-center px-7 pt-2 text-center"
       >
         {/* Logo mark */}
         <motion.div variants={v ?? item} className="mb-6">

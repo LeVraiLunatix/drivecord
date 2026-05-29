@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import DarkVeil from "@/components/ui/dark-veil";
+import { BetaBanner } from "@/components/beta-banner";
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -68,13 +69,15 @@ export function Landing() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
+      {/* ── Beta banner ── */}
+      <BetaBanner />
+
       {/* ── Nav ── */}
       <motion.header
         initial={{ y: -64, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="sticky top-0 z-50 border-b border-border/40 bg-background/70 backdrop-blur-xl"
-        style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-mono text-base font-semibold tracking-tight">
@@ -254,10 +257,20 @@ export function Landing() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-border/40">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-muted-foreground/60 sm:flex-row sm:px-6">
-          <p>⚠️ Le stockage via Discord viole les ToS Discord — risque de perte de données.</p>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-6 text-xs text-muted-foreground/60 sm:flex-row sm:px-6">
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link href="/conditions" className="hover:text-foreground">Conditions & mentions légales</Link>
+            <Link
+              href="https://github.com/LeVraiLunatix/discloud"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground"
+            >
+              Code source
+            </Link>
+          </nav>
           <p>
-            <Link href="/" className="font-mono hover:text-foreground">drivecord</Link> · local-first · open source
+            <Link href="/" className="font-mono hover:text-foreground">drivecord</Link> · open source
           </p>
         </div>
       </footer>
