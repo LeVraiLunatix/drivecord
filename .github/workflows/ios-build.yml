@@ -27,21 +27,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Regenerate files excluded by ios/.gitignore (public/, capacitor.config.json, config.xml)
-      - name: Sync web assets
+      # Regenerate files excluded by ios/.gitignore
+      - name: Sync Capacitor
         run: npx cap sync ios
 
-      # Verify project structure
-      - name: Verify iOS project
-        run: |
-          echo "--- Project structure ---"
-          ls ios/App/
-          echo "--- Checking key files ---"
-          ls ios/App/App.xcodeproj/
-          ls ios/App/App/
+      # ldid creates a minimal fake signature that AltStore can replace
+      - name: Install ldid
+        run: brew install ldid
 
-      # Build unsigned IPA (Swift Package Manager — no CocoaPods needed)
-      - name: Build archive
+      # Build for device (no real signing needed — ldid handles it after)
+      - name: Build app
         run: |
           xcodebuild \
             -project ios/App/App.xcodeproj \
@@ -52,17 +47,56 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            -archivePath "$GITHUB_WORKSPACE/build/Drivecord.xcarchive" \
-            archive 2>&1 | tail -80
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
+            build 2>&1 | grep -E "error:|warning:|Build succeeded|FAILED" | tail -30
 
+      # Find the built .app
+      - name: Locate .app
+        id: app
+        run: |
+          APP=$(find "$GITHUB_WORKSPACE/DerivedData" -name "*.app" \
+            -not -path "*/simulator/*" \
+            -not -name "*.appex" \
+            | head -1)
+          echo "path=$APP" >> $GITHUB_OUTPUT
+          echo "Found: $APP"
+          ls "$APP"
+
+      # Sign with ldid (fake signature — AltStore replaces it with user's Apple ID)
+      - name: Sign with ldid
+        run: |
+          APP="${{ steps.app.outputs.path }}"
+          # Create minimal entitlements
+          cat > /tmp/entitlements.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>application-identifier</key>
+            <string>com.lunatix.drivecord</string>
+            <key>get-task-allow</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+          # Sign main binary
+          BINARY="$APP/$(basename "$APP" .app)"
+          echo "Signing: $BINARY"
+          ldid -S/tmp/entitlements.plist "$BINARY"
+          echo "Done"
+
+      # Package as IPA
       - name: Package IPA
         run: |
-          APP=$(find "$GITHUB_WORKSPACE/build/Drivecord.xcarchive/Products/Applications" -name "*.app" | head -1)
-          echo "App bundle: $APP"
+          APP="${{ steps.app.outputs.path }}"
           mkdir Payload
           cp -r "$APP" Payload/
           zip -r Drivecord.ipa Payload/
           echo "IPA size: $(du -sh Drivecord.ipa)"
+          # Verify structure
+          unzip -l Drivecord.ipa | grep -E "\.app/|Info\.plist|binary" | head -20
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
@@ -75,4 +109,8 @@ jobs:
         if: success()
         run: |
           echo "## ✅ Drivecord.ipa prête" >> $GITHUB_STEP_SUMMARY
-          echo "Télécharge l'artifact **Drivecord-IPA** et installe avec AltStore." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installer avec AltStore 2.0" >> $GITHUB_STEP_SUMMARY
+          echo "1. Télécharge l'artifact **Drivecord-IPA**" >> $GITHUB_STEP_SUMMARY
+          echo "2. Transfère \`Drivecord.ipa\` sur iPhone (AirDrop, Fichiers...)" >> $GITHUB_STEP_SUMMARY
+          echo "3. AltStore → **My Apps** → **+** → sélectionne le .ipa" >> $GITHUB_STEP_SUMMARY
