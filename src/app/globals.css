@@ -138,6 +138,21 @@
     overflow-x: hidden;
     overscroll-behavior: none;
   }
+
+  /* ── Native app: lock the viewport (no WKWebView rubber-band bounce) ──
+     Applied only inside Capacitor (the <html.is-native> class is added by
+     NativeAppClass). The web site keeps its normal document scrolling.
+     Pages that need to scroll in the app use their own inner overflow
+     container (drive's <main>, login/register/setup wrappers). */
+  html.is-native,
+  html.is-native body {
+    position: fixed;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
 }
 
 /* ── GooeyNav ─────────────────────────────────────────────────────────────── */

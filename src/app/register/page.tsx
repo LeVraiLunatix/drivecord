@@ -101,16 +101,16 @@ export default function RegisterPage() {
   const v = reduce ? {} : undefined;
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-1 flex-col items-center justify-center px-6 py-12">
+    <div className="relative h-[100dvh] overflow-y-auto">
       <AuthBackground />
-      <div className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] z-10">
         <BackButton fallback="/login" />
       </div>
       <motion.div
         variants={v ?? container}
         initial="hidden"
         animate="show"
-        className="w-full max-w-sm space-y-6"
+        className="mx-auto flex min-h-full w-full max-w-sm flex-col justify-center gap-6 px-6 py-12"
       >
         {/* Logo */}
         <motion.div variants={v ?? item} className="flex flex-col items-center gap-3">

@@ -46,7 +46,7 @@ export default function SetupPage() {
 
   return (
     <div
-      className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 pb-12"
+      className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col gap-6 overflow-y-auto px-6 pb-12"
       style={{ paddingTop: "max(3rem, calc(env(safe-area-inset-top) + 1rem))" }}
     >
       <BackButton
