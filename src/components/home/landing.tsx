@@ -74,6 +74,7 @@ export function Landing() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="sticky top-0 z-50 border-b border-border/40 bg-background/70 backdrop-blur-xl"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-mono text-base font-semibold tracking-tight">
