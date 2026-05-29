@@ -117,7 +117,7 @@ jobs:
           src['apps'][0]['versions'] = [{
               'version': '${VERSION}',
               'date': '${DATE}',
-              'downloadURL': 'https://github.com/LeVraiLunatix/discloud/releases/download/ios-latest/Drivecord.ipa',
+              'downloadURL': 'https://github.com/LeVraiLunatix/drivecord-releases/releases/download/ios-latest/Drivecord.ipa',
               'size': ${SIZE},
               'localizedDescription': 'Build #${BUILD}'
           }]
@@ -160,21 +160,26 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: update AltStore source to build ${{ github.run_number }}"
           git pull --rebase && git push || true
 
-      # ── GitHub Release (public download URL for AltStore) ─────────────────────
-      - name: Create/Update GitHub Release
+      # ── GitHub Release dans le repo PUBLIC drivecord-releases ────────────────
+      # Le repo privé ne permet pas le téléchargement sans auth.
+      # GIST_TOKEN doit avoir le scope public_repo.
+      - name: Create/Update public Release
         uses: softprops/action-gh-release@v2
         with:
+          repository: LeVraiLunatix/drivecord-releases
+          token: ${{ secrets.GIST_TOKEN }}
           tag_name: ios-latest
           name: "Drivecord iOS — Build ${{ github.run_number }}"
-          prerelease: true
+          prerelease: false
+          make_latest: true
           files: Drivecord.ipa
           body: |
             ### Drivecord iOS — Build ${{ github.run_number }}
 
-            **Installer via AltStore :**
-            Ajoute la source : `https://raw.githubusercontent.com/LeVraiLunatix/discloud/master/altstore-source.json`
-
-            Ou télécharge directement `Drivecord.ipa` ci-dessous.
+            **Source AltStore :**
+            ```
+            https://gist.githubusercontent.com/LeVraiLunatix/675fae65b1a5de3c86eb9b82c511e83b/raw/gistfile1.txt
+            ```
 
       # ── Artifact (backup) ─────────────────────────────────────────────────────
       - name: Upload artifact
