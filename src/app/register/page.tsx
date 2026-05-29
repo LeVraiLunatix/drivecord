@@ -110,8 +110,10 @@ export default function RegisterPage() {
         variants={v ?? container}
         initial="hidden"
         animate="show"
-        className="mx-auto flex min-h-full w-full max-w-sm flex-col justify-center gap-6 px-6 py-12"
+        className="mx-auto flex min-h-full w-full max-w-sm flex-col px-6 py-12"
       >
+        {/* Centered group: logo + card */}
+        <motion.div variants={v ?? container} className="flex flex-1 flex-col justify-center gap-6">
         {/* Logo */}
         <motion.div variants={v ?? item} className="flex flex-col items-center gap-3">
           <motion.div
@@ -209,8 +211,9 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
         </motion.div>
+        </motion.div>
 
-        <motion.p variants={v ?? item} className="text-center text-sm text-muted-foreground">
+        <motion.p variants={v ?? item} className="pt-8 text-center text-sm text-muted-foreground">
           Déjà un compte ?{" "}
           <Link
             href="/login"
