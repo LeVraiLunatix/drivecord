@@ -6,6 +6,7 @@ on:
     branches: [master]
     paths:
       - 'capacitor.config.json'
+      - 'ios/**'
       - '.github/workflows/ios-build.yml'
 
 jobs:
@@ -26,46 +27,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ── Verify Capacitor config ───────────────────────────────────────────────
-      - name: Show Capacitor config
-        run: |
-          cat capacitor.config.json
-          echo "---"
-          ls node_modules/@capacitor/ || echo "No @capacitor in node_modules"
-
-      # ── Add iOS platform ──────────────────────────────────────────────────────
-      - name: Add iOS platform
-        run: |
-          npx cap add ios
-          echo "Exit code: $?"
-          echo "--- ios/ structure ---"
-          find ios -maxdepth 4 -type f | sort || echo "No ios/ directory created"
-
-      # ── CocoaPods ─────────────────────────────────────────────────────────────
-      - name: pod install
-        run: |
-          PODFILE=$(find ios -name "Podfile" | head -1)
-          if [ -z "$PODFILE" ]; then
-            echo "ERROR: No Podfile found. cap add ios probably failed."
-            find . -maxdepth 3 -name "*.json" | grep -i cap || true
-            exit 1
-          fi
-          PODFILE_DIR=$(dirname "$PODFILE")
-          echo "Running pod install in: $PODFILE_DIR"
-          cd "$PODFILE_DIR"
-          pod install
-
-      # ── Sync ─────────────────────────────────────────────────────────────────
+      # Regenerate files excluded by ios/.gitignore (public/, capacitor.config.json, config.xml)
       - name: Sync web assets
         run: npx cap sync ios
 
-      # ── Build ─────────────────────────────────────────────────────────────────
-      - name: Build archive (unsigned)
+      # Verify project structure
+      - name: Verify iOS project
         run: |
-          WS=$(find ios -name "*.xcworkspace" -maxdepth 5 | head -1)
-          echo "Using workspace: $WS"
+          echo "--- Project structure ---"
+          ls ios/App/
+          echo "--- Checking key files ---"
+          ls ios/App/App.xcodeproj/
+          ls ios/App/App/
+
+      # Build unsigned IPA (Swift Package Manager — no CocoaPods needed)
+      - name: Build archive
+        run: |
           xcodebuild \
-            -workspace "$WS" \
+            -project ios/App/App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
             -configuration Release \
@@ -74,7 +53,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
             -archivePath "$GITHUB_WORKSPACE/build/Drivecord.xcarchive" \
-            archive 2>&1 | tail -60
+            archive 2>&1 | tail -80
 
       - name: Package IPA
         run: |
@@ -91,3 +70,9 @@ jobs:
           name: Drivecord-IPA
           path: Drivecord.ipa
           retention-days: 30
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "## ✅ Drivecord.ipa prête" >> $GITHUB_STEP_SUMMARY
+          echo "Télécharge l'artifact **Drivecord-IPA** et installe avec AltStore." >> $GITHUB_STEP_SUMMARY
