@@ -10,6 +10,7 @@ import type { ParentId } from "@/lib/storage";
 import type { FilterKind, SortDir, SortField, ViewMode } from "@/lib/view-prefs";
 
 type Props = {
+  driveId: string | null;
   currentFolderId: ParentId;
   onNavigate: (id: ParentId) => void;
   onNewFolder: () => void;
@@ -35,6 +36,7 @@ type Props = {
 };
 
 export function DriveTopbar({
+  driveId,
   currentFolderId,
   onNavigate,
   onNewFolder,
@@ -85,6 +87,7 @@ export function DriveTopbar({
 
         <div className="min-w-0 flex-1">
           <DriveBreadcrumbs
+            driveId={driveId}
             currentFolderId={currentFolderId}
             onNavigate={onNavigate}
             onDropItem={onDropItemOnBreadcrumb}

@@ -25,8 +25,8 @@ export function TagDialog({ item, onOpenChange }: Props) {
   const [busy, setBusy] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Live file state — reacts instantly when tags are added/removed in IDB.
-  const liveFile = useFile(item?.kind === "file" ? item.id : null);
+  // Live file state — reacts instantly when tags are added/removed.
+  const liveFile = useFile(item?.driveId ?? null, item?.kind === "file" ? item.id : null);
   const currentTags = liveFile?.tags ?? (item?.kind === "file" ? item.tags : []);
 
   // All existing tags in the drive for autocomplete
@@ -54,7 +54,7 @@ export function TagDialog({ item, onOpenChange }: Props) {
     if (!tag || currentTags.includes(tag)) return;
     setBusy(true);
     try {
-      await addFileTag(item.id, tag);
+      await addFileTag(item.driveId, item.id, tag);
       setInput("");
       inputRef.current?.focus();
     } catch (err) {
@@ -66,7 +66,7 @@ export function TagDialog({ item, onOpenChange }: Props) {
 
   const removeTag = async (tag: string) => {
     try {
-      await removeFileTag(item.id, tag);
+      await removeFileTag(item.driveId, item.id, tag);
     } catch (err) {
       toast.error((err as Error).message);
     }

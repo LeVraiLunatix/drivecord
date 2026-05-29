@@ -1,14 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "./db";
+import useSWR from "swr";
 import {
   ACTIVE_DRIVE_EVENT_NAME,
   getActiveDriveId,
   setActiveDriveId,
   clearActiveDriveId,
 } from "./drives";
+import { db } from "./db";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
   ROOT_PARENT,
   type Drive,
@@ -18,23 +19,17 @@ import {
   type ParentId,
 } from "./schema";
 
-function toPid(p: ParentId | null | undefined): ParentId {
-  return p ?? ROOT_PARENT;
-}
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-/**
- * Subscribe to the active drive id stored in localStorage.
- * Updates reactively on cross-tab changes via the `storage` event.
- */
+// ── Active drive (stays in IndexedDB / localStorage) ──────────────────────────
+
 export function useActiveDriveId(): [string | null, (id: string | null) => void] {
   const [id, setId] = React.useState<string | null>(() => getActiveDriveId());
 
   React.useEffect(() => {
-    // Cross-tab updates: the browser `storage` event fires in OTHER tabs.
     const onStorage = (e: StorageEvent) => {
       if (e.key === "drivecord:activeDriveId") setId(e.newValue);
     };
-    // Same-tab updates: a custom event we dispatch from setActiveDriveId.
     const onCustom = (e: Event) => {
       const detail = (e as CustomEvent<string | null>).detail;
       setId(detail ?? null);
@@ -56,178 +51,134 @@ export function useActiveDriveId(): [string | null, (id: string | null) => void]
   return [id, setAndPersist];
 }
 
+/** Active Drive record from IndexedDB (drives stay local). */
 export function useActiveDrive(): Drive | undefined {
   const [id] = useActiveDriveId();
   return useLiveQuery(
-    async () => (id ? await db().drives.get(id) : undefined),
+    async () => (id ? db().drives.get(id) : undefined),
     [id],
   );
 }
 
+/** All drives (IndexedDB). */
 export function useAllDrives(): Drive[] | undefined {
   return useLiveQuery(
-    async () => await db().drives.orderBy("lastOpenedAt").reverse().toArray(),
+    async () => db().drives.orderBy("lastOpenedAt").reverse().toArray(),
     [],
   );
 }
 
-/** Direct children (folders + files) of `parentId` inside the active drive. */
+// ── Server-backed hooks (SWR) ─────────────────────────────────────────────────
+
+/** Direct children (folders + files) of `parentId` inside a drive. */
 export function useDriveItems(
   driveId: string | null,
   parentId: ParentId | null,
 ): DriveItem[] | undefined {
-  return useLiveQuery(
-    async () => {
-      if (!driveId) return [];
-      const pid = toPid(parentId);
-      const [folders, files] = await Promise.all([
-        db()
-          .folders.where("[driveId+parentId]")
-          .equals([driveId, pid])
-          .toArray(),
-        db()
-          .files.where("[driveId+parentId]")
-          .equals([driveId, pid])
-          .toArray(),
-      ]);
-      const out: DriveItem[] = [];
-      for (const f of folders) if (!f.trashed) out.push({ kind: "folder", ...f });
-      for (const f of files) if (!f.trashed) out.push({ kind: "file", ...f });
-      // Folders first, then files; both alphabetic.
-      out.sort((a, b) => {
-        if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
-        const an = a.kind === "folder" ? a.name : a.filename;
-        const bn = b.kind === "folder" ? b.name : b.filename;
-        return an.localeCompare(bn, "fr", { numeric: true });
-      });
-      return out;
-    },
-    [driveId, parentId],
+  const pid = parentId ?? ROOT_PARENT;
+  const { data } = useSWR(
+    driveId ? `/api/drive/${driveId}/items?parentId=${encodeURIComponent(pid)}` : null,
+    fetcher,
+    { revalidateOnFocus: false },
   );
+  return data?.items as DriveItem[] | undefined;
 }
 
-export function useFolderPath(
-  folderId: ParentId | null,
-): FolderEntry[] | undefined {
-  return useLiveQuery(
-    async () => {
-      const start = toPid(folderId);
-      if (start === ROOT_PARENT) return [];
-      const path: FolderEntry[] = [];
-      let cur: ParentId = start;
-      const guard = new Set<string>();
-      while (cur && cur !== ROOT_PARENT && !guard.has(cur)) {
-        guard.add(cur);
-        const row: FolderEntry | undefined = await db().folders.get(cur);
-        if (!row) break;
-        path.unshift(row);
-        cur = row.parentId;
-      }
-      return path;
-    },
-    [folderId],
+/** Files flagged as favorite in a drive. */
+export function useFavorites(driveId: string | null): DriveItem[] | undefined {
+  const { data } = useSWR(
+    driveId ? `/api/drive/${driveId}/items?view=favorites` : null,
+    fetcher,
+    { revalidateOnFocus: false },
   );
+  return data?.items as DriveItem[] | undefined;
 }
 
-export function useFile(id: string | null): FileEntry | undefined {
-  return useLiveQuery(
-    async () => (id ? await db().files.get(id) : undefined),
-    [id],
+/** All trashed items in a drive. */
+export function useTrashedItems(driveId: string | null): DriveItem[] | undefined {
+  const { data } = useSWR(
+    driveId ? `/api/drive/${driveId}/items?view=trash` : null,
+    fetcher,
+    { revalidateOnFocus: false },
   );
+  return data?.items as DriveItem[] | undefined;
 }
 
-/** Live count of direct children inside a folder (folders + non-trashed files). */
-export function useFolderItemCount(
-  driveId: string | null,
-  folderId: string,
-): number | undefined {
-  return useLiveQuery(
-    async () => {
-      if (!driveId) return 0;
-      const [folders, files] = await Promise.all([
-        db()
-          .folders.where("[driveId+parentId]")
-          .equals([driveId, folderId])
-          .filter((r) => !r.trashed)
-          .count(),
-        db()
-          .files.where("[driveId+parentId]")
-          .equals([driveId, folderId])
-          .filter((r) => !r.trashed)
-          .count(),
-      ]);
-      return folders + files;
-    },
-    [driveId, folderId],
-  );
-}
-
-/** All unique tags used across a drive (reactive). */
-export function useAllTags(
-  driveId: string | null,
-): { tag: string; count: number }[] | undefined {
-  return useLiveQuery(
-    async () => {
-      if (!driveId) return [];
-      const files = await db()
-        .files.where("driveId")
-        .equals(driveId)
-        .filter((f) => !f.trashed && f.tags.length > 0)
-        .toArray();
-      const counts = new Map<string, number>();
-      for (const file of files) {
-        for (const tag of file.tags) {
-          counts.set(tag, (counts.get(tag) ?? 0) + 1);
-        }
-      }
-      return [...counts.entries()]
-        .map(([tag, count]) => ({ tag, count }))
-        .sort((a, b) => a.tag.localeCompare(b.tag, "fr"));
-    },
-    [driveId],
-  );
-}
-
-/** All non-trashed files in a drive that carry a given tag (reactive). */
+/** Files with a given tag. */
 export function useFilesByTag(
   driveId: string | null,
   tag: string | null,
 ): DriveItem[] | undefined {
-  return useLiveQuery(
-    async () => {
-      if (!driveId || !tag) return [];
-      const files = await db()
-        .files.where("tags")
-        .equals(tag)
-        .filter((f) => f.driveId === driveId && !f.trashed)
-        .toArray();
-      files.sort((a, b) =>
-        a.filename.localeCompare(b.filename, "fr", { numeric: true }),
-      );
-      return files.map((f) => ({ kind: "file" as const, ...f }));
-    },
-    [driveId, tag],
+  const { data } = useSWR(
+    driveId && tag ? `/api/drive/${driveId}/items?tag=${encodeURIComponent(tag)}` : null,
+    fetcher,
+    { revalidateOnFocus: false },
   );
+  return data?.items as DriveItem[] | undefined;
 }
 
+/** Breadcrumb path from root to folderId. */
+export function useFolderPath(
+  driveId: string | null,
+  folderId: ParentId | null,
+): FolderEntry[] | undefined {
+  const pid = folderId ?? ROOT_PARENT;
+  const { data } = useSWR(
+    driveId && pid !== ROOT_PARENT
+      ? `/api/drive/${driveId}/folder-path?folderId=${encodeURIComponent(pid)}`
+      : null,
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+  if (!folderId || folderId === ROOT_PARENT) return [];
+  return data?.path as FolderEntry[] | undefined;
+}
+
+/** Single file (with SWR caching). */
+export function useFile(driveId: string | null, id: string | null): FileEntry | undefined {
+  const { data } = useSWR(
+    driveId && id ? `/api/drive/${driveId}/files/${id}` : null,
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+  return data as FileEntry | undefined;
+}
+
+/** Child count for a folder badge (folder items list). */
+export function useFolderItemCount(
+  driveId: string | null,
+  folderId: string,
+): number | undefined {
+  // We re-use the items SWR key for the folder's children.
+  const { data } = useSWR(
+    driveId ? `/api/drive/${driveId}/items?parentId=${encodeURIComponent(folderId)}` : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 10_000 },
+  );
+  if (!data?.items) return undefined;
+  return (data.items as DriveItem[]).length;
+}
+
+/** All unique tags across a drive. */
+export function useAllTags(
+  driveId: string | null,
+): { tag: string; count: number }[] | undefined {
+  const { data } = useSWR(
+    driveId ? `/api/drive/${driveId}/tags` : null,
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+  return data?.tags as { tag: string; count: number }[] | undefined;
+}
+
+/** Drive storage usage. */
 export function useDriveUsage(
   driveId: string | null,
 ): { fileCount: number; totalBytes: number } | undefined {
-  return useLiveQuery(
-    async () => {
-      if (!driveId) return { fileCount: 0, totalBytes: 0 };
-      let fileCount = 0;
-      let totalBytes = 0;
-      await db()
-        .files.where("driveId")
-        .equals(driveId)
-        .each((f) => {
-          if (f.trashed) return;
-          fileCount++;
-          totalBytes += f.size;
-        });
-      return { fileCount, totalBytes };
-    },
-    [driveId],
+  const { data } = useSWR(
+    driveId ? `/api/drive/${driveId}/usage` : null,
+    fetcher,
+    { revalidateOnFocus: false },
   );
+  return data as { fileCount: number; totalBytes: number } | undefined;
 }

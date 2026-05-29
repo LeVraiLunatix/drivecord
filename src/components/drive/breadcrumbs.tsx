@@ -10,6 +10,7 @@ import {
 } from "@/lib/drive-dnd";
 
 type Props = {
+  driveId: string | null;
   currentFolderId: ParentId;
   onNavigate: (folderId: ParentId) => void;
   /** Move an item into the breadcrumb folder via drag&drop. */
@@ -17,11 +18,12 @@ type Props = {
 };
 
 export function DriveBreadcrumbs({
+  driveId,
   currentFolderId,
   onNavigate,
   onDropItem,
 }: Props) {
-  const path = useFolderPath(currentFolderId);
+  const path = useFolderPath(driveId, currentFolderId);
 
   return (
     <nav

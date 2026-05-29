@@ -30,7 +30,7 @@ export function ColorPickerDialog({ item, onOpenChange }: Props) {
 
   const apply = async (color: FolderColor | undefined) => {
     try {
-      await setFolderColor(item.id, color);
+      await setFolderColor(item.driveId, item.id, color);
       onOpenChange(false);
     } catch (err) {
       toast.error((err as Error).message);

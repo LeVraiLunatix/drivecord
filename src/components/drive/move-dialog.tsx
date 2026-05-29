@@ -133,8 +133,8 @@ export function MoveDialog({ item, items: bulkItems, driveId, onOpenChange }: Pr
     setBusy(true);
     try {
       for (const it of effectiveItems) {
-        if (it.kind === "folder") await moveFolder(it.id, target);
-        else await moveFile(it.id, target);
+        if (it.kind === "folder") await moveFolder(driveId, it.id, target);
+        else await moveFile(driveId, it.id, target);
       }
       toast.success(
         effectiveItems.length > 1

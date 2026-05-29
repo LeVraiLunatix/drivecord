@@ -84,7 +84,57 @@ model Webhook {
   lastOpenedAt DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files   DriveFile[]
+  folders DriveFolder[]
 
   @@unique([userId, driveId])
+}
+
+// ── Drive content (files + folders) ──────────────────────────────────────────
+
+/// A file uploaded via a webhook. `chunks` is a JSON array of ChunkRef objects.
+model DriveFile {
+  id        String    @id
+  webhookId String
+  driveId   String
+  parentId  String    @default("")
+  filename  String
+  /// Total byte size (sum of chunks). Int covers up to ~2 GB.
+  size      Int
+  mimeType  String    @default("")
+  chunkSize Int
+  /// ChunkRef[] — ordered list of Discord message references.
+  chunks    Json
+  tags      String[]
+  favorite  Boolean   @default(false)
+  trashed   Boolean   @default(false)
+  trashedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, parentId])
+  @@index([webhookId, trashed])
+  @@index([webhookId, favorite])
+}
+
+/// A virtual folder (Discord has no notion of folders).
+model DriveFolder {
+  id        String    @id
+  webhookId String
+  driveId   String
+  parentId  String    @default("")
+  name      String
+  color     String?
+  trashed   Boolean   @default(false)
+  trashedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, parentId])
+  @@index([webhookId, trashed])
 }

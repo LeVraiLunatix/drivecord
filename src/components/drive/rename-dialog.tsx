@@ -55,8 +55,8 @@ export function RenameDialog({ item, onOpenChange }: Props) {
     }
     setBusy(true);
     try {
-      if (item.kind === "folder") await renameFolder(item.id, trimmed);
-      else await renameFile(item.id, trimmed);
+      if (item.kind === "folder") await renameFolder(item.driveId, item.id, trimmed);
+      else await renameFile(item.driveId, item.id, trimmed);
       toast.success("Renommé");
       onOpenChange(false);
     } catch (err) {

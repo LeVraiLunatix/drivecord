@@ -203,7 +203,7 @@ export default function DevDiscordPage() {
         chunkSize: f.chunkSize,
         chunks: f.chunks,
       });
-      await hardDeleteFile(f.id);
+      await hardDeleteFile(f.driveId, f.id);
       toast.success(`Fichier supprimé (Discord + IDB)`);
     } catch (err) {
       toast.error(`Delete KO : ${(err as Error).message}`);

@@ -20,6 +20,7 @@ import { useDiscordClient } from "@/lib/discord/context";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Props = {
+  driveId: string | null;
   /** ID of the file to preview, or null when closed. */
   fileId: string | null;
   /**
@@ -46,12 +47,13 @@ function isTextKind(kind: string) {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function PreviewModal({
+  driveId,
   fileId,
   siblings = [],
   onClose,
   onNavigate,
 }: Props) {
-  const file = useFile(fileId);
+  const file = useFile(driveId, fileId);
   const client = useDiscordClient();
 
   const [blobUrl, setBlobUrl] = React.useState<string | null>(null);

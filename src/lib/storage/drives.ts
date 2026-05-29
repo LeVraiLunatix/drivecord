@@ -63,16 +63,12 @@ export async function renameDrive(id: string, name: string): Promise<void> {
  * data accessible elsewhere.
  */
 export async function removeDriveMetadata(id: string): Promise<void> {
-  await db().transaction(
-    "rw",
-    [db().drives, db().folders, db().files, db().shares],
-    async () => {
-      await db().folders.where("driveId").equals(id).delete();
-      await db().files.where("driveId").equals(id).delete();
-      await db().shares.where("driveId").equals(id).delete();
-      await db().drives.delete(id);
-    },
-  );
+  // Files/folders are in Neon and cascade-deleted via the Webhook row.
+  // We only clean up IndexedDB local data here.
+  await db().transaction("rw", [db().drives, db().shares], async () => {
+    await db().shares.where("driveId").equals(id).delete();
+    await db().drives.delete(id);
+  });
   if (getActiveDriveId() === id) clearActiveDriveId();
 }
 

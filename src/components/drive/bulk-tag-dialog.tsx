@@ -43,7 +43,7 @@ export function BulkTagDialog({ items, driveId, onOpenChange }: Props) {
     if (!tag) return;
     setBusy(true);
     try {
-      await Promise.all(fileItems.map((item) => addFileTag(item.id, tag)));
+      await Promise.all(fileItems.map((item) => addFileTag(item.driveId, item.id, tag)));
       toast.success(
         `Tag #${tag} ajouté à ${fileItems.length} fichier${fileItems.length > 1 ? "s" : ""}`,
       );
