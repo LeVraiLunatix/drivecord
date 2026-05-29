@@ -7,7 +7,11 @@ on:
     paths:
       - 'capacitor.config.json'
       - 'ios/**'
+      - 'resources/**'
       - '.github/workflows/ios-build.yml'
+
+permissions:
+  contents: write   # needed to create GitHub Releases
 
 jobs:
   build:
@@ -27,16 +31,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Regenerate files excluded by ios/.gitignore
+      # ── App icon ─────────────────────────────────────────────────────────────
+      - name: Generate icon (if no custom icon provided)
+        run: |
+          if [ ! -f resources/icon.png ]; then
+            echo "No custom icon found — generating default Drivecord icon..."
+            python3 scripts/generate-icon.py
+          else
+            echo "Custom icon found at resources/icon.png ✅"
+          fi
+          ls -la resources/
+
+      - name: Generate all iOS icon sizes
+        run: npx @capacitor/assets generate --ios --iconBackgroundColor "#0a0a0a" --iconBackgroundColorDark "#0a0a0a"
+
+      # ── Capacitor sync ────────────────────────────────────────────────────────
       - name: Sync Capacitor
         run: npx cap sync ios
 
-      # ldid creates a minimal fake signature that AltStore can replace
+      # ── Build ─────────────────────────────────────────────────────────────────
       - name: Install ldid
         run: brew install ldid
 
-      # Build for device (no real signing needed — ldid handles it after)
-      - name: Build app
+      - name: Build app (unsigned)
         run: |
           xcodebuild \
             -project ios/App/App.xcodeproj \
@@ -48,69 +65,96 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
             SKIP_INSTALL=NO \
-            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
             -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
-            build 2>&1 | grep -E "error:|warning:|Build succeeded|FAILED" | tail -30
+            build 2>&1 | grep -E "error:|Build succeeded|FAILED|warning:.*error" | tail -20
 
-      # Find the built .app
       - name: Locate .app
         id: app
         run: |
           APP=$(find "$GITHUB_WORKSPACE/DerivedData" -name "*.app" \
             -not -path "*/simulator/*" \
-            -not -name "*.appex" \
-            | head -1)
+            -not -name "*.appex" | head -1)
           echo "path=$APP" >> $GITHUB_OUTPUT
           echo "Found: $APP"
-          ls "$APP"
 
-      # Sign with ldid (fake signature — AltStore replaces it with user's Apple ID)
       - name: Sign with ldid
         run: |
           APP="${{ steps.app.outputs.path }}"
-          # Create minimal entitlements
-          cat > /tmp/entitlements.plist << 'EOF'
+          BINARY="$APP/$(basename "$APP" .app)"
+          cat > /tmp/ent.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>application-identifier</key>
-            <string>com.lunatix.drivecord</string>
-            <key>get-task-allow</key>
-            <true/>
-          </dict>
-          </plist>
+          <plist version="1.0"><dict>
+            <key>application-identifier</key><string>com.lunatix.drivecord</string>
+            <key>get-task-allow</key><true/>
+          </dict></plist>
           EOF
-          # Sign main binary
-          BINARY="$APP/$(basename "$APP" .app)"
-          echo "Signing: $BINARY"
-          ldid -S/tmp/entitlements.plist "$BINARY"
-          echo "Done"
+          ldid -S/tmp/ent.plist "$BINARY"
+          echo "Signed ✅"
 
-      # Package as IPA
       - name: Package IPA
         run: |
           APP="${{ steps.app.outputs.path }}"
           mkdir Payload
           cp -r "$APP" Payload/
           zip -r Drivecord.ipa Payload/
+          IPA_SIZE=$(stat -f%z Drivecord.ipa)
           echo "IPA size: $(du -sh Drivecord.ipa)"
-          # Verify structure
-          unzip -l Drivecord.ipa | grep -E "\.app/|Info\.plist|binary" | head -20
+          echo "ipa_size=$IPA_SIZE" >> $GITHUB_ENV
 
-      - name: Upload IPA
+      # ── Update AltStore source version ────────────────────────────────────────
+      - name: Update altstore-source.json
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          BUILD=${{ github.run_number }}
+          VERSION="1.0.$BUILD"
+          SIZE=${{ env.ipa_size }}
+          # Update version in source JSON
+          python3 -c "
+          import json, sys
+          with open('altstore-source.json') as f:
+            src = json.load(f)
+          src['apps'][0]['versions'] = [{
+            'version': '$VERSION',
+            'date': '$DATE',
+            'downloadURL': 'https://github.com/LeVraiLunatix/discloud/releases/download/ios-latest/Drivecord.ipa',
+            'size': $SIZE,
+            'localizedDescription': 'Build automatique #$BUILD'
+          }]
+          with open('altstore-source.json', 'w') as f:
+            json.dump(src, f, indent=2, ensure_ascii=False)
+          print('Updated altstore-source.json to v$VERSION')
+          "
+          cat altstore-source.json
+
+      - name: Commit updated source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add altstore-source.json
+          git diff --staged --quiet || git commit -m "chore: update AltStore source to build ${{ github.run_number }}"
+          git push
+
+      # ── GitHub Release (public download URL for AltStore) ─────────────────────
+      - name: Create/Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-latest
+          name: "Drivecord iOS — Build ${{ github.run_number }}"
+          prerelease: true
+          files: Drivecord.ipa
+          body: |
+            ### Drivecord iOS — Build ${{ github.run_number }}
+
+            **Installer via AltStore :**
+            Ajoute la source : `https://raw.githubusercontent.com/LeVraiLunatix/discloud/master/altstore-source.json`
+
+            Ou télécharge directement `Drivecord.ipa` ci-dessous.
+
+      # ── Artifact (backup) ─────────────────────────────────────────────────────
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Drivecord-IPA
           path: Drivecord.ipa
           retention-days: 30
-
-      - name: Summary
-        if: success()
-        run: |
-          echo "## ✅ Drivecord.ipa prête" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Installer avec AltStore 2.0" >> $GITHUB_STEP_SUMMARY
-          echo "1. Télécharge l'artifact **Drivecord-IPA**" >> $GITHUB_STEP_SUMMARY
-          echo "2. Transfère \`Drivecord.ipa\` sur iPhone (AirDrop, Fichiers...)" >> $GITHUB_STEP_SUMMARY
-          echo "3. AltStore → **My Apps** → **+** → sélectionne le .ipa" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,29 @@
+{
+  "name": "Drivecord",
+  "identifier": "com.lunatix.drivecord.source",
+  "sourceURL": "https://raw.githubusercontent.com/LeVraiLunatix/discloud/master/altstore-source.json",
+  "apps": [
+    {
+      "name": "Drivecord",
+      "bundleIdentifier": "com.lunatix.drivecord",
+      "developerName": "Lunatix",
+      "subtitle": "Stockage illimité via Discord",
+      "localizedDescription": "Drive cloud illimité propulsé par webhooks Discord. Upload chunked, preview de fichiers, dossiers, tags et plus.\n\nConnecte ton webhook Discord et stocke tout ce que tu veux.",
+      "iconURL": "https://raw.githubusercontent.com/LeVraiLunatix/discloud/master/resources/icon.png",
+      "tintColor": "6366f1",
+      "category": "utilities",
+      "screenshotURLs": [],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "date": "2026-05-29",
+          "downloadURL": "https://github.com/LeVraiLunatix/discloud/releases/download/ios-latest/Drivecord.ipa",
+          "size": 5000000,
+          "localizedDescription": "Version initiale de Drivecord."
+        }
+      ],
+      "appPermissions": {}
+    }
+  ],
+  "news": []
+}
