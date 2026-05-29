@@ -10,6 +10,7 @@
  */
 
 import { db } from "@/lib/storage/db";
+import { getActiveDriveId, clearActiveDriveId } from "@/lib/storage/drives";
 import type { Drive } from "@/lib/storage/schema";
 
 type ServerWebhook = {
@@ -31,8 +32,14 @@ export async function syncWebhooksFromServer(): Promise<number> {
   if (!res.ok) return 0;
 
   const webhooks: ServerWebhook[] = await res.json();
-  if (!webhooks.length) return 0;
 
+  // The server (Neon, per-account) is authoritative for which webhooks belong
+  // to the logged-in user. IndexedDB is only a local cache shared across all
+  // accounts on this browser — so we must RECONCILE it to match the server
+  // exactly, otherwise a previous account's webhooks leak into this one.
+  const serverIds = new Set(webhooks.map((w) => w.driveId));
+
+  // 1) Upsert every server webhook into IndexedDB.
   for (const w of webhooks) {
     const existing = await db().drives.get(w.driveId);
     const row: Drive = {
@@ -45,6 +52,21 @@ export async function syncWebhooksFromServer(): Promise<number> {
       lastOpenedAt: w.lastOpenedAt,
     };
     await db().drives.put(row);
+  }
+
+  // 2) Delete any local drive that the current account does NOT own.
+  const localDrives = await db().drives.toArray();
+  const staleIds = localDrives
+    .map((d) => d.id)
+    .filter((id) => !serverIds.has(id));
+  if (staleIds.length > 0) {
+    await db().transaction("rw", [db().drives, db().shares], async () => {
+      await db().shares.where("driveId").anyOf(staleIds).delete();
+      await db().drives.bulkDelete(staleIds);
+    });
+    // 3) If the active drive was one of the removed ones, clear the selection.
+    const active = getActiveDriveId();
+    if (active && staleIds.includes(active)) clearActiveDriveId();
   }
 
   return webhooks.length;
