@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { CloudUpload, Loader2, Mail } from "lucide-react";
+import { CloudUpload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,9 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
 
@@ -55,11 +53,6 @@ function LoginContent() {
   const [password, setPassword] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
-  // Magic link state
-  const [magicEmail, setMagicEmail] = React.useState("");
-  const [magicBusy, setMagicBusy] = React.useState(false);
-  const [magicSent, setMagicSent] = React.useState(false);
-
   React.useEffect(() => {
     if (params.get("error") === "CredentialsSignin") {
       toast.error("Email ou mot de passe incorrect.");
@@ -83,24 +76,6 @@ function LoginContent() {
       }
     } finally {
       setBusy(false);
-    }
-  };
-
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMagicBusy(true);
-    try {
-      const res = await signIn("resend", {
-        email: magicEmail,
-        redirect: false,
-      });
-      if (res?.error) {
-        toast.error("Erreur lors de l'envoi. Vérifie ton email.");
-      } else {
-        setMagicSent(true);
-      }
-    } finally {
-      setMagicBusy(false);
     }
   };
 
@@ -139,99 +114,36 @@ function LoginContent() {
             <CardTitle className="text-base">Se connecter</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Tabs defaultValue="password">
-              <TabsList className="w-full">
-                <TabsTrigger value="password" className="flex-1">
-                  Mot de passe
-                </TabsTrigger>
-                <TabsTrigger value="magic" className="flex-1">
-                  Lien magique
-                </TabsTrigger>
-              </TabsList>
-
-              {/* ── Email + password tab ── */}
-              <TabsContent value="password">
-                <form onSubmit={handleCredentials} className="space-y-3 pt-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="toi@example.com"
-                      required
-                      autoComplete="email"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="password">Mot de passe</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      autoComplete="current-password"
-                    />
-                  </div>
-                  <Button type="submit" disabled={busy} className="w-full">
-                    {busy && <Loader2 className="size-4 animate-spin" />}
-                    Se connecter
-                  </Button>
-                </form>
-              </TabsContent>
-
-              {/* ── Magic link tab ── */}
-              <TabsContent value="magic">
-                {magicSent ? (
-                  <div className="space-y-3 pt-4 text-center">
-                    <Mail className="mx-auto size-10 text-primary" />
-                    <p className="text-sm font-medium">Vérifie tes emails !</p>
-                    <p className="text-xs text-muted-foreground">
-                      Un lien de connexion a été envoyé à{" "}
-                      <strong>{magicEmail}</strong>. Il expire dans 24 h.
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setMagicSent(false)}
-                    >
-                      Renvoyer
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleMagicLink} className="space-y-3 pt-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="magic-email">Email</Label>
-                      <Input
-                        id="magic-email"
-                        type="email"
-                        value={magicEmail}
-                        onChange={(e) => setMagicEmail(e.target.value)}
-                        placeholder="toi@example.com"
-                        required
-                        autoComplete="email"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={magicBusy}
-                      className="w-full"
-                    >
-                      {magicBusy && <Loader2 className="size-4 animate-spin" />}
-                      <Mail className="size-4" />
-                      Envoyer le lien
-                    </Button>
-                    <p className="text-center text-xs text-muted-foreground">
-                      Pas besoin de mot de passe — on t&apos;envoie un lien de
-                      connexion.
-                    </p>
-                  </form>
-                )}
-              </TabsContent>
-            </Tabs>
+            <form onSubmit={handleCredentials} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="toi@example.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Mot de passe</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+              <Button type="submit" disabled={busy} className="w-full">
+                {busy && <Loader2 className="size-4 animate-spin" />}
+                Se connecter
+              </Button>
+            </form>
 
             <div className="relative">
               <Separator />

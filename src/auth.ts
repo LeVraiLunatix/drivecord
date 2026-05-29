@@ -6,7 +6,6 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import Resend from "next-auth/providers/resend";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
@@ -18,10 +17,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   providers: [
     Google,
-
-    Resend({
-      from: process.env.EMAIL_FROM ?? "Drivecord <noreply@drivecord.app>",
-    }),
 
     Credentials({
       credentials: {
