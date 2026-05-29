@@ -19,7 +19,8 @@ import { PreviewModal } from "@/components/drive/preview-modal";
 import { UploadDropzone } from "@/components/drive/upload-dropzone";
 import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
-import { Star, Tag, Trash2 } from "lucide-react";
+import FloatingActionMenu from "@/components/ui/floating-action-menu";
+import { FolderPlus, Star, Tag, Trash2, Upload } from "lucide-react";
 
 import { useDiscordClient } from "@/lib/discord/context";
 import { useUploadQueue } from "@/lib/upload-queue";
@@ -453,6 +454,23 @@ export default function DrivePage() {
         onNavigate={setPreviewFileId}
       />
       <UploadQueuePanel />
+
+      {/* Mobile-only floating quick actions (desktop uses the topbar buttons) */}
+      <FloatingActionMenu
+        className="lg:hidden right-4 z-40 bottom-[calc(1.5rem+env(safe-area-inset-bottom))]"
+        options={[
+          {
+            label: "Upload",
+            Icon: <Upload className="size-4" />,
+            onClick: () => fileInputRef.current?.click(),
+          },
+          {
+            label: "Nouveau dossier",
+            Icon: <FolderPlus className="size-4" />,
+            onClick: () => setNewFolderOpen(true),
+          },
+        ]}
+      />
     </div>
   );
 }
