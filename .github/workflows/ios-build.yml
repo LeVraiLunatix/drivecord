@@ -107,24 +107,25 @@ jobs:
         run: |
           DATE=$(date +%Y-%m-%d)
           BUILD=${{ github.run_number }}
-          VERSION="1.0.$BUILD"
-          SIZE=${{ env.ipa_size }}
-          # Update version in source JSON
-          python3 -c "
-          import json, sys
-          with open('altstore-source.json') as f:
-            src = json.load(f)
+          VERSION="1.0.${BUILD}"
+          SIZE=$(stat -f%z Drivecord.ipa)
+          # Write updated source using a temp file (avoids shell interpolation issues)
+          python3 - <<PYEOF
+          import json
+          with open('altstore-source.json', encoding='ascii') as f:
+              src = json.load(f)
           src['apps'][0]['versions'] = [{
-            'version': '$VERSION',
-            'date': '$DATE',
-            'downloadURL': 'https://github.com/LeVraiLunatix/discloud/releases/download/ios-latest/Drivecord.ipa',
-            'size': $SIZE,
-            'localizedDescription': 'Build automatique #$BUILD'
+              'version': '${VERSION}',
+              'date': '${DATE}',
+              'downloadURL': 'https://github.com/LeVraiLunatix/discloud/releases/download/ios-latest/Drivecord.ipa',
+              'size': ${SIZE},
+              'localizedDescription': 'Build #${BUILD}'
           }]
-          with open('altstore-source.json', 'w') as f:
-            json.dump(src, f, indent=2, ensure_ascii=False)
-          print('Updated altstore-source.json to v$VERSION')
-          "
+          with open('altstore-source.json', 'w', encoding='ascii') as f:
+              json.dump(src, f, indent=2, ensure_ascii=True)
+          PYEOF
+          # Validate JSON
+          python3 -c "import json; json.load(open('altstore-source.json'))" && echo "JSON valid"
           cat altstore-source.json
 
       - name: Commit updated source
