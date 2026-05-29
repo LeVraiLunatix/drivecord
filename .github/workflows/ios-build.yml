@@ -1,7 +1,7 @@
 name: Build iOS IPA
 
 on:
-  workflow_dispatch:  # Déclenche manuellement depuis GitHub Actions
+  workflow_dispatch:
   push:
     branches: [master]
     paths:
@@ -14,12 +14,10 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      # ── Checkout ──────────────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Node ──────────────────────────────────────────────────────────────────
-      - name: Setup Node
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -28,29 +26,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ── Capacitor iOS ─────────────────────────────────────────────────────────
+      # ── Capacitor ─────────────────────────────────────────────────────────────
       - name: Add iOS platform
         run: npx cap add ios
+        env:
+          CI: true
+
+      - name: Debug — list ios/App
+        run: ls -la ios/App/ || echo "ios/App not found"
 
       - name: Copy web assets
-        run: npx cap copy ios
+        run: npx cap sync ios
 
       # ── CocoaPods ─────────────────────────────────────────────────────────────
-      - name: Install CocoaPods
+      - name: Install CocoaPods dependencies
         run: |
-          cd ios/App
+          PODFILE_DIR=$(find ios -name "Podfile" -maxdepth 3 | head -1 | xargs dirname)
+          echo "Podfile found in: $PODFILE_DIR"
+          cd "$PODFILE_DIR"
           pod install --repo-update
 
-      # ── Icons & Splash (optionnel — ajoute tes assets plus tard) ─────────────
-      # - name: Generate app icons
-      #   run: npx capacitor-assets generate --ios
-
-      # ── Build IPA (non signé — AltStore le re-signe) ─────────────────────────
-      - name: Build archive
+      # ── Build ─────────────────────────────────────────────────────────────────
+      - name: Find workspace
+        id: workspace
         run: |
-          cd ios/App
+          WS=$(find ios -name "*.xcworkspace" -maxdepth 4 | head -1)
+          DIR=$(dirname "$WS")
+          echo "workspace=$WS" >> $GITHUB_OUTPUT
+          echo "dir=$DIR" >> $GITHUB_OUTPUT
+          echo "Found workspace: $WS"
+
+      - name: Build archive (unsigned)
+        run: |
           xcodebuild \
-            -workspace App.xcworkspace \
+            -workspace "${{ steps.workspace.outputs.workspace }}" \
             -scheme App \
             -sdk iphoneos \
             -configuration Release \
@@ -58,35 +67,21 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            -archivePath $GITHUB_WORKSPACE/build/Drivecord.xcarchive \
-            archive \
-            | xcpretty || true
+            -archivePath "$GITHUB_WORKSPACE/build/Drivecord.xcarchive" \
+            archive 2>&1 | tail -50
 
       - name: Package IPA
         run: |
+          APP=$(find "$GITHUB_WORKSPACE/build/Drivecord.xcarchive/Products/Applications" -name "*.app" | head -1)
+          echo "App: $APP"
           mkdir -p Payload
-          APP_PATH=$(find $GITHUB_WORKSPACE/build/Drivecord.xcarchive/Products/Applications -name "*.app" | head -1)
-          echo "App path: $APP_PATH"
-          cp -r "$APP_PATH" Payload/
+          cp -r "$APP" Payload/
           zip -r Drivecord.ipa Payload/
-          echo "IPA size: $(du -sh Drivecord.ipa)"
+          echo "IPA: $(du -sh Drivecord.ipa)"
 
-      # ── Upload artifact ───────────────────────────────────────────────────────
-      - name: Upload IPA
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: Drivecord-IPA
           path: Drivecord.ipa
           retention-days: 30
-
-      - name: Summary
-        run: |
-          echo "## ✅ IPA built successfully" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Download **Drivecord-IPA** from the Artifacts section above." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Install with AltStore" >> $GITHUB_STEP_SUMMARY
-          echo "1. Install [AltStore](https://altstore.io) sur ton PC et iPhone" >> $GITHUB_STEP_SUMMARY
-          echo "2. Télécharge \`Drivecord.ipa\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. AltStore → **My Apps** → \`+\` → sélectionne le .ipa" >> $GITHUB_STEP_SUMMARY
-          echo "4. Expire dans 7 jours — re-signe via AltStore" >> $GITHUB_STEP_SUMMARY
