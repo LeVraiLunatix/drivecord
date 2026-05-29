@@ -1,0 +1,92 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:  # Déclenche manuellement depuis GitHub Actions
+  push:
+    branches: [master]
+    paths:
+      - 'capacitor.config.ts'
+      - '.github/workflows/ios-build.yml'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Node ──────────────────────────────────────────────────────────────────
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Capacitor iOS ─────────────────────────────────────────────────────────
+      - name: Add iOS platform
+        run: npx cap add ios
+
+      - name: Copy web assets
+        run: npx cap copy ios
+
+      # ── CocoaPods ─────────────────────────────────────────────────────────────
+      - name: Install CocoaPods
+        run: |
+          cd ios/App
+          pod install --repo-update
+
+      # ── Icons & Splash (optionnel — ajoute tes assets plus tard) ─────────────
+      # - name: Generate app icons
+      #   run: npx capacitor-assets generate --ios
+
+      # ── Build IPA (non signé — AltStore le re-signe) ─────────────────────────
+      - name: Build archive
+        run: |
+          cd ios/App
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            -archivePath $GITHUB_WORKSPACE/build/Drivecord.xcarchive \
+            archive \
+            | xcpretty || true
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          APP_PATH=$(find $GITHUB_WORKSPACE/build/Drivecord.xcarchive/Products/Applications -name "*.app" | head -1)
+          echo "App path: $APP_PATH"
+          cp -r "$APP_PATH" Payload/
+          zip -r Drivecord.ipa Payload/
+          echo "IPA size: $(du -sh Drivecord.ipa)"
+
+      # ── Upload artifact ───────────────────────────────────────────────────────
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Drivecord-IPA
+          path: Drivecord.ipa
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## ✅ IPA built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download **Drivecord-IPA** from the Artifacts section above." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install with AltStore" >> $GITHUB_STEP_SUMMARY
+          echo "1. Install [AltStore](https://altstore.io) sur ton PC et iPhone" >> $GITHUB_STEP_SUMMARY
+          echo "2. Télécharge \`Drivecord.ipa\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. AltStore → **My Apps** → \`+\` → sélectionne le .ipa" >> $GITHUB_STEP_SUMMARY
+          echo "4. Expire dans 7 jours — re-signe via AltStore" >> $GITHUB_STEP_SUMMARY
