@@ -1,0 +1,20 @@
+{
+  "appId": "com.lunatix.drivecord",
+  "appName": "Drivecord",
+  "webDir": "capacitor-web",
+  "server": {
+    "url": "https://drivecord.vercel.app",
+    "cleartext": false,
+    "allowNavigation": [
+      "drivecord.vercel.app",
+      "*.discord.com",
+      "accounts.google.com"
+    ]
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#0a0a0a",
+    "preferredContentMode": "mobile",
+    "scrollEnabled": true
+  }
+}

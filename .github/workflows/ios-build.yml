@@ -5,7 +5,7 @@ on:
   push:
     branches: [master]
     paths:
-      - 'capacitor.config.ts'
+      - 'capacitor.config.json'
       - '.github/workflows/ios-build.yml'
 
 jobs:
@@ -26,40 +26,46 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ── Capacitor ─────────────────────────────────────────────────────────────
+      # ── Verify Capacitor config ───────────────────────────────────────────────
+      - name: Show Capacitor config
+        run: |
+          cat capacitor.config.json
+          echo "---"
+          ls node_modules/@capacitor/ || echo "No @capacitor in node_modules"
+
+      # ── Add iOS platform ──────────────────────────────────────────────────────
       - name: Add iOS platform
-        run: npx cap add ios
-        env:
-          CI: true
-
-      - name: Debug — list ios/App
-        run: ls -la ios/App/ || echo "ios/App not found"
-
-      - name: Copy web assets
-        run: npx cap sync ios
+        run: |
+          npx cap add ios
+          echo "Exit code: $?"
+          echo "--- ios/ structure ---"
+          find ios -maxdepth 4 -type f | sort || echo "No ios/ directory created"
 
       # ── CocoaPods ─────────────────────────────────────────────────────────────
-      - name: Install CocoaPods dependencies
+      - name: pod install
         run: |
-          PODFILE_DIR=$(find ios -name "Podfile" -maxdepth 3 | head -1 | xargs dirname)
-          echo "Podfile found in: $PODFILE_DIR"
+          PODFILE=$(find ios -name "Podfile" | head -1)
+          if [ -z "$PODFILE" ]; then
+            echo "ERROR: No Podfile found. cap add ios probably failed."
+            find . -maxdepth 3 -name "*.json" | grep -i cap || true
+            exit 1
+          fi
+          PODFILE_DIR=$(dirname "$PODFILE")
+          echo "Running pod install in: $PODFILE_DIR"
           cd "$PODFILE_DIR"
-          pod install --repo-update
+          pod install
+
+      # ── Sync ─────────────────────────────────────────────────────────────────
+      - name: Sync web assets
+        run: npx cap sync ios
 
       # ── Build ─────────────────────────────────────────────────────────────────
-      - name: Find workspace
-        id: workspace
-        run: |
-          WS=$(find ios -name "*.xcworkspace" -maxdepth 4 | head -1)
-          DIR=$(dirname "$WS")
-          echo "workspace=$WS" >> $GITHUB_OUTPUT
-          echo "dir=$DIR" >> $GITHUB_OUTPUT
-          echo "Found workspace: $WS"
-
       - name: Build archive (unsigned)
         run: |
+          WS=$(find ios -name "*.xcworkspace" -maxdepth 5 | head -1)
+          echo "Using workspace: $WS"
           xcodebuild \
-            -workspace "${{ steps.workspace.outputs.workspace }}" \
+            -workspace "$WS" \
             -scheme App \
             -sdk iphoneos \
             -configuration Release \
@@ -68,18 +74,18 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
             -archivePath "$GITHUB_WORKSPACE/build/Drivecord.xcarchive" \
-            archive 2>&1 | tail -50
+            archive 2>&1 | tail -60
 
       - name: Package IPA
         run: |
           APP=$(find "$GITHUB_WORKSPACE/build/Drivecord.xcarchive/Products/Applications" -name "*.app" | head -1)
-          echo "App: $APP"
-          mkdir -p Payload
+          echo "App bundle: $APP"
+          mkdir Payload
           cp -r "$APP" Payload/
           zip -r Drivecord.ipa Payload/
-          echo "IPA: $(du -sh Drivecord.ipa)"
+          echo "IPA size: $(du -sh Drivecord.ipa)"
 
-      - name: Upload IPA artifact
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: Drivecord-IPA
