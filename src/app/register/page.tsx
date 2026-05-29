@@ -17,6 +17,17 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
+import { AuthBackground } from "@/components/auth/auth-background";
+import { motion, useReducedMotion, type Variants } from "motion/react";
+
+const container: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+};
+const item: Variants = {
+  hidden: { opacity: 0, y: 18, filter: "blur(5px)" },
+  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
+};
 
 function GoogleIcon() {
   return (
@@ -86,27 +97,41 @@ export default function RegisterPage() {
     }
   };
 
+  const reduce = useReducedMotion();
+  const v = reduce ? {} : undefined;
+
   return (
     <div className="relative flex min-h-[100dvh] flex-1 flex-col items-center justify-center px-6 py-12">
+      <AuthBackground />
       <div className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))]">
         <BackButton fallback="/login" />
       </div>
-      <div className="w-full max-w-sm space-y-6">
+      <motion.div
+        variants={v ?? container}
+        initial="hidden"
+        animate="show"
+        className="w-full max-w-sm space-y-6"
+      >
         {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-mono text-xl font-semibold tracking-tight"
+        <motion.div variants={v ?? item} className="flex flex-col items-center gap-3">
+          <motion.div
+            initial={reduce ? undefined : { scale: 0.6, opacity: 0 }}
+            animate={reduce ? undefined : { scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.1 }}
+            className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30"
           >
-            <CloudUpload className="size-6 text-primary" />
+            <CloudUpload className="size-7 text-white" />
+          </motion.div>
+          <Link href="/" className="font-mono text-xl font-semibold tracking-tight">
             drivecord
           </Link>
           <p className="text-sm text-muted-foreground">
             Crée un compte pour sauvegarder tes webhooks.
           </p>
-        </div>
+        </motion.div>
 
-        <Card>
+        <motion.div variants={v ?? item}>
+        <Card className="border-border/60 bg-card/70 backdrop-blur-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">Créer un compte</CardTitle>
           </CardHeader>
@@ -183,8 +208,9 @@ export default function RegisterPage() {
             </Button>
           </CardContent>
         </Card>
+        </motion.div>
 
-        <p className="text-center text-sm text-muted-foreground">
+        <motion.p variants={v ?? item} className="text-center text-sm text-muted-foreground">
           Déjà un compte ?{" "}
           <Link
             href="/login"
@@ -192,8 +218,8 @@ export default function RegisterPage() {
           >
             Se connecter
           </Link>
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
     </div>
   );
 }

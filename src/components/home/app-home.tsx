@@ -40,7 +40,7 @@ export function AppHome() {
   const v = reduce ? {} : undefined;
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-background">
+    <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-background">
       {/* Animated background */}
       <DarkVeil
         className="-z-10"

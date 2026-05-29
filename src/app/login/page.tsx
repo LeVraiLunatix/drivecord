@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 import { CloudUpload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,16 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
+import { AuthBackground } from "@/components/auth/auth-background";
+
+const container: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+};
+const item: Variants = {
+  hidden: { opacity: 0, y: 18, filter: "blur(5px)" },
+  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
+};
 
 // Google "G" icon (SVG inline)
 function GoogleIcon() {
@@ -83,33 +94,47 @@ function LoginContent() {
     signIn("google", { callbackUrl });
   };
 
+  const reduce = useReducedMotion();
+  const v = reduce ? {} : undefined;
+
   return (
     <div className="relative flex min-h-[100dvh] flex-1 flex-col items-center justify-center px-6 py-12">
+      <AuthBackground />
       <div className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))]">
         <BackButton fallback="/" />
       </div>
-      <div className="w-full max-w-sm space-y-6">
+      <motion.div
+        variants={v ?? container}
+        initial="hidden"
+        animate="show"
+        className="w-full max-w-sm space-y-6"
+      >
         {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-mono text-xl font-semibold tracking-tight"
+        <motion.div variants={v ?? item} className="flex flex-col items-center gap-3">
+          <motion.div
+            initial={reduce ? undefined : { scale: 0.6, opacity: 0 }}
+            animate={reduce ? undefined : { scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.1 }}
+            className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30"
           >
-            <CloudUpload className="size-6 text-primary" />
+            <CloudUpload className="size-7 text-white" />
+          </motion.div>
+          <Link href="/" className="font-mono text-xl font-semibold tracking-tight">
             drivecord
           </Link>
           <p className="text-sm text-muted-foreground">
             Connecte-toi pour accéder à tes drives.
           </p>
-        </div>
+        </motion.div>
 
         {justVerified && (
-          <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400">
+          <motion.div variants={v ?? item} className="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400">
             Email vérifié ! Tu peux maintenant te connecter.
-          </div>
+          </motion.div>
         )}
 
-        <Card>
+        <motion.div variants={v ?? item}>
+        <Card className="border-border/60 bg-card/70 backdrop-blur-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">Se connecter</CardTitle>
           </CardHeader>
@@ -162,8 +187,9 @@ function LoginContent() {
             </Button>
           </CardContent>
         </Card>
+        </motion.div>
 
-        <p className="text-center text-sm text-muted-foreground">
+        <motion.p variants={v ?? item} className="text-center text-sm text-muted-foreground">
           Pas encore de compte ?{" "}
           <Link
             href="/register"
@@ -171,8 +197,8 @@ function LoginContent() {
           >
             S&apos;inscrire
           </Link>
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
     </div>
   );
 }
