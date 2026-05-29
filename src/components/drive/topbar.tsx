@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, FolderPlus, Search, Upload } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FolderPlus,
+  Menu,
+  Search,
+  Upload,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DriveBreadcrumbs } from "./breadcrumbs";
@@ -18,14 +26,11 @@ type Props = {
   search: string;
   onSearchChange: (v: string) => void;
   searchVisible: boolean;
-  /** Drag an item onto a breadcrumb to move it into that folder. */
   onDropItemOnBreadcrumb?: (sourceItemId: string, targetFolderId: ParentId) => void;
-  // History navigation
   canGoBack: boolean;
   canGoForward: boolean;
   onGoBack: () => void;
   onGoForward: () => void;
-  // View preferences
   viewMode: ViewMode;
   onViewModeChange: (v: ViewMode) => void;
   sortField: SortField;
@@ -33,6 +38,8 @@ type Props = {
   onSortChange: (field: SortField, dir: SortDir) => void;
   filterKind: FilterKind;
   onFilterChange: (v: FilterKind) => void;
+  /** Mobile: open the sidebar drawer */
+  onMenuOpen?: () => void;
 };
 
 export function DriveTopbar({
@@ -56,13 +63,28 @@ export function DriveTopbar({
   onSortChange,
   filterKind,
   onFilterChange,
+  onMenuOpen,
 }: Props) {
+  const [searchOpen, setSearchOpen] = React.useState(false);
+
   return (
     <div className="border-b border-border/50">
-      {/* Top row: breadcrumbs + search + action buttons */}
-      <div className="flex flex-wrap items-center gap-3 px-6 py-3">
+      {/* ── Main row ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-1.5 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">
+
+        {/* Hamburger — mobile only */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 lg:hidden"
+          onClick={onMenuOpen}
+          aria-label="Menu"
+        >
+          <Menu className="size-5" />
+        </Button>
+
         {/* Back / Forward */}
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="hidden items-center gap-0.5 sm:flex">
           <Button
             variant="ghost"
             size="icon"
@@ -85,7 +107,8 @@ export function DriveTopbar({
           </Button>
         </div>
 
-        <div className="min-w-0 flex-1">
+        {/* Breadcrumbs — hidden when search is open on mobile */}
+        <div className={`min-w-0 flex-1 ${searchOpen ? "hidden sm:block" : ""}`}>
           <DriveBreadcrumbs
             driveId={driveId}
             currentFolderId={currentFolderId}
@@ -93,30 +116,94 @@ export function DriveTopbar({
             onDropItem={onDropItemOnBreadcrumb}
           />
         </div>
+
+        {/* Search — desktop: always visible inline; mobile: toggled */}
         {searchVisible && (
-          <div className="relative w-72">
-            <Search className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Rechercher dans ce drive…"
-              className="pl-7"
-            />
-          </div>
+          <>
+            {/* Mobile search toggle */}
+            {!searchOpen && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 sm:hidden"
+                onClick={() => setSearchOpen(true)}
+                aria-label="Rechercher"
+              >
+                <Search className="size-4" />
+              </Button>
+            )}
+
+            {/* Mobile search input (expanded) */}
+            {searchOpen && (
+              <div className="flex flex-1 items-center gap-1 sm:hidden">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    autoFocus
+                    value={search}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    placeholder="Rechercher…"
+                    className="pl-7 h-8"
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  onClick={() => { setSearchOpen(false); onSearchChange(""); }}
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Desktop search — always visible */}
+            <div className="relative hidden w-64 sm:block xl:w-72">
+              <Search className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Rechercher dans ce drive…"
+                className="pl-7"
+              />
+            </div>
+          </>
         )}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onNewFolder}>
+
+        {/* Action buttons */}
+        <div className={`flex shrink-0 items-center gap-1 sm:gap-2 ${searchOpen ? "hidden sm:flex" : "flex"}`}>
+          {/* Mobile: icon only */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-8 sm:hidden"
+            onClick={onNewFolder}
+            title="Nouveau dossier"
+          >
+            <FolderPlus className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            className="size-8 sm:hidden"
+            onClick={onUploadClick}
+            title="Upload"
+          >
+            <Upload className="size-4" />
+          </Button>
+
+          {/* Desktop: icon + label */}
+          <Button variant="outline" size="sm" className="hidden sm:flex" onClick={onNewFolder}>
             <FolderPlus className="size-4" />
             Nouveau dossier
           </Button>
-          <Button size="sm" onClick={onUploadClick}>
+          <Button size="sm" className="hidden sm:flex" onClick={onUploadClick}>
             <Upload className="size-4" />
             Upload
           </Button>
         </div>
       </div>
 
-      {/* Second row: view mode toggle + filter pills + sort controls */}
+      {/* ── View controls row ──────────────────────────────────────────────── */}
       <ViewControls
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}

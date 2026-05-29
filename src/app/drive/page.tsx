@@ -130,6 +130,8 @@ export default function DrivePage() {
   const [bulkTagItems, setBulkTagItems] = React.useState<DriveItem[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   React.useEffect(() => {
@@ -339,10 +341,13 @@ export default function DrivePage() {
         onNavigateRoot={() => { resetHistory(ROOT_PARENT); setSection("files"); }}
         activeTag={activeTag}
         onTagSelect={(tag) => { setActiveTag(tag); setSection("tag"); resetHistory(ROOT_PARENT); }}
+        mobileOpen={sidebarOpen}
+        onMobileClose={() => setSidebarOpen(false)}
       />
 
       <UploadDropzone onFiles={(files) => handleUploadFiles(files)} className="flex flex-1 flex-col">
         <DriveTopbar
+          onMenuOpen={() => setSidebarOpen(true)}
           driveId={driveId}
           currentFolderId={currentFolderId}
           onNavigate={navigateTo}

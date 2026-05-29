@@ -94,15 +94,27 @@ export default function Home() {
             <CloudUpload className="size-5 text-primary" />
             drivecord
           </Link>
-          <div className="flex items-center gap-3">
-            <GooeyNav
-              items={navItems}
-              initialActiveIndex={0}
-              particleCount={12}
-              particleDistances={[80, 8]}
-              animationTime={500}
-              timeVariance={250}
-            />
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Mobile nav: simple buttons */}
+            <div className="flex items-center gap-1 sm:hidden">
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/login">Connexion</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/register">Commencer</Link>
+              </Button>
+            </div>
+            {/* Desktop nav: GooeyNav */}
+            <div className="hidden sm:block">
+              <GooeyNav
+                items={navItems}
+                initialActiveIndex={0}
+                particleCount={12}
+                particleDistances={[80, 8]}
+                animationTime={500}
+                timeVariance={250}
+              />
+            </div>
             <ThemeToggle />
           </div>
         </div>
