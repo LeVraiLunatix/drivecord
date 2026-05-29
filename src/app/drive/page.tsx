@@ -334,7 +334,7 @@ export default function DrivePage() {
   if (!activeDrive) return null;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-[100dvh] overflow-hidden">
       <DriveSidebar
         section={section}
         onSectionChange={setSection}
@@ -345,7 +345,7 @@ export default function DrivePage() {
         onMobileClose={() => setSidebarOpen(false)}
       />
 
-      <UploadDropzone onFiles={(files) => handleUploadFiles(files)} className="flex flex-1 flex-col">
+      <UploadDropzone onFiles={(files) => handleUploadFiles(files)} className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <DriveTopbar
           onMenuOpen={() => setSidebarOpen(true)}
           driveId={driveId}
@@ -370,7 +370,7 @@ export default function DrivePage() {
           onFilterChange={setFilterKind}
         />
 
-        <main className="flex-1 overflow-y-auto px-6 py-6">
+        <main className="flex-1 overflow-y-auto px-3 py-3 sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           {section === "favorites" && (displayedItems?.length ?? 0) === 0 && (
             <EmptyState icon={Star} title="Aucun favori" description="Mets un fichier en favori avec le menu contextuel pour le retrouver ici." />
           )}
