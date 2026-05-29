@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -64,8 +64,16 @@ export function DriveSidebar(props: Props) {
 
       {/* ── Mobile drawer ───────────────────────────────────────────────── */}
       <Sheet open={mobileOpen} onOpenChange={(open) => !open && onMobileClose?.()}>
-        <SheetContent side="left" className="w-72 p-0 flex flex-col gap-0">
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+        <SheetContent
+          side="left"
+          className="w-[17rem] p-0 flex flex-col gap-0"
+          // Prevent Radix from auto-focusing the first interactive element
+          // (the drive switcher dropdown), which made it look like the menu
+          // "opened the disconnect / change-webhook popup" on open.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <SheetTitle className="sr-only">Menu</SheetTitle>
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-12">
             <SidebarContent {...props} onClose={onMobileClose} />
           </div>
         </SheetContent>

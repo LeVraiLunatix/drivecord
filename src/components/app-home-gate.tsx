@@ -6,10 +6,10 @@ import { useSession } from "next-auth/react";
 import { isNativeApp } from "@/lib/use-platform";
 
 /**
- * On the web, renders the marketing landing page ({children}).
- * In the native app (Capacitor), there's no point showing marketing — redirect
- * straight to /drive (if logged in) or /login. The Capacitor splash screen
- * covers this brief redirect so the user never sees the marketing flash.
+ * Renders the animated home ({children}) on web, and in the native app for
+ * logged-out users. The only app-specific behaviour: an already-authenticated
+ * user opening the app skips the home and lands straight on /drive (the
+ * Capacitor splash covers that brief redirect).
  */
 export function AppHomeGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -21,12 +21,13 @@ export function AppHomeGate({ children }: { children: React.ReactNode }) {
     setIsNative(isNativeApp());
   }, []);
 
-  React.useEffect(() => {
-    if (isNative !== true || status === "loading") return;
-    router.replace(status === "authenticated" ? "/drive" : "/login");
-  }, [isNative, status, router]);
+  const shouldRedirect = isNative === true && status === "authenticated";
 
-  if (isNative === true) {
+  React.useEffect(() => {
+    if (shouldRedirect) router.replace("/drive");
+  }, [shouldRedirect, router]);
+
+  if (shouldRedirect) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-background">
         <div className="size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
@@ -34,6 +35,6 @@ export function AppHomeGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Web (or not-yet-determined) → show the marketing page with no delay.
+  // Everyone else (web, or logged-out app users) → the animated home.
   return <>{children}</>;
 }
