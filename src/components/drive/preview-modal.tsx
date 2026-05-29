@@ -35,6 +35,13 @@ const PREVIEWABLE_KINDS = new Set(["image", "video", "audio", "pdf", "code", "te
 /** HEIC/HEIF extensions that need client-side conversion. */
 const HEIC_EXTS = new Set(["heic", "heif"]);
 
+/**
+ * Extensions whose QuickTime container Chrome rejects even when the codec
+ * (H.264) is supported. Relabeling the blob as video/mp4 lets Chrome's
+ * media pipeline decode the identical byte stream.
+ */
+const QUICKTIME_EXTS = new Set(["mov", "qt"]);
+
 function isTextKind(kind: string) {
   return TEXT_KINDS.has(kind);
 }
@@ -193,6 +200,15 @@ export function PreviewModal({
           }
           if (cancelled) return;
           setConvertingHeic(false);
+        }
+
+        // ── MOV / QuickTime → relabel as video/mp4 ────────────────────────
+        // Chrome refuses video/quicktime even when the codec is H.264.
+        // Retyping the blob as video/mp4 lets Chrome's decoder process the
+        // same bytes — works for all H.264 .mov (every iPhone video).
+        // HEVC .mov will still fail at the codec level; VideoPreview handles that.
+        if (QUICKTIME_EXTS.has(ext) || file.mimeType === "video/quicktime") {
+          finalBlob = new Blob([finalBlob], { type: "video/mp4" });
         }
 
         const url = URL.createObjectURL(finalBlob);
