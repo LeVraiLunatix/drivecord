@@ -73,7 +73,13 @@ export function DriveSidebar(props: Props) {
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <SheetTitle className="sr-only">Menu</SheetTitle>
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-12">
+          <div
+            className="flex flex-1 flex-col gap-4 overflow-y-auto px-4"
+            style={{
+              paddingTop: "max(3.25rem, calc(env(safe-area-inset-top) + 1rem))",
+              paddingBottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))",
+            }}
+          >
             <SidebarContent {...props} onClose={onMobileClose} />
           </div>
         </SheetContent>
@@ -214,43 +220,78 @@ function SidebarContent({
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        {session?.user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent/60">
-                <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
-                  {session.user.image ? (
-                    <img src={session.user.image} alt="" className="size-6 rounded-full object-cover" />
-                  ) : (
-                    <User className="size-3.5" />
-                  )}
-                </div>
-                <span className="min-w-0 truncate text-xs text-muted-foreground">
-                  {session.user.name ?? session.user.email}
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="top" className="w-56">
-              <DropdownMenuLabel className="font-normal">
+      {/* ── Profile + disconnect ── */}
+      {onClose ? (
+        // Mobile drawer: profile info + a direct, always-visible logout button
+        // (a dropdown at the very bottom is hard to reach behind the home bar).
+        <div className="space-y-2">
+          {session?.user && (
+            <div className="flex items-center gap-2 rounded-md px-2 py-1.5">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+                {session.user.image ? (
+                  <img src={session.user.image} alt="" className="size-7 rounded-full object-cover" />
+                ) : (
+                  <User className="size-4" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{session.user.name ?? "Mon compte"}</p>
                 <p className="truncate text-xs text-muted-foreground">{session.user.email}</p>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={async () => { clearActiveDriveId(); await signOut({ callbackUrl: "/" }); }}
-                className="text-destructive focus:text-destructive"
-              >
-                <LogOut className="size-4" />
-                Se déconnecter
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="flex-1" />
-        )}
-        <ThemeToggle />
-      </div>
+              </div>
+              <ThemeToggle />
+            </div>
+          )}
+          {session?.user && (
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={async () => { clearActiveDriveId(); await signOut({ callbackUrl: "/" }); }}
+            >
+              <LogOut className="size-4" />
+              Se déconnecter
+            </Button>
+          )}
+        </div>
+      ) : (
+        // Desktop: compact dropdown
+        <div className="flex items-center justify-between gap-2">
+          {session?.user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent/60">
+                  <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+                    {session.user.image ? (
+                      <img src={session.user.image} alt="" className="size-6 rounded-full object-cover" />
+                    ) : (
+                      <User className="size-3.5" />
+                    )}
+                  </div>
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">
+                    {session.user.name ?? session.user.email}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="top" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <p className="truncate text-sm font-medium">{session.user.name ?? "Mon compte"}</p>
+                  <p className="truncate text-xs text-muted-foreground">{session.user.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={async () => { clearActiveDriveId(); await signOut({ callbackUrl: "/" }); }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <LogOut className="size-4" />
+                  Se déconnecter
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex-1" />
+          )}
+          <ThemeToggle />
+        </div>
+      )}
     </>
   );
 }
