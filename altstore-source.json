@@ -13,11 +13,11 @@
       "tintColor": "6366f1",
       "versions": [
         {
-          "version": "1.0.8",
+          "version": "1.0",
           "date": "2026-05-29",
           "downloadURL": "https://github.com/LeVraiLunatix/drivecord-releases/releases/download/ios-latest/Drivecord.ipa",
           "size": 499544,
-          "localizedDescription": "Build #8"
+          "localizedDescription": "Initial release."
         }
       ]
     }

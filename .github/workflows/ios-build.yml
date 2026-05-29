@@ -105,26 +105,18 @@ jobs:
       # ── Update AltStore source version ────────────────────────────────────────
       - name: Update altstore-source.json
         run: |
-          DATE=$(date +%Y-%m-%d)
-          BUILD=${{ github.run_number }}
-          VERSION="1.0.${BUILD}"
           SIZE=$(stat -f%z Drivecord.ipa)
-          # Write updated source using a temp file (avoids shell interpolation issues)
+          DATE=$(date +%Y-%m-%d)
+          # Only update size and date — version must match CFBundleShortVersionString (1.0)
           python3 - <<PYEOF
           import json
           with open('altstore-source.json', encoding='ascii') as f:
               src = json.load(f)
-          src['apps'][0]['versions'] = [{
-              'version': '${VERSION}',
-              'date': '${DATE}',
-              'downloadURL': 'https://github.com/LeVraiLunatix/drivecord-releases/releases/download/ios-latest/Drivecord.ipa',
-              'size': ${SIZE},
-              'localizedDescription': 'Build #${BUILD}'
-          }]
+          src['apps'][0]['versions'][0]['size'] = ${SIZE}
+          src['apps'][0]['versions'][0]['date'] = '${DATE}'
           with open('altstore-source.json', 'w', encoding='ascii') as f:
               json.dump(src, f, indent=2, ensure_ascii=True)
           PYEOF
-          # Validate JSON
           python3 -c "import json; json.load(open('altstore-source.json'))" && echo "JSON valid"
           cat altstore-source.json
 
