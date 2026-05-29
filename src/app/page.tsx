@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import DarkVeil from "@/components/ui/dark-veil";
 import GooeyNav from "@/components/ui/gooey-nav";
+import { AppHomeGate } from "@/components/app-home-gate";
 
 const navItems = [
   { label: "Accueil", href: "/" },
@@ -83,6 +84,7 @@ const steps = [
 
 export default function Home() {
   return (
+    <AppHomeGate>
     <div className="flex min-h-screen flex-col">
       {/* ── Nav ── */}
       <header className="sticky top-0 z-50 overflow-hidden border-b border-border/40 bg-background/80 backdrop-blur-md">
@@ -284,5 +286,6 @@ export default function Home() {
         </div>
       </footer>
     </div>
+    </AppHomeGate>
   );
 }

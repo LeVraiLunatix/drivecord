@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { BackButton } from "@/components/back-button";
 
 function GoogleIcon() {
   return (
@@ -86,7 +87,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-full flex-1 flex-col items-center justify-center px-6 py-12">
+    <div className="relative flex min-h-[100dvh] flex-1 flex-col items-center justify-center px-6 py-12">
+      <div className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))]">
+        <BackButton fallback="/login" />
+      </div>
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-2">

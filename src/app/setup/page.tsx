@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   CheckCircle2,
   CloudUpload,
   ExternalLink,
@@ -23,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { addDriveFromWebhook, useAllDrives } from "@/lib/storage";
 import { pushWebhookToServer } from "@/lib/auth/sync";
+import { BackButton } from "@/components/back-button";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -47,12 +46,10 @@ export default function SetupPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
-      <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link href="/">
-          <ArrowLeft className="size-4" />
-          Retour
-        </Link>
-      </Button>
+      <BackButton
+        fallback={drives && drives.length > 0 ? "/drive" : "/"}
+        className="w-fit"
+      />
 
       <div className="space-y-2">
         <div className="flex items-center gap-2 font-mono text-sm uppercase tracking-wider text-muted-foreground">
