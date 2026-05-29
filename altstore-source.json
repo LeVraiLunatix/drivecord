@@ -19,7 +19,13 @@
           "size": 499544,
           "localizedDescription": "Initial release."
         }
-      ]
+      ],
+      "appPermissions": {
+        "entitlements": [
+          { "name": "get-task-allow" }
+        ],
+        "privacy": []
+      }
     }
   ]
 }
