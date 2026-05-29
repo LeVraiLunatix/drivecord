@@ -15,11 +15,11 @@
       "screenshotURLs": [],
       "versions": [
         {
-          "version": "1.0.0",
+          "version": "1.0.7",
           "date": "2026-05-29",
           "downloadURL": "https://github.com/LeVraiLunatix/discloud/releases/download/ios-latest/Drivecord.ipa",
-          "size": 5000000,
-          "localizedDescription": "Version initiale de Drivecord."
+          "size": 499544,
+          "localizedDescription": "Build automatique #7"
         }
       ],
       "appPermissions": {}
