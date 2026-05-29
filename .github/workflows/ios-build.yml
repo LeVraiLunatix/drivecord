@@ -114,12 +114,12 @@ jobs:
           git clone "https://x-access-token:${GIST_TOKEN}@github.com/LeVraiLunatix/drivecord-releases.git" /tmp/rel
           python3 - <<PYEOF
           import json
-          with open('/tmp/rel/source.json', encoding='ascii') as f:
+          with open('/tmp/rel/source.json', encoding='utf-8') as f:
               src = json.load(f)
           src['apps'][0]['versions'][0]['size'] = ${SIZE}
           src['apps'][0]['versions'][0]['date'] = '${DATE}'
-          with open('/tmp/rel/source.json', 'w', encoding='ascii') as f:
-              json.dump(src, f, indent=2, ensure_ascii=True)
+          with open('/tmp/rel/source.json', 'w', encoding='utf-8') as f:
+              json.dump(src, f, indent=2, ensure_ascii=False)
           PYEOF
           cd /tmp/rel
           git config user.name "github-actions[bot]"
