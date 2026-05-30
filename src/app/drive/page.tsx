@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { DriveSidebar } from "@/components/drive/sidebar";
 import { DriveTopbar } from "@/components/drive/topbar";
+import { CommandPalette } from "@/components/drive/command-palette";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
 import { NewFolderDialog } from "@/components/drive/new-folder-dialog";
 import { RenameDialog } from "@/components/drive/rename-dialog";
@@ -416,6 +417,15 @@ export default function DrivePage() {
           const files = Array.from(e.target.files ?? []);
           if (files.length) handleUploadFiles(files);
           e.target.value = "";
+        }}
+      />
+
+      <CommandPalette
+        onUpload={() => fileInputRef.current?.click()}
+        onNewFolder={() => setNewFolderOpen(true)}
+        onSection={(s) => {
+          if (s === "files") { resetHistory(ROOT_PARENT); }
+          setSection(s);
         }}
       />
 
