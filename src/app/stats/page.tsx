@@ -14,8 +14,15 @@ import {
   Code,
   Table,
   File,
+  Folder,
+  Star,
+  Ruler,
+  Trash2,
+  CalendarClock,
+  Tag,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { formatBytes } from "@/lib/utils/format";
 import { useActiveDrive } from "@/lib/storage";
@@ -24,9 +31,22 @@ import type { FileKind } from "@/lib/utils/file-icons";
 type Stats = {
   fileCount: number;
   totalBytes: number;
+  folderCount: number;
+  favoriteCount: number;
+  avgBytes: number;
+  firstUpload: number | null;
+  lastUpload: number | null;
+  trashedCount: number;
+  trashedBytes: number;
   byKind: { kind: FileKind; count: number; bytes: number }[];
   topFiles: { filename: string; size: number }[];
+  topTags: { tag: string; count: number }[];
+  uploadsByMonth: { month: string; label: string; count: number }[];
 };
+
+function fmtDate(ts: number | null): string {
+  return ts ? new Date(ts).toLocaleDateString("fr", { day: "numeric", month: "short", year: "numeric" }) : "—";
+}
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -52,6 +72,28 @@ const item: Variants = {
   show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
 };
 
+function StatTile({
+  Icon,
+  label,
+  value,
+  sub,
+  color,
+}: {
+  Icon: typeof File;
+  label: string;
+  value: string;
+  sub?: string;
+  color: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border/50 bg-card/40 p-3">
+      <Icon className="size-4" style={{ color }} />
+      <p className="mt-2 truncate text-lg font-bold leading-tight">{value}</p>
+      <p className="truncate text-xs text-muted-foreground">{sub ?? label}</p>
+    </div>
+  );
+}
+
 export default function StatsPage() {
   const reduce = useReducedMotion();
   const v = reduce ? {} : undefined;
@@ -70,6 +112,7 @@ export default function StatsPage() {
 
   const pct = data ? Math.min(100, (data.totalBytes / cap) * 100) : 0;
   const maxKindBytes = data?.byKind[0]?.bytes ?? 1;
+  const maxMonth = Math.max(1, ...(data?.uploadsByMonth.map((m) => m.count) ?? [1]));
 
   return (
     <motion.div
@@ -135,6 +178,84 @@ export default function StatsPage() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Key figures */}
+          <motion.div variants={v ?? item} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile Icon={Folder} label="Dossiers" value={String(data.folderCount)} color="#60a5fa" />
+            <StatTile Icon={Star} label="Favoris" value={String(data.favoriteCount)} color="#fbbf24" />
+            <StatTile Icon={Ruler} label="Taille moy." value={formatBytes(data.avgBytes)} color="#a78bfa" />
+            <StatTile
+              Icon={Trash2}
+              label="Corbeille"
+              value={data.trashedCount > 0 ? formatBytes(data.trashedBytes) : "0"}
+              sub={data.trashedCount > 0 ? `${data.trashedCount} fichier(s)` : undefined}
+              color="#f87171"
+            />
+          </motion.div>
+
+          {/* Date range */}
+          {data.firstUpload && (
+            <motion.div variants={v ?? item}>
+              <Card>
+                <CardContent className="flex items-center gap-3 p-4 text-sm">
+                  <CalendarClock className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="text-muted-foreground">Activité du</span>
+                  <span className="font-medium">{fmtDate(data.firstUpload)}</span>
+                  <span className="text-muted-foreground">au</span>
+                  <span className="font-medium">{fmtDate(data.lastUpload)}</span>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Upload activity (last 6 months) */}
+          {data.fileCount > 0 && (
+            <motion.div variants={v ?? item}>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Ajouts par mois</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex h-32 items-end justify-between gap-2">
+                    {data.uploadsByMonth.map((m) => (
+                      <div key={m.month} className="flex flex-1 flex-col items-center gap-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {m.count > 0 ? m.count : ""}
+                        </span>
+                        <div
+                          className="w-full rounded-t-md bg-gradient-to-t from-indigo-500 to-fuchsia-500 transition-all"
+                          style={{ height: `${Math.max(4, (m.count / maxMonth) * 100)}%`, minHeight: m.count > 0 ? 6 : 2, opacity: m.count > 0 ? 1 : 0.25 }}
+                        />
+                        <span className="text-[10px] uppercase text-muted-foreground/60">{m.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Top tags */}
+          {data.topTags.length > 0 && (
+            <motion.div variants={v ?? item}>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Tag className="size-4 text-muted-foreground" />
+                    Tags les plus utilisés
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-2">
+                  {data.topTags.map((t) => (
+                    <Badge key={t.tag} variant="secondary" className="gap-1.5">
+                      {t.tag}
+                      <span className="text-muted-foreground">{t.count}</span>
+                    </Badge>
+                  ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* By kind */}
           {data.byKind.length > 0 && (
