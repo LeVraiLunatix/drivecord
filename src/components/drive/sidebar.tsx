@@ -8,6 +8,7 @@ import {
   HardDrive,
   LogOut,
   Plus,
+  Settings,
   Star,
   Trash2,
   User,
@@ -174,6 +175,12 @@ function SidebarContent({
           icon={Trash2}
           active={section === "trash"}
           onClick={() => { onSectionChange("trash"); close(); }}
+        />
+        <NavButton
+          label="Paramètres"
+          icon={Settings}
+          active={false}
+          onClick={() => { router.push("/settings"); close(); }}
         />
 
         {allTags && allTags.length > 0 && (
