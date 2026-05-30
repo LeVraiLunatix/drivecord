@@ -20,6 +20,11 @@ import { BackButton } from "@/components/back-button";
 const SOURCE_URL =
   "https://raw.githubusercontent.com/LeVraiLunatix/drivecord-releases/main/source.json";
 
+const IPA_URL =
+  "https://github.com/LeVraiLunatix/drivecord-releases/releases/download/ios-latest/Drivecord.ipa";
+
+const RELEASES_URL = "https://github.com/LeVraiLunatix/drivecord-releases/releases";
+
 const container: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } },
@@ -112,6 +117,42 @@ export default function InstallPage() {
           quelques minutes. C&apos;est gratuit.
         </p>
       </motion.header>
+
+      {/* Direct download */}
+      <motion.div
+        variants={v ?? item}
+        className="rounded-2xl border border-primary/30 bg-gradient-to-br from-indigo-500/10 via-violet-500/10 to-fuchsia-500/10 p-5"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <Download className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold">Télécharger la dernière version</h2>
+            <p className="text-xs text-muted-foreground">
+              Le fichier <code className="font-mono">Drivecord.ipa</code> à sideloader avec AltStore.
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <Button asChild className="gap-2">
+            <a href={IPA_URL}>
+              <Download className="size-4" />
+              Télécharger Drivecord.ipa
+            </a>
+          </Button>
+          <Button asChild variant="outline" className="gap-2">
+            <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer">
+              Toutes les versions
+              <ExternalLink className="size-4" />
+            </a>
+          </Button>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground/70">
+          💡 Le plus simple reste d&apos;ajouter la source AltStore (ci-dessous) — l&apos;app se met
+          alors à jour toute seule. Le téléchargement direct sert pour une install manuelle.
+        </p>
+      </motion.div>
 
       {/* Steps */}
       <div className="space-y-3">
