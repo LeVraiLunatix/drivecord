@@ -16,6 +16,7 @@ import { formatBytes } from "@/lib/utils/format";
 import { kindOf } from "@/lib/utils/file-icons";
 import { useFile } from "@/lib/storage";
 import { useDiscordClient } from "@/lib/discord/context";
+import { RichTextPreview } from "@/components/drive/rich-text-preview";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -386,12 +387,10 @@ export function PreviewModal({
           />
         )}
 
-        {/* Code / Text */}
-        {loadState === "done" && isTextKind(kind) && text !== null && (
-          <div className="h-full w-full overflow-auto rounded border border-white/10 bg-zinc-900/80 p-4 shadow-2xl">
-            <pre className="break-words whitespace-pre-wrap font-mono text-sm leading-relaxed text-zinc-100">
-              {text}
-            </pre>
+        {/* Code / Text / Markdown */}
+        {loadState === "done" && isTextKind(kind) && text !== null && file && (
+          <div className="h-full w-full">
+            <RichTextPreview text={text} filename={file.filename} />
           </div>
         )}
 
