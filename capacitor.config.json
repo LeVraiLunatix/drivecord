@@ -7,8 +7,11 @@
     "cleartext": false,
     "allowNavigation": [
       "drivecord.vercel.app",
+      "discord.com",
       "*.discord.com",
-      "accounts.google.com"
+      "accounts.google.com",
+      "*.google.com",
+      "*.googleusercontent.com"
     ]
   },
   "ios": {
