@@ -8,10 +8,22 @@ import { AppHome } from "@/components/home/app-home";
 
 /**
  * Decides what the root route renders:
- *  - Web                       → {children} (the marketing Landing)
- *  - Native app, logged out    → <AppHome /> (dedicated app welcome screen)
- *  - Native app, authenticated → redirect to /drive (covered by the splash)
+ *  - Authenticated (web or app)  → redirect to /drive (never show the
+ *    logged-out home, which made navigating to "/" look like a logout)
+ *  - Logged-out web              → {children} (marketing Landing)
+ *  - Logged-out app              → <AppHome /> (dedicated welcome screen)
+ *
+ * While the session status is still "loading" we avoid flashing the logged-out
+ * home so an authenticated user never briefly sees the sign-in screen.
  */
+function Spinner() {
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+      <div className="size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+    </div>
+  );
+}
+
 export function AppHomeGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { status } = useSession();
@@ -22,23 +34,21 @@ export function AppHomeGate({ children }: { children: React.ReactNode }) {
     setIsNative(isNativeApp());
   }, []);
 
-  const authedInApp = isNative === true && status === "authenticated";
+  const authed = status === "authenticated";
 
   React.useEffect(() => {
-    if (authedInApp) router.replace("/drive");
-  }, [authedInApp, router]);
+    if (authed) router.replace("/drive");
+  }, [authed, router]);
 
-  if (authedInApp) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
-        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
-      </div>
-    );
+  // Authenticated anywhere → going to /drive.
+  if (authed) return <Spinner />;
+
+  if (isNative === true) {
+    // In the app, don't flash the logged-out welcome until we KNOW the status.
+    if (status === "loading") return <Spinner />;
+    return <AppHome />;
   }
 
-  // Logged-out user inside the native app → dedicated app home.
-  if (isNative === true) return <AppHome />;
-
-  // Web (or not-yet-determined) → marketing landing.
+  // Web: marketing landing for logged-out (and during the brief loading window).
   return <>{children}</>;
 }
