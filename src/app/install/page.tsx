@@ -206,9 +206,11 @@ export default function InstallPage() {
       >
         <MessageCircle className="mt-0.5 size-4 shrink-0 text-primary" />
         <p className="text-sm text-muted-foreground">
-          <strong className="text-foreground">Astuce :</strong> dans l&apos;app, connecte-toi avec
-          <strong> Discord</strong> ou <strong>Google</strong> (ça ouvre ton navigateur préféré, tu
-          te connectes, puis tu reviens dans l&apos;app), ou crée un mot de passe dans les Paramètres.
+          <strong className="text-foreground">Astuce :</strong>{" "}
+          dans l&apos;app, connecte-toi avec <strong>Discord</strong> ou{" "}
+          <strong>Google</strong>{" "}
+          (ça ouvre ton navigateur préféré, tu te connectes, puis tu reviens dans
+          l&apos;app), ou crée un mot de passe dans les Paramètres.
         </p>
       </motion.div>
 
