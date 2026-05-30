@@ -112,12 +112,6 @@ export function CommandPalette({ onUpload, onNewFolder, onSection }: Props) {
   // Keep active index in range.
   React.useEffect(() => { setActive(0); }, [query]);
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((i) => Math.min(i + 1, filtered.length - 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter") { e.preventDefault(); filtered[active]?.run(); }
-  };
-
   // Group the filtered commands, preserving group order of first appearance.
   const groups = React.useMemo(() => {
     const order: string[] = [];
@@ -129,7 +123,18 @@ export function CommandPalette({ onUpload, onNewFolder, onSection }: Props) {
     return order.map((g) => ({ group: g, items: map[g] }));
   }, [filtered]);
 
-  // Flat index → for highlight.
+  // Flattened in the SAME order as rendered (grouped) — keyboard highlight and
+  // Enter must use this, not `filtered`, otherwise the highlighted item and the
+  // executed command get out of sync.
+  const flat = React.useMemo(() => groups.flatMap((g) => g.items), [groups]);
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((i) => Math.min(i + 1, flat.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter") { e.preventDefault(); flat[active]?.run(); }
+  };
+
+  // Flat index → for highlight (matches `flat` / grouped render order).
   let flatIdx = -1;
 
   return (
