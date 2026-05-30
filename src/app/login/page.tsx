@@ -53,6 +53,14 @@ function GoogleIcon() {
   );
 }
 
+function DiscordIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" aria-hidden fill="#5865F2">
+      <path d="M20.317 4.369A19.79 19.79 0 0 0 15.885 3c-.21.375-.444.88-.608 1.283a18.27 18.27 0 0 0-5.487 0A12.6 12.6 0 0 0 9.18 3c-1.57.27-3.07.745-4.434 1.369C1.945 8.533 1.18 12.59 1.56 16.59a19.95 19.95 0 0 0 6.073 3.058c.49-.668.927-1.379 1.302-2.126-.715-.27-1.4-.602-2.046-.99.171-.126.34-.258.501-.394 3.94 1.844 8.198 1.844 12.09 0 .164.139.332.27.5.394-.647.388-1.333.72-2.048.991.375.746.81 1.457 1.302 2.125a19.9 19.9 0 0 0 6.073-3.058c.444-4.64-.764-8.66-3.19-12.221ZM8.02 14.131c-1.182 0-2.157-1.085-2.157-2.42 0-1.334.955-2.42 2.157-2.42 1.21 0 2.176 1.095 2.157 2.42 0 1.335-.955 2.42-2.157 2.42Zm7.96 0c-1.183 0-2.157-1.085-2.157-2.42 0-1.334.955-2.42 2.157-2.42 1.21 0 2.176 1.095 2.157 2.42 0 1.335-.946 2.42-2.157 2.42Z" />
+    </svg>
+  );
+}
+
 function LoginContent() {
   const router = useRouter();
   const params = useSearchParams();
@@ -179,14 +187,20 @@ function LoginContent() {
               </span>
             </div>
 
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogle}
-            >
-              <GoogleIcon />
-              Continuer avec Google
-            </Button>
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full" onClick={handleGoogle}>
+                <GoogleIcon />
+                Continuer avec Google
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => signIn("discord", { callbackUrl })}
+              >
+                <DiscordIcon />
+                Continuer avec Discord
+              </Button>
+            </div>
           </CardContent>
         </Card>
         </motion.div>

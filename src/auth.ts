@@ -6,6 +6,7 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import Discord from "next-auth/providers/discord";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
@@ -21,6 +22,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // to switch accounts kept logging back into the first one.
     Google({
       authorization: { params: { prompt: "select_account" } },
+    }),
+
+    // Discord OAuth — works inside the in-app WebView (unlike Google).
+    // Reads AUTH_DISCORD_ID / AUTH_DISCORD_SECRET. `prompt: consent` forces
+    // the account chooser so users can switch Discord accounts.
+    Discord({
+      authorization: {
+        params: { scope: "identify email", prompt: "consent" },
+      },
     }),
 
     Credentials({
