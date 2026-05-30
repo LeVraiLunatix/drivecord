@@ -165,6 +165,18 @@ export function Landing() {
               <ShieldCheck className="size-3.5" />
               Aucune carte bancaire · Open source
             </motion.p>
+
+            {/* Install app CTA */}
+            <motion.div variants={v ?? item}>
+              <Link
+                href="/install"
+                className="group flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm backdrop-blur-sm transition-colors hover:border-primary/40 hover:bg-card"
+              >
+                <Smartphone className="size-4 text-primary" />
+                <span className="font-medium">Installer l&apos;app iPhone</span>
+                <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </motion.div>
           </motion.div>
         </section>
 

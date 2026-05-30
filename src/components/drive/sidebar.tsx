@@ -9,6 +9,7 @@ import {
   LogOut,
   Plus,
   Settings,
+  Smartphone,
   Star,
   Trash2,
   User,
@@ -181,6 +182,12 @@ function SidebarContent({
           icon={Settings}
           active={false}
           onClick={() => { router.push("/settings"); close(); }}
+        />
+        <NavButton
+          label="Installer l'app"
+          icon={Smartphone}
+          active={false}
+          onClick={() => { router.push("/install"); close(); }}
         />
 
         {allTags && allTags.length > 0 && (
