@@ -110,6 +110,30 @@ jobs:
           echo "IPA size: $(du -sh Drivecord.ipa)"
           echo "ipa_size=$IPA_SIZE" >> $GITHUB_ENV
 
+      # ── Extract the top CHANGELOG.md section as release notes ────────────────
+      - name: Extract changelog
+        id: changelog
+        run: |
+          NOTES=$(CHANGELOG_PATH="$GITHUB_WORKSPACE/CHANGELOG.md" python3 - <<'PY'
+          import os, re
+          notes = "Nouvelle version de Drivecord."
+          try:
+              text = open(os.environ['CHANGELOG_PATH'], encoding='utf-8').read()
+              text = re.sub(r'<!--.*?-->', '', text, flags=re.S)
+              m = re.search(r'^##\s+(.*?)(?=^##\s|\Z)', text, flags=re.S | re.M)
+              if m:
+                  notes = m.group(0).lstrip('#').strip()
+          except Exception:
+              pass
+          print(notes)
+          PY
+          )
+          {
+            echo "notes<<EOF_NOTES"
+            echo "$NOTES"
+            echo "EOF_NOTES"
+          } >> "$GITHUB_OUTPUT"
+
       # ── Update source.json in the PUBLIC repo (version + changelog) ──────────
       # The AltStore source lives at drivecord-releases/source.json.
       # Version = MARKETING_VERSION (must match), so AltStore offers the update.
@@ -167,23 +191,40 @@ jobs:
       # ── GitHub Release dans le repo PUBLIC drivecord-releases ────────────────
       # Le repo privé ne permet pas le téléchargement sans auth.
       # GIST_TOKEN doit avoir le scope public_repo.
-      - name: Create/Update public Release
+      # Rolling "latest" release — stable download URL for the AltStore source.
+      - name: Update rolling latest release
         uses: softprops/action-gh-release@v2
         with:
           repository: LeVraiLunatix/drivecord-releases
           token: ${{ secrets.GIST_TOKEN }}
           tag_name: ios-latest
+          name: "Drivecord (dernière version) — ${{ env.app_version }}"
+          prerelease: false
+          make_latest: false
+          files: Drivecord.ipa
+          body: |
+            Pointe toujours vers la dernière version (${{ env.app_version }}).
+
+            **Source AltStore :** `https://raw.githubusercontent.com/LeVraiLunatix/drivecord-releases/main/source.json`
+
+            ${{ steps.changelog.outputs.notes }}
+
+      # Per-version release — keeps a visible history on GitHub.
+      - name: Create versioned release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: LeVraiLunatix/drivecord-releases
+          token: ${{ secrets.GIST_TOKEN }}
+          tag_name: "v${{ env.app_version }}"
           name: "Drivecord ${{ env.app_version }}"
           prerelease: false
           make_latest: true
           files: Drivecord.ipa
           body: |
-            ### Drivecord ${{ env.app_version }}
+            ${{ steps.changelog.outputs.notes }}
 
-            **Source AltStore :**
-            ```
-            https://raw.githubusercontent.com/LeVraiLunatix/drivecord-releases/main/source.json
-            ```
+            ---
+            **Installer via AltStore :** `https://raw.githubusercontent.com/LeVraiLunatix/drivecord-releases/main/source.json`
 
       # ── Artifact (backup) ─────────────────────────────────────────────────────
       - name: Upload artifact
