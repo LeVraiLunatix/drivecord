@@ -22,6 +22,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // to switch accounts kept logging back into the first one.
     Google({
       authorization: { params: { prompt: "select_account" } },
+      // Link to an existing account with the same (verified) email instead of
+      // failing with OAuthAccountNotLinked. Safe here: Google verifies emails.
+      allowDangerousEmailAccountLinking: true,
     }),
 
     // Discord OAuth — works inside the in-app WebView (unlike Google).
@@ -31,6 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: {
         params: { scope: "identify email", prompt: "consent" },
       },
+      allowDangerousEmailAccountLinking: true,
     }),
 
     Credentials({
