@@ -19,6 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
 import { AuthBackground } from "@/components/auth/auth-background";
+import { oauthSignIn } from "@/lib/auth/oauth";
 
 const container: Variants = {
   hidden: {},
@@ -99,7 +100,7 @@ function LoginContent() {
   };
 
   const handleGoogle = () => {
-    signIn("google", { callbackUrl });
+    oauthSignIn("google", callbackUrl);
   };
 
   const reduce = useReducedMotion();
@@ -195,7 +196,7 @@ function LoginContent() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => signIn("discord", { callbackUrl })}
+                onClick={() => oauthSignIn("discord", callbackUrl)}
               >
                 <DiscordIcon />
                 Continuer avec Discord

@@ -18,6 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
 import { AuthBackground } from "@/components/auth/auth-background";
+import { oauthSignIn } from "@/lib/auth/oauth";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 const container: Variants = {
@@ -212,7 +213,7 @@ export default function RegisterPage() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => signIn("google", { callbackUrl: "/drive" })}
+                onClick={() => oauthSignIn("google", "/drive")}
               >
                 <GoogleIcon />
                 Continuer avec Google
@@ -220,7 +221,7 @@ export default function RegisterPage() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => signIn("discord", { callbackUrl: "/drive" })}
+                onClick={() => oauthSignIn("discord", "/drive")}
               >
                 <DiscordIcon />
                 Continuer avec Discord

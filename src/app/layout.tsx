@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
+import { NativeDeepLink } from "@/components/native-deep-link";
 import "./globals.css";
 
 // Inter = substitut libre le plus proche de "gg sans" (la police de Discord).
@@ -57,6 +58,7 @@ export default function RootLayout({
       className={`${interSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <NativeDeepLink />
         <AuthSessionProvider>
           <ThemeProvider
             attribute="class"
