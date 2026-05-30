@@ -184,18 +184,6 @@ function SidebarContent({
           active={false}
           onClick={() => { router.push("/stats"); close(); }}
         />
-        <NavButton
-          label="Paramètres"
-          icon={Settings}
-          active={false}
-          onClick={() => { router.push("/settings"); close(); }}
-        />
-        <NavButton
-          label="Installer l'app"
-          icon={Smartphone}
-          active={false}
-          onClick={() => { router.push("/install"); close(); }}
-        />
 
         {allTags && allTags.length > 0 && (
           <>
@@ -235,24 +223,38 @@ function SidebarContent({
         </p>
       </div>
 
+      {/* Install the app — just above the account */}
+      <NavButton
+        label="Installer l'app"
+        icon={Smartphone}
+        active={false}
+        onClick={() => { router.push("/install"); close(); }}
+      />
+
       {/* ── Profile + disconnect ── */}
       {onClose ? (
         // Mobile drawer: profile info + a direct, always-visible logout button
         // (a dropdown at the very bottom is hard to reach behind the home bar).
         <div className="space-y-2">
           {session?.user && (
-            <div className="flex items-center gap-2 rounded-md px-2 py-1.5">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
-                {session.user.image ? (
-                  <img src={session.user.image} alt="" className="size-7 rounded-full object-cover" />
-                ) : (
-                  <User className="size-4" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{session.user.name ?? "Mon compte"}</p>
-                <p className="truncate text-xs text-muted-foreground">{session.user.email}</p>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { router.push("/settings"); close(); }}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent/60"
+              >
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+                  {session.user.image ? (
+                    <img src={session.user.image} alt="" className="size-7 rounded-full object-cover" />
+                  ) : (
+                    <User className="size-4" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{session.user.name ?? "Mon compte"}</p>
+                  <p className="truncate text-xs text-muted-foreground">{session.user.email}</p>
+                </div>
+                <Settings className="size-4 shrink-0 text-muted-foreground" />
+              </button>
               <ThemeToggle />
             </div>
           )}
@@ -292,6 +294,10 @@ function SidebarContent({
                   <p className="truncate text-xs text-muted-foreground">{session.user.email}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push("/settings")}>
+                  <Settings className="size-4" />
+                  Paramètres
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => fullSignOut()}
                   className="text-destructive focus:text-destructive"
