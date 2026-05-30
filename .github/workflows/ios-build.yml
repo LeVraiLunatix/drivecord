@@ -8,6 +8,7 @@ on:
       - 'capacitor.config.json'
       - 'ios/**'
       - 'resources/**'
+      - 'CHANGELOG.md'
       - '.github/workflows/ios-build.yml'
 
 permissions:
@@ -55,6 +56,11 @@ jobs:
 
       - name: Build app (unsigned)
         run: |
+          # Auto-incrementing version so AltStore detects each new build.
+          # MUST match the source.json version → set MARKETING_VERSION here too.
+          VERSION="1.0.${{ github.run_number }}"
+          echo "app_version=$VERSION" >> $GITHUB_ENV
+          echo "Building version $VERSION"
           xcodebuild \
             -project ios/App/App.xcodeproj \
             -scheme App \
@@ -65,6 +71,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
             SKIP_INSTALL=NO \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
             build 2>&1 | grep -E "error:|Build succeeded|FAILED|warning:.*error" | tail -20
 
@@ -102,30 +110,58 @@ jobs:
           echo "IPA size: $(du -sh Drivecord.ipa)"
           echo "ipa_size=$IPA_SIZE" >> $GITHUB_ENV
 
-      # ── Update source.json in the PUBLIC repo (size + date) ──────────────────
+      # ── Update source.json in the PUBLIC repo (version + changelog) ──────────
       # The AltStore source lives at drivecord-releases/source.json.
-      # Version stays "1.0" (must match CFBundleShortVersionString).
+      # Version = MARKETING_VERSION (must match), so AltStore offers the update.
+      # Release notes = the top section of CHANGELOG.md (French).
       - name: Update public source.json
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
         run: |
           SIZE=$(stat -f%z Drivecord.ipa)
           DATE=$(date +%Y-%m-%d)
+          VERSION="${{ env.app_version }}"
           git clone "https://x-access-token:${GIST_TOKEN}@github.com/LeVraiLunatix/drivecord-releases.git" /tmp/rel
-          python3 - <<PYEOF
-          import json
+          CHANGELOG_PATH="$GITHUB_WORKSPACE/CHANGELOG.md" \
+          VERSION="$VERSION" SIZE="$SIZE" DATE="$DATE" \
+          python3 - <<'PYEOF'
+          import json, os, re
+
+          # Extract the top changelog entry (first "## " heading + body).
+          notes = "Nouvelle version de Drivecord."
+          try:
+              with open(os.environ['CHANGELOG_PATH'], encoding='utf-8') as f:
+                  text = f.read()
+              # Drop HTML comments.
+              text = re.sub(r'<!--.*?-->', '', text, flags=re.S)
+              m = re.search(r'^##\s+(.*?)(?=^##\s|\Z)', text, flags=re.S | re.M)
+              if m:
+                  notes = m.group(0).lstrip('#').strip()
+          except Exception as e:
+              print("changelog read failed:", e)
+
           with open('/tmp/rel/source.json', encoding='utf-8') as f:
               src = json.load(f)
-          src['apps'][0]['versions'][0]['size'] = ${SIZE}
-          src['apps'][0]['versions'][0]['date'] = '${DATE}'
+          ver = {
+              'version': os.environ['VERSION'],
+              'date': os.environ['DATE'],
+              'downloadURL': 'https://github.com/LeVraiLunatix/drivecord-releases/releases/download/ios-latest/Drivecord.ipa',
+              'size': int(os.environ['SIZE']),
+              'localizedDescription': notes,
+          }
+          # Prepend as newest; keep a short history (max 10).
+          versions = [v for v in src['apps'][0].get('versions', []) if v.get('version') != ver['version']]
+          src['apps'][0]['versions'] = [ver] + versions[:9]
           with open('/tmp/rel/source.json', 'w', encoding='utf-8') as f:
               json.dump(src, f, indent=2, ensure_ascii=False)
+          print("Set version", ver['version'])
+          print(notes[:200])
           PYEOF
           cd /tmp/rel
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add source.json
-          git diff --staged --quiet || git commit -m "chore: update source size/date (build ${{ github.run_number }})"
+          git diff --staged --quiet || git commit -m "release: ${{ env.app_version }}"
           git push || true
 
       # ── GitHub Release dans le repo PUBLIC drivecord-releases ────────────────
@@ -137,16 +173,16 @@ jobs:
           repository: LeVraiLunatix/drivecord-releases
           token: ${{ secrets.GIST_TOKEN }}
           tag_name: ios-latest
-          name: "Drivecord iOS — Build ${{ github.run_number }}"
+          name: "Drivecord ${{ env.app_version }}"
           prerelease: false
           make_latest: true
           files: Drivecord.ipa
           body: |
-            ### Drivecord iOS — Build ${{ github.run_number }}
+            ### Drivecord ${{ env.app_version }}
 
             **Source AltStore :**
             ```
-            https://gist.githubusercontent.com/LeVraiLunatix/675fae65b1a5de3c86eb9b82c511e83b/raw/gistfile1.txt
+            https://raw.githubusercontent.com/LeVraiLunatix/drivecord-releases/main/source.json
             ```
 
       # ── Artifact (backup) ─────────────────────────────────────────────────────
