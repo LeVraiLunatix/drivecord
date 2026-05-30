@@ -21,7 +21,7 @@ const SOURCE_URL =
   "https://raw.githubusercontent.com/LeVraiLunatix/drivecord-releases/main/source.json";
 
 const IPA_URL =
-  "https://github.com/LeVraiLunatix/drivecord-releases/releases/download/ios-latest/Drivecord.ipa";
+  "https://github.com/LeVraiLunatix/drivecord-releases/releases/latest/download/Drivecord.ipa";
 
 const RELEASES_URL = "https://github.com/LeVraiLunatix/drivecord-releases/releases";
 
