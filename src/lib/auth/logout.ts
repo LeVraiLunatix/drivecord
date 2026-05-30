@@ -11,9 +11,12 @@ import { wipeLocalDrives } from "@/lib/storage/drives";
  */
 export async function fullSignOut(): Promise<void> {
   // Drop every SWR cache entry (no revalidation).
-  await mutate(() => true, undefined, { revalidate: false });
+  await mutate(() => true, undefined, { revalidate: false }).catch(() => {});
   // Wipe local IndexedDB drives + active selection.
   await wipeLocalDrives().catch(() => {});
-  // End the session.
-  await signOut({ callbackUrl: "/" });
+  // End the session WITHOUT next-auth's own redirect…
+  await signOut({ redirect: false }).catch(() => {});
+  // …then hard-reload to "/" so every in-memory cache (SessionProvider, SWR,
+  // React state) is fully discarded. Guarantees the next account starts clean.
+  window.location.href = "/";
 }
