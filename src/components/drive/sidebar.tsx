@@ -153,12 +153,6 @@ function SidebarContent({
             <Plus className="size-4" />
             Ajouter un drive
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => fullSignOut()}
-          >
-            <LogOut className="size-4" />
-            Se déconnecter
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
