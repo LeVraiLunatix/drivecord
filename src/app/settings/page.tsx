@@ -24,6 +24,7 @@ import {
   Moon,
   Sun,
   CalendarDays,
+  ShieldCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ type Account = {
   providers: string[];
   webhookCount: number;
   createdAt: number;
+  isAdmin: boolean;
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -112,6 +114,12 @@ export default function SettingsPage() {
       <motion.div variants={v ?? item}>
         <DrivesSection />
       </motion.div>
+
+      {account?.isAdmin && (
+        <motion.div variants={v ?? item}>
+          <AdminSection />
+        </motion.div>
+      )}
 
       <motion.div variants={v ?? item}>
         <PreferencesSection />
@@ -421,6 +429,31 @@ function DriveRow({ drive }: { drive: Drive }) {
         </p>
       )}
     </div>
+  );
+}
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+function AdminSection() {
+  const router = useRouter();
+  return (
+    <Card className="border-primary/30">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ShieldCheck className="size-4 text-primary" />
+          Administration
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Tu es administrateur. Gère tous les comptes du site.
+        </p>
+        <Button className="w-full gap-2 sm:w-auto" onClick={() => router.push("/admin")}>
+          <ShieldCheck className="size-4" />
+          Gérer les comptes
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { isAdminEmail } from "@/lib/auth/admin";
 
 export async function GET() {
   const session = await auth();
@@ -40,6 +41,7 @@ export async function GET() {
     providers: user.accounts.map((a) => a.provider),
     webhookCount: user._count.webhooks,
     createdAt: user.createdAt.getTime(),
+    isAdmin: isAdminEmail(user.email),
   });
 }
 
