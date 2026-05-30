@@ -163,7 +163,7 @@ export function Landing() {
 
             <motion.p variants={v ?? item} className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
               <ShieldCheck className="size-3.5" />
-              Aucune carte bancaire · Local-first · Open source
+              Aucune carte bancaire · Open source
             </motion.p>
           </motion.div>
         </section>

@@ -72,6 +72,19 @@ export async function removeDriveMetadata(id: string): Promise<void> {
   if (getActiveDriveId() === id) clearActiveDriveId();
 }
 
+/**
+ * Wipe ALL local drive data (drives + shares) and clear the active selection.
+ * Called on sign-out so the next account never sees the previous account's
+ * webhooks/files before the server reconciliation runs.
+ */
+export async function wipeLocalDrives(): Promise<void> {
+  await db().transaction("rw", [db().drives, db().shares], async () => {
+    await db().shares.clear();
+    await db().drives.clear();
+  });
+  clearActiveDriveId();
+}
+
 // --- Active drive (current selection) ---
 
 export function getActiveDriveId(): string | null {

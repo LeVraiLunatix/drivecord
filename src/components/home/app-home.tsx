@@ -131,7 +131,7 @@ export function AppHome() {
           </Button>
         </motion.div>
         <motion.p variants={v ?? item} className="mt-4 text-center text-xs text-muted-foreground/60">
-          Aucune carte bancaire · Local-first
+          Aucune carte bancaire · Sans abonnement
         </motion.p>
       </motion.div>
     </div>

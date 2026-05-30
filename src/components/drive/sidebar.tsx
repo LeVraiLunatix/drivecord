@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { fullSignOut } from "@/lib/auth/logout";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +31,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
 import {
-  clearActiveDriveId,
   setActiveDriveId,
   useActiveDrive,
   useAllDrives,
@@ -154,7 +154,7 @@ function SidebarContent({
             Ajouter un drive
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={async () => { clearActiveDriveId(); await signOut({ callbackUrl: "/" }); }}
+            onClick={() => fullSignOut()}
           >
             <LogOut className="size-4" />
             Se déconnecter
@@ -245,7 +245,7 @@ function SidebarContent({
             <Button
               variant="outline"
               className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={async () => { clearActiveDriveId(); await signOut({ callbackUrl: "/" }); }}
+              onClick={() => fullSignOut()}
             >
               <LogOut className="size-4" />
               Se déconnecter
@@ -278,7 +278,7 @@ function SidebarContent({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={async () => { clearActiveDriveId(); await signOut({ callbackUrl: "/" }); }}
+                  onClick={() => fullSignOut()}
                   className="text-destructive focus:text-destructive"
                 >
                   <LogOut className="size-4" />

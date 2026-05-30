@@ -16,7 +16,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // JWT strategy required when using Credentials provider alongside an adapter
   session: { strategy: "jwt" },
   providers: [
-    Google,
+    // Force Google to always show the account chooser. Without this, the
+    // in-app WebView silently re-signs in the last Google account, so trying
+    // to switch accounts kept logging back into the first one.
+    Google({
+      authorization: { params: { prompt: "select_account" } },
+    }),
 
     Credentials({
       credentials: {
