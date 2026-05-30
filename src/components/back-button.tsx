@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * Reusable back button. Uses browser history when available, otherwise
- * navigates to `fallback`. Especially useful in the native app where there's
- * no browser chrome / hardware back button on iOS.
+ * Reusable back button. Navigates straight to `fallback` (the logical parent
+ * of the page) for predictable behaviour — `router.back()` was sending users
+ * to unexpected pages depending on their navigation history.
  */
 export function BackButton({
   fallback = "/",
@@ -23,12 +23,7 @@ export function BackButton({
   const router = useRouter();
 
   const onClick = React.useCallback(() => {
-    // history.length > 1 means there's somewhere to go back to.
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push(fallback);
-    }
+    router.push(fallback);
   }, [router, fallback]);
 
   return (
