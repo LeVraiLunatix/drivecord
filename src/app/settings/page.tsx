@@ -244,6 +244,11 @@ function SecuritySection({ account, onUpdate }: { account?: Account; onUpdate: (
   const [busy, setBusy] = React.useState(false);
   const hasPassword = account?.hasPassword;
 
+  // Human-readable list of the OAuth providers this account uses.
+  const providerLabel = (account?.providers ?? [])
+    .map((p) => (p === "google" ? "Google" : p === "discord" ? "Discord" : p))
+    .join(" et ");
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (next !== confirm) {
@@ -281,7 +286,7 @@ function SecuritySection({ account, onUpdate }: { account?: Account; onUpdate: (
         <form onSubmit={submit} className="space-y-3">
           {!hasPassword && (
             <p className="rounded-md bg-primary/10 px-3 py-2 text-xs text-muted-foreground">
-              Ton compte utilise Google. Définis un mot de passe pour aussi te connecter par email.
+              Ton compte utilise {providerLabel || "une connexion externe"}. Définis un mot de passe pour aussi te connecter par email.
             </p>
           )}
           {hasPassword && (
