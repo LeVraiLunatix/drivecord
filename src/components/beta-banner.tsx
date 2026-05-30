@@ -8,7 +8,10 @@ import { Construction } from "lucide-react";
  */
 export function BetaBanner() {
   return (
-    <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500/15 via-violet-500/15 to-fuchsia-500/15 px-4 py-1.5 text-center text-xs text-muted-foreground">
+    <div
+      className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500/15 via-violet-500/15 to-fuchsia-500/15 px-4 py-1.5 text-center text-xs text-muted-foreground"
+      style={{ paddingTop: "max(0.375rem, env(safe-area-inset-top))" }}
+    >
       <Construction className="size-3.5 shrink-0 text-primary" />
       <span>
         <strong className="font-medium text-foreground">Version bêta</strong>

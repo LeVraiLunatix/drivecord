@@ -45,7 +45,10 @@ export default function SetupPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 px-6 pb-12 pt-6">
+    <div
+      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 px-6 pb-12"
+      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
+    >
       <BackButton
         fallback={drives && drives.length > 0 ? "/drive" : "/"}
         className="w-fit"

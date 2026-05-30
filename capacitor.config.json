@@ -12,7 +12,7 @@
     ]
   },
   "ios": {
-    "contentInset": "automatic",
+    "contentInset": "never",
     "backgroundColor": "#0a0a0a",
     "preferredContentMode": "mobile",
     "scrollEnabled": true

@@ -103,7 +103,7 @@ export default function RegisterPage() {
   return (
     <div className="relative flex min-h-[100dvh] flex-col">
       <AuthBackground />
-      <div className="absolute left-3 top-3 z-10">
+      <div className="absolute left-3 z-10" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
         <BackButton fallback="/login" />
       </div>
       <motion.div
