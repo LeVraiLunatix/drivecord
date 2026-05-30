@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  BarChart3,
   Check,
   ChevronsUpDown,
   CloudUpload,
@@ -176,6 +177,12 @@ function SidebarContent({
           icon={Trash2}
           active={section === "trash"}
           onClick={() => { onSectionChange("trash"); close(); }}
+        />
+        <NavButton
+          label="Statistiques"
+          icon={BarChart3}
+          active={false}
+          onClick={() => { router.push("/stats"); close(); }}
         />
         <NavButton
           label="Paramètres"
