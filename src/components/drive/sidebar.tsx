@@ -173,16 +173,16 @@ function SidebarContent({
           onClick={() => { onSectionChange("favorites"); close(); }}
         />
         <NavButton
-          label="Corbeille"
-          icon={Trash2}
-          active={section === "trash"}
-          onClick={() => { onSectionChange("trash"); close(); }}
-        />
-        <NavButton
           label="Statistiques"
           icon={BarChart3}
           active={false}
           onClick={() => { router.push("/stats"); close(); }}
+        />
+        <NavButton
+          label="Corbeille"
+          icon={Trash2}
+          active={section === "trash"}
+          onClick={() => { onSectionChange("trash"); close(); }}
         />
 
         {allTags && allTags.length > 0 && (
