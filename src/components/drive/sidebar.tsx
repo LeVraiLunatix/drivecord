@@ -75,9 +75,8 @@ export function DriveSidebar(props: Props) {
         >
           <SheetTitle className="sr-only">Menu</SheetTitle>
           <div
-            className="flex flex-1 flex-col gap-4 overflow-y-auto px-4"
+            className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-12"
             style={{
-              paddingTop: "max(3.25rem, calc(env(safe-area-inset-top) + 1rem))",
               paddingBottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))",
             }}
           >

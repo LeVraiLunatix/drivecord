@@ -61,8 +61,7 @@ export function ConditionsContent() {
       variants={v ?? container}
       initial="hidden"
       animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-8 px-6 pb-16"
-      style={{ paddingTop: "max(3rem, calc(env(safe-area-inset-top) + 1rem))" }}
+      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-8 px-6 pb-16 pt-6"
     >
       <motion.div variants={v ?? item}>
         <BackButton fallback="/" className="w-fit" />
