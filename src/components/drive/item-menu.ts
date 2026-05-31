@@ -7,6 +7,7 @@ import type { DriveItem } from "@/lib/storage";
 export type ItemAction =
   | "open"
   | "download"
+  | "share"
   | "rename"
   | "favorite"
   | "lock"
@@ -29,6 +30,9 @@ export function buildItemMenu(item: DriveItem): MenuEntry[] {
     },
   ];
   if (!isFolder) {
+    if (!item.locked) {
+      entries.push({ kind: "item", label: "Partager par lien…", action: "share" });
+    }
     entries.push({
       kind: "item",
       label: item.favorite ? "Retirer des favoris" : "Mettre en favori",

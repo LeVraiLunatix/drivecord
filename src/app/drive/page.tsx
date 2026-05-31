@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { DriveSidebar } from "@/components/drive/sidebar";
 import { DriveTopbar } from "@/components/drive/topbar";
 import { CommandPalette } from "@/components/drive/command-palette";
+import { ShareDialog } from "@/components/drive/share-dialog";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
 import { createFolder } from "@/lib/storage";
 import { downloadItemsAsZip } from "@/lib/download-zip";
@@ -134,6 +135,7 @@ export default function DrivePage() {
   const [moveTarget, setMoveTarget] = React.useState<DriveItem | null>(null);
   const [tagTarget, setTagTarget] = React.useState<DriveItem | null>(null);
   const [colorTarget, setColorTarget] = React.useState<DriveItem | null>(null);
+  const [shareTarget, setShareTarget] = React.useState<DriveItem | null>(null);
   const [previewFileId, setPreviewFileId] = React.useState<string | null>(null);
   const [bulkDeleteItems, setBulkDeleteItems] = React.useState<DriveItem[]>([]);
   const [bulkMoveItems, setBulkMoveItems] = React.useState<DriveItem[]>([]);
@@ -280,6 +282,7 @@ export default function DrivePage() {
       if (action === "move") { setMoveTarget(item); return; }
       if (action === "tag") { setTagTarget(item); return; }
       if (action === "color") { setColorTarget(item); return; }
+      if (action === "share") { setShareTarget(item); return; }
       if (action === "favorite" && item.kind === "file") {
         try { await setFavorite(item.driveId, item.id, !item.favorite); }
         catch (err) { toast.error((err as Error).message); }
@@ -555,6 +558,7 @@ export default function DrivePage() {
       />
       <TagDialog item={tagTarget} onOpenChange={(open) => !open && setTagTarget(null)} />
       <ColorPickerDialog item={colorTarget} onOpenChange={(open) => !open && setColorTarget(null)} />
+      <ShareDialog item={shareTarget} onOpenChange={(open) => !open && setShareTarget(null)} />
       <BulkDeleteDialog
         items={bulkDeleteItems}
         permanent={section === "trash"}

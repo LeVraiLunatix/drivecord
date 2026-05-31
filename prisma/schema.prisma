@@ -91,8 +91,25 @@ model Webhook {
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   files   DriveFile[]
   folders DriveFolder[]
+  shares  Share[]
 
   @@unique([userId, driveId])
+}
+
+/// A public share link for a single file.
+model Share {
+  token        String    @id
+  webhookId    String
+  fileId       String
+  /// bcrypt hash of the optional access password (null = no password)
+  passwordHash String?
+  expiresAt    DateTime?
+  downloads    Int       @default(0)
+  createdAt    DateTime  @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
 }
 
 // ── Drive content (files + folders) ──────────────────────────────────────────
