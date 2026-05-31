@@ -28,7 +28,7 @@ export function DriveBreadcrumbs({
   return (
     <nav
       aria-label="Fil d'Ariane"
-      className="flex items-center gap-1 text-sm"
+      className="flex items-center gap-1 overflow-x-auto whitespace-nowrap text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <BreadcrumbButton
         targetId={ROOT_PARENT}
@@ -36,12 +36,12 @@ export function DriveBreadcrumbs({
         onDropItem={onDropItem}
         active={currentFolderId === ROOT_PARENT}
       >
-        <HardDrive className="size-3.5" />
+        <HardDrive className="size-3.5 shrink-0" />
         Mon drive
       </BreadcrumbButton>
       {(path ?? []).map((f, i) => (
-        <div key={f.id} className="flex items-center gap-1">
-          <ChevronRight className="size-3.5 text-muted-foreground" />
+        <div key={f.id} className="flex shrink-0 items-center gap-1">
+          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
           <BreadcrumbButton
             targetId={f.id}
             onClick={() => onNavigate(f.id)}
