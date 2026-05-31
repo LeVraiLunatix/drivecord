@@ -295,7 +295,10 @@ export function PreviewModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
+      <div
+        className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3"
+        style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+      >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-white">{file?.filename ?? "…"}</p>
           {file && <p className="text-xs text-white/40">{formatBytes(file.size)}</p>}
@@ -437,7 +440,10 @@ export function PreviewModal({
 
       {/* Bottom counter */}
       {siblings.length > 1 && currentIdx !== -1 && (
-        <div className="shrink-0 pb-3 text-center text-xs text-white/30 select-none">
+        <div
+          className="shrink-0 pb-3 text-center text-xs text-white/30 select-none"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
           {currentIdx + 1} / {siblings.length}
         </div>
       )}
