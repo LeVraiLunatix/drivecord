@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { biometryAvailable, runBiometric } from "@/lib/biometric";
+import { deriveVaultKey } from "@/lib/crypto/vault-crypto";
+import { setVaultKey } from "@/lib/crypto/vault-key-store";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -66,7 +68,9 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Échec");
-      toast.success("Code du coffre défini 🔒");
+      // Derive + hold the encryption key for this session.
+      if (d.salt) setVaultKey(await deriveVaultKey(pin, d.salt));
+      toast.success("Coffre-fort créé et chiffré 🔒");
       await mutate();
       onUnlock();
     } catch (err) { toast.error((err as Error).message); }
@@ -83,8 +87,10 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
         body: JSON.stringify({ pin }),
       });
       const d = await res.json();
-      if (d.ok) { onUnlock(); }
-      else { toast.error("Code incorrect"); setPin(""); }
+      if (d.ok) {
+        if (d.salt) setVaultKey(await deriveVaultKey(pin, d.salt));
+        onUnlock();
+      } else { toast.error("Code incorrect"); setPin(""); }
     } catch { toast.error("Erreur"); }
     finally { setBusy(false); }
   };

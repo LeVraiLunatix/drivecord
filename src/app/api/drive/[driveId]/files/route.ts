@@ -24,6 +24,8 @@ export async function POST(
     chunkSize: number;
     chunks: ChunkRef[];
     tags?: string[];
+    locked?: boolean;
+    encIv?: string | null;
   };
 
   const row = await prisma.driveFile.create({
@@ -38,6 +40,8 @@ export async function POST(
       chunkSize: body.chunkSize,
       chunks: body.chunks,
       tags: body.tags ?? [],
+      locked: body.locked ?? false,
+      encIv: body.encIv ?? null,
     },
   });
 

@@ -3,6 +3,7 @@
 import JSZip from "jszip";
 import type { DiscordClient } from "@/lib/discord/client";
 import type { DriveItem } from "@/lib/storage";
+import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 
 /** Fetch the (non-trashed) items inside a folder. */
 async function listFolderItems(driveId: string, parentId: string): Promise<DriveItem[]> {
@@ -24,13 +25,14 @@ async function addItems(
 ): Promise<void> {
   for (const item of items) {
     if (item.kind === "file") {
-      const blob = await client.downloadFile({
+      const raw = await client.downloadFile({
         size: item.size,
         mimeType: item.mimeType,
         filename: item.filename,
         chunkSize: item.chunkSize,
         chunks: item.chunks,
       });
+      const blob = await maybeDecrypt(raw, item);
       zip.file(prefix + item.filename, blob);
       onFile();
     } else {

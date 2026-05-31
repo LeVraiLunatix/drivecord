@@ -10,6 +10,8 @@ import { CommandPalette } from "@/components/drive/command-palette";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
 import { createFolder } from "@/lib/storage";
 import { downloadItemsAsZip } from "@/lib/download-zip";
+import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
+import { getVaultKey, clearVaultKey } from "@/lib/crypto/vault-key-store";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
 import { NewFolderDialog } from "@/components/drive/new-folder-dialog";
 import { RenameDialog } from "@/components/drive/rename-dialog";
@@ -155,11 +157,12 @@ export default function DrivePage() {
   const taggedItems = useFilesByTag(driveId, activeTag);
   const vaultItems = useVaultItems(driveId, section === "vault" && vaultUnlocked);
 
-  // Re-lock the vault whenever we leave its section or switch drive.
+  // Re-lock the vault (and forget the encryption key) when we leave its
+  // section or switch drive.
   React.useEffect(() => {
-    if (section !== "vault") setVaultUnlocked(false);
+    if (section !== "vault") { setVaultUnlocked(false); clearVaultKey(); }
   }, [section]);
-  React.useEffect(() => { setVaultUnlocked(false); }, [driveId]);
+  React.useEffect(() => { setVaultUnlocked(false); clearVaultKey(); }, [driveId]);
 
   const displayedItems = React.useMemo(() => {
     const base =
@@ -193,6 +196,19 @@ export default function DrivePage() {
       const onUploaded = (item: { fileName: string }) =>
         toast.success(`« ${item.fileName} » uploadé`);
 
+      // Uploading inside the unlocked vault → encrypt + lock (flattened, no
+      // folder structure to avoid leaking folder names outside the vault).
+      const vaultKey = section === "vault" && vaultUnlocked ? getVaultKey() : null;
+      if (vaultKey) {
+        enqueue({
+          files: entries.map((e) => e.file),
+          driveId, parentId: base, client,
+          encryptKey: vaultKey,
+          onUploaded: (item) => toast.success(`« ${item.fileName} » chiffré 🔒`),
+        });
+        return;
+      }
+
       // Flat upload (no folders) — keep the simple path.
       const hasFolders = entries.some((e) => e.path !== "");
       if (!hasFolders) {
@@ -220,7 +236,7 @@ export default function DrivePage() {
         toast.error("Échec de l'import du dossier");
       }
     },
-    [activeDrive, client, currentFolderId, enqueue],
+    [activeDrive, client, currentFolderId, enqueue, section, vaultUnlocked],
   );
 
   const handleMoveTo = React.useCallback(
@@ -273,10 +289,11 @@ export default function DrivePage() {
         if (!client) { toast.error("Client Discord indisponible"); return; }
         toast.info(`Téléchargement de « ${item.filename} »…`);
         try {
-          const blob = await client.downloadFile({
+          const raw = await client.downloadFile({
             size: item.size, mimeType: item.mimeType,
             filename: item.filename, chunkSize: item.chunkSize, chunks: item.chunks,
           });
+          const blob = await maybeDecrypt(raw, item);
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url; a.download = item.filename; a.click();

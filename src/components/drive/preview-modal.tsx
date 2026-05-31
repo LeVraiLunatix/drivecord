@@ -17,6 +17,7 @@ import { kindOf } from "@/lib/utils/file-icons";
 import { useFile } from "@/lib/storage";
 import { useDiscordClient } from "@/lib/discord/context";
 import { RichTextPreview } from "@/components/drive/rich-text-preview";
+import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -193,9 +194,11 @@ export function PreviewModal({
         chunkSize: file.chunkSize,
         chunks: file.chunks,
       })
-      .then(async (blob) => {
+      .then(async (downloaded) => {
         if (cancelled) return;
 
+        // Decrypt vault files transparently (no-op for normal files).
+        const blob = await maybeDecrypt(downloaded, file);
         let finalBlob = blob;
         const ext = getExt(file.filename);
 

@@ -22,6 +22,8 @@ model User {
   password      String?
   /// bcrypt hash of the vault PIN — null until the user sets one
   vaultPin      String?
+  /// base64 PBKDF2 salt used to derive the vault encryption key from the PIN
+  vaultSalt     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -111,6 +113,8 @@ model DriveFile {
   tags      String[]
   favorite  Boolean   @default(false)
   locked    Boolean   @default(false)
+  /// base64 AES-GCM IV — present iff the file content is E2EE encrypted
+  encIv     String?
   trashed   Boolean   @default(false)
   trashedAt DateTime?
   createdAt DateTime  @default(now())

@@ -26,6 +26,9 @@ export async function recordUploadedFile(args: {
   parentId: ParentId | null;
   manifest: FileManifest;
   tags?: string[];
+  /** Set when the file was E2EE-encrypted before upload (vault). */
+  locked?: boolean;
+  encIv?: string;
 }): Promise<string> {
   const id = nanoid(12);
   await apiFetch(`/api/drive/${args.driveId}/files`, {
@@ -39,6 +42,8 @@ export async function recordUploadedFile(args: {
       chunkSize: args.manifest.chunkSize,
       chunks: args.manifest.chunks,
       tags: args.tags ?? [],
+      locked: args.locked ?? false,
+      encIv: args.encIv ?? null,
     }),
   });
   invalidateDrive(args.driveId);

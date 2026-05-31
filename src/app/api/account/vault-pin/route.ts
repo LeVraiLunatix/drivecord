@@ -6,6 +6,7 @@
  * POST  → { pin } → { ok }        — verify the PIN (to unlock the vault)
  */
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -15,9 +16,9 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { vaultPin: true },
+    select: { vaultPin: true, vaultSalt: true },
   });
-  return NextResponse.json({ hasPin: Boolean(user?.vaultPin) });
+  return NextResponse.json({ hasPin: Boolean(user?.vaultPin), salt: user?.vaultSalt ?? null });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -31,7 +32,7 @@ export async function PATCH(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { vaultPin: true },
+    select: { vaultPin: true, vaultSalt: true },
   });
   if (user?.vaultPin) {
     if (!currentPin || !(await bcrypt.compare(currentPin, user.vaultPin))) {
@@ -40,8 +41,14 @@ export async function PATCH(req: NextRequest) {
   }
 
   const hash = await bcrypt.hash(newPin, 10);
-  await prisma.user.update({ where: { id: session.user.id }, data: { vaultPin: hash } });
-  return NextResponse.json({ ok: true });
+  // Create the encryption salt once (keeping it stable so existing encrypted
+  // files stay decryptable). Derives the vault key together with the PIN.
+  const salt = user?.vaultSalt ?? crypto.randomBytes(16).toString("base64");
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { vaultPin: hash, vaultSalt: salt },
+  });
+  return NextResponse.json({ ok: true, salt });
 }
 
 export async function POST(req: NextRequest) {
@@ -51,9 +58,9 @@ export async function POST(req: NextRequest) {
   const { pin } = (await req.json()) as { pin?: string };
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { vaultPin: true },
+    select: { vaultPin: true, vaultSalt: true },
   });
   if (!user?.vaultPin || !pin) return NextResponse.json({ ok: false });
   const ok = await bcrypt.compare(pin, user.vaultPin);
-  return NextResponse.json({ ok });
+  return NextResponse.json({ ok, salt: ok ? user.vaultSalt : null });
 }

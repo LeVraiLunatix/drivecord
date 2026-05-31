@@ -28,6 +28,7 @@ type PrismaFile = {
   id: string; webhookId: string; driveId: string; parentId: string;
   filename: string; size: number; mimeType: string; chunkSize: number;
   chunks: unknown; tags: string[]; favorite: boolean; locked: boolean;
+  encIv: string | null;
   trashed: boolean; trashedAt: Date | null;
   createdAt: Date; updatedAt: Date;
 };
@@ -51,6 +52,7 @@ export function toFileEntry(row: PrismaFile): FileEntry {
     tags: row.tags,
     favorite: row.favorite,
     locked: row.locked,
+    encIv: row.encIv ?? undefined,
     trashed: row.trashed,
     trashedAt: row.trashedAt?.getTime(),
     createdAt: row.createdAt.getTime(),

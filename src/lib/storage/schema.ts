@@ -78,6 +78,8 @@ export type FileEntry = {
   favorite: boolean;
   /** In the locked vault (hidden from normal views, requires PIN/biometric). */
   locked?: boolean;
+  /** base64 AES-GCM IV — present iff the file content is E2EE encrypted. */
+  encIv?: string;
   /** Soft delete flag. */
   trashed: boolean;
   trashedAt?: number;
