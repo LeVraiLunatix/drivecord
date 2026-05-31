@@ -94,6 +94,16 @@ export function useFavorites(driveId: string | null): DriveItem[] | undefined {
   return data?.items as DriveItem[] | undefined;
 }
 
+/** Locked files in the vault. Pass enabled=false to skip fetching until unlocked. */
+export function useVaultItems(driveId: string | null, enabled = true): DriveItem[] | undefined {
+  const { data } = useSWR(
+    driveId && enabled ? `/api/drive/${driveId}/items?view=vault` : null,
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+  return data?.items as DriveItem[] | undefined;
+}
+
 /** All trashed items in a drive. */
 export function useTrashedItems(driveId: string | null): DriveItem[] | undefined {
   const { data } = useSWR(

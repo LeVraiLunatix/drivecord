@@ -26,10 +26,19 @@ export async function GET(
   const search = sp.get("search");
   const parentId = sp.get("parentId") ?? "";
 
+  // ── Vault (locked files) ────────────────────────────────────────────────────
+  if (view === "vault") {
+    const files = await prisma.driveFile.findMany({
+      where: { webhookId: webhook.id, locked: true, trashed: false },
+      orderBy: { filename: "asc" },
+    });
+    return NextResponse.json({ items: files.map((f) => ({ kind: "file", ...toFileEntry(f) })) });
+  }
+
   // ── Favorites ─────────────────────────────────────────────────────────────
   if (view === "favorites") {
     const files = await prisma.driveFile.findMany({
-      where: { webhookId: webhook.id, favorite: true, trashed: false },
+      where: { webhookId: webhook.id, favorite: true, locked: false, trashed: false },
       orderBy: { filename: "asc" },
     });
     return NextResponse.json({ items: files.map((f) => ({ kind: "file", ...toFileEntry(f) })) });
@@ -57,7 +66,7 @@ export async function GET(
   // ── Tag filter ─────────────────────────────────────────────────────────────
   if (tag) {
     const files = await prisma.driveFile.findMany({
-      where: { webhookId: webhook.id, tags: { has: tag }, trashed: false },
+      where: { webhookId: webhook.id, tags: { has: tag }, locked: false, trashed: false },
       orderBy: { filename: "asc" },
     });
     return NextResponse.json({ items: files.map((f) => ({ kind: "file", ...toFileEntry(f) })) });
@@ -69,7 +78,7 @@ export async function GET(
     const [files, folders] = await Promise.all([
       prisma.driveFile.findMany({
         where: {
-          webhookId: webhook.id, trashed: false,
+          webhookId: webhook.id, trashed: false, locked: false,
           filename: { contains: q, mode: "insensitive" },
         },
         orderBy: { filename: "asc" },
@@ -98,7 +107,7 @@ export async function GET(
       orderBy: { name: "asc" },
     }),
     prisma.driveFile.findMany({
-      where: { webhookId: webhook.id, parentId, trashed: false },
+      where: { webhookId: webhook.id, parentId, trashed: false, locked: false },
       orderBy: { filename: "asc" },
     }),
   ]);

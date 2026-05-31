@@ -24,7 +24,8 @@ import { UploadDropzone } from "@/components/drive/upload-dropzone";
 import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
 import FloatingActionMenu from "@/components/ui/floating-action-menu";
-import { FolderPlus, FolderUp, Star, Tag, Trash2, Upload } from "lucide-react";
+import { FolderPlus, FolderUp, Lock, Star, Tag, Trash2, Upload } from "lucide-react";
+import { VaultGate } from "@/components/drive/vault-gate";
 
 import { useDiscordClient } from "@/lib/discord/context";
 import { useUploadQueue } from "@/lib/upload-queue";
@@ -32,6 +33,7 @@ import { useViewPrefs } from "@/lib/view-prefs";
 import {
   ROOT_PARENT,
   setFavorite,
+  setLocked,
   hardDeleteFile,
   hardDeleteFolderSubtree,
   trashFile,
@@ -44,13 +46,14 @@ import {
   useActiveDriveId,
   useDriveItems,
   useFavorites,
+  useVaultItems,
   useTrashedItems,
   useFilesByTag,
   type DriveItem,
   type ParentId,
 } from "@/lib/storage";
 
-type Section = "files" | "favorites" | "trash" | "tag";
+type Section = "files" | "favorites" | "vault" | "trash" | "tag";
 
 export default function DrivePage() {
   const router = useRouter();
@@ -145,15 +148,24 @@ export default function DrivePage() {
   }, [mounted, activeDriveId, router]);
 
   const driveId = activeDrive?.id ?? null;
+  const [vaultUnlocked, setVaultUnlocked] = React.useState(false);
   const items      = useDriveItems(driveId, currentFolderId);
   const favorites  = useFavorites(driveId);
   const trashed    = useTrashedItems(driveId);
   const taggedItems = useFilesByTag(driveId, activeTag);
+  const vaultItems = useVaultItems(driveId, section === "vault" && vaultUnlocked);
+
+  // Re-lock the vault whenever we leave its section or switch drive.
+  React.useEffect(() => {
+    if (section !== "vault") setVaultUnlocked(false);
+  }, [section]);
+  React.useEffect(() => { setVaultUnlocked(false); }, [driveId]);
 
   const displayedItems = React.useMemo(() => {
     const base =
       section === "files" ? items
       : section === "favorites" ? favorites
+      : section === "vault" ? vaultItems
       : section === "tag" ? taggedItems
       : trashed;
     if (!base) return base;
@@ -163,7 +175,7 @@ export default function DrivePage() {
       const name = it.kind === "folder" ? it.name : it.filename;
       return name.toLowerCase().includes(q);
     });
-  }, [section, items, favorites, trashed, taggedItems, search]);
+  }, [section, items, favorites, vaultItems, trashed, taggedItems, search]);
 
   const previewSiblings = React.useMemo(
     () => (displayedItems ?? []).filter((i) => i.kind === "file").map((i) => i.id),
@@ -248,6 +260,13 @@ export default function DrivePage() {
       if (action === "favorite" && item.kind === "file") {
         try { await setFavorite(item.driveId, item.id, !item.favorite); }
         catch (err) { toast.error((err as Error).message); }
+        return;
+      }
+      if (action === "lock" && item.kind === "file") {
+        try {
+          await setLocked(item.driveId, item.id, !item.locked);
+          toast.success(item.locked ? "Sorti du coffre-fort" : "Mis dans le coffre-fort 🔒");
+        } catch (err) { toast.error((err as Error).message); }
         return;
       }
       if (action === "download" && item.kind === "file") {
@@ -417,9 +436,15 @@ export default function DrivePage() {
           onFilterChange={setFilterKind}
         />
 
-        <main className="flex-1 overflow-y-auto px-3 py-3 sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <main className="flex flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+          {section === "vault" && !vaultUnlocked && (
+            <VaultGate onUnlock={() => setVaultUnlocked(true)} />
+          )}
           {section === "favorites" && (displayedItems?.length ?? 0) === 0 && (
             <EmptyState icon={Star} title="Aucun favori" description="Mets un fichier en favori avec le menu contextuel pour le retrouver ici." />
+          )}
+          {section === "vault" && vaultUnlocked && (displayedItems?.length ?? 0) === 0 && (
+            <EmptyState icon={Lock} title="Coffre-fort vide" description="Mets un fichier dans le coffre via le menu contextuel (« Mettre dans le coffre-fort »)." />
           )}
           {section === "trash" && (displayedItems?.length ?? 0) === 0 && (
             <EmptyState icon={Trash2} title="Corbeille vide" description="Les fichiers et dossiers supprimés apparaissent ici." />
@@ -427,7 +452,7 @@ export default function DrivePage() {
           {section === "tag" && (displayedItems?.length ?? 0) === 0 && (
             <EmptyState icon={Tag} title={`Aucun fichier avec #${activeTag}`} description="Ajoute ce tag à des fichiers via le menu contextuel." />
           )}
-          {(section === "files" || ((section === "favorites" || section === "trash" || section === "tag") && (displayedItems?.length ?? 0) > 0)) && (
+          {(section === "files" || (section === "vault" && vaultUnlocked && (displayedItems?.length ?? 0) > 0) || ((section === "favorites" || section === "trash" || section === "tag") && (displayedItems?.length ?? 0) > 0)) && (
             <DriveExplorer
               key={`${section}-${currentFolderId}`}
               items={displayedItems}

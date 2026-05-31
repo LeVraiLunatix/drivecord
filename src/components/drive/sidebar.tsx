@@ -7,6 +7,7 @@ import {
   ChevronsUpDown,
   CloudUpload,
   HardDrive,
+  Lock,
   LogOut,
   Plus,
   Settings,
@@ -42,7 +43,7 @@ import {
 } from "@/lib/storage";
 import { tagDot } from "@/lib/tag-colors";
 
-type SidebarSection = "files" | "favorites" | "trash" | "tag";
+type SidebarSection = "files" | "favorites" | "vault" | "trash" | "tag";
 
 type Props = {
   section: SidebarSection;
@@ -171,6 +172,12 @@ function SidebarContent({
           icon={Star}
           active={section === "favorites"}
           onClick={() => { onSectionChange("favorites"); close(); }}
+        />
+        <NavButton
+          label="Coffre-fort"
+          icon={Lock}
+          active={section === "vault"}
+          onClick={() => { onSectionChange("vault"); close(); }}
         />
         <NavButton
           label="Statistiques"

@@ -31,6 +31,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     filename?: string;
     parentId?: string;
     favorite?: boolean;
+    locked?: boolean;
     tags?: string[];
     trashed?: boolean;
     trashedAt?: number | null;
@@ -41,6 +42,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   if (body.filename !== undefined) data.filename = body.filename.trim();
   if (body.parentId !== undefined) data.parentId = body.parentId;
   if (body.favorite !== undefined) data.favorite = body.favorite;
+  if (body.locked !== undefined) data.locked = body.locked;
   if (body.tags !== undefined) data.tags = body.tags;
   if (body.trashed !== undefined) {
     data.trashed = body.trashed;

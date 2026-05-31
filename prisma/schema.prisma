@@ -20,6 +20,8 @@ model User {
   image         String?
   /// bcrypt hash — null for OAuth-only accounts
   password      String?
+  /// bcrypt hash of the vault PIN — null until the user sets one
+  vaultPin      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -108,6 +110,7 @@ model DriveFile {
   chunks    Json
   tags      String[]
   favorite  Boolean   @default(false)
+  locked    Boolean   @default(false)
   trashed   Boolean   @default(false)
   trashedAt DateTime?
   createdAt DateTime  @default(now())

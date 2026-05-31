@@ -75,6 +75,15 @@ export async function setFavorite(driveId: string, id: string, favorite: boolean
   invalidateDrive(driveId);
 }
 
+/** Move a file in/out of the locked vault. */
+export async function setLocked(driveId: string, id: string, locked: boolean): Promise<void> {
+  await apiFetch(`/api/drive/${driveId}/files/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ locked }),
+  });
+  invalidateDrive(driveId);
+}
+
 export async function setTags(driveId: string, id: string, tags: string[]): Promise<void> {
   const cleaned = Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean)));
   await apiFetch(`/api/drive/${driveId}/files/${id}`, {

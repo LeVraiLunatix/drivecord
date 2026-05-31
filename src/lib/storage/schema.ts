@@ -76,6 +76,8 @@ export type FileEntry = {
   tags: string[];
   /** Starred / favorited. */
   favorite: boolean;
+  /** In the locked vault (hidden from normal views, requires PIN/biometric). */
+  locked?: boolean;
   /** Soft delete flag. */
   trashed: boolean;
   trashedAt?: number;

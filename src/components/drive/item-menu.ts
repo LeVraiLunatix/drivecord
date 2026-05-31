@@ -9,6 +9,7 @@ export type ItemAction =
   | "download"
   | "rename"
   | "favorite"
+  | "lock"
   | "delete"
   | "move"
   | "tag"
@@ -32,6 +33,11 @@ export function buildItemMenu(item: DriveItem): MenuEntry[] {
       kind: "item",
       label: item.favorite ? "Retirer des favoris" : "Mettre en favori",
       action: "favorite",
+    });
+    entries.push({
+      kind: "item",
+      label: item.locked ? "Sortir du coffre-fort" : "Mettre dans le coffre-fort",
+      action: "lock",
     });
     entries.push({ kind: "item", label: "Gérer les tags…", action: "tag" });
   }
