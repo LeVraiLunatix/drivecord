@@ -196,6 +196,13 @@ export default function DrivePage() {
       const onUploaded = (item: { fileName: string }) =>
         toast.success(`« ${item.fileName} » uploadé`);
 
+      // In the vault section, uploads must be encrypted — which needs the
+      // PIN-derived key. If the vault was opened via Face ID only (no key),
+      // ask for the PIN rather than silently uploading outside the vault.
+      if (section === "vault" && vaultUnlocked && !getVaultKey()) {
+        toast.error("Entre ton code PIN pour ajouter un fichier (chiffrement) au coffre.");
+        return;
+      }
       // Uploading inside the unlocked vault → encrypt + lock (flattened, no
       // folder structure to avoid leaking folder names outside the vault).
       const vaultKey = section === "vault" && vaultUnlocked ? getVaultKey() : null;
