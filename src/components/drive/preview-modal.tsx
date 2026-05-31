@@ -173,6 +173,26 @@ export function PreviewModal({
     return () => window.removeEventListener("keydown", handler);
   }, [fileId, onClose, goPrev, goNext]);
 
+  // ── Lock-screen media metadata (filename + Drivecord artwork) ──────────────
+  React.useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    if (!file || !blobUrl) return;
+    const k = kindOf(file.filename, file.mimeType);
+    if (k !== "audio" && k !== "video") return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: file.filename,
+        artist: "Drivecord",
+        artwork: [
+          { src: "/icon.png", sizes: "512x512", type: "image/png" },
+          { src: "/icon.png", sizes: "192x192", type: "image/png" },
+        ],
+      });
+    } catch {
+      /* MediaMetadata unsupported */
+    }
+  }, [file?.filename, file?.mimeType, blobUrl]);
+
   // ── Download + HEIC conversion + cache blob ────────────────────────────────
   React.useEffect(() => {
     if (!file || !client) return;
