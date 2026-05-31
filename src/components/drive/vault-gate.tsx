@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import useSWR from "swr";
-import { Lock, ShieldCheck, Loader2, KeyRound } from "lucide-react";
+import { Lock, ShieldCheck, Loader2, KeyRound, Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { biometryAvailable, runBiometric } from "@/lib/biometric";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -23,6 +24,27 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
   const [pin, setPin] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const [bioAvailable, setBioAvailable] = React.useState(false);
+
+  // Detect biometrics (native app only). Auto-prompt once if a PIN exists.
+  React.useEffect(() => {
+    let cancelled = false;
+    biometryAvailable().then((ok) => {
+      if (cancelled) return;
+      setBioAvailable(ok);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const tryBiometric = React.useCallback(async () => {
+    const ok = await runBiometric();
+    if (ok) onUnlock();
+  }, [onUnlock]);
+
+  // Once we know a PIN exists and biometrics are available, offer Face ID first.
+  React.useEffect(() => {
+    if (data?.hasPin && bioAvailable) void tryBiometric();
+  }, [data?.hasPin, bioAvailable, tryBiometric]);
 
   if (isLoading || !data) {
     return (
@@ -90,6 +112,12 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
                 {busy ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
                 Déverrouiller
               </Button>
+              {bioAvailable && (
+                <Button type="button" variant="outline" className="w-full gap-2" onClick={tryBiometric}>
+                  <Fingerprint className="size-4" />
+                  Face ID / Touch ID
+                </Button>
+              )}
             </form>
           </>
         ) : (
