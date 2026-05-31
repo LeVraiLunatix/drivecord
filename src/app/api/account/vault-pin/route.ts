@@ -62,5 +62,13 @@ export async function POST(req: NextRequest) {
   });
   if (!user?.vaultPin || !pin) return NextResponse.json({ ok: false });
   const ok = await bcrypt.compare(pin, user.vaultPin);
-  return NextResponse.json({ ok, salt: ok ? user.vaultSalt : null });
+  if (!ok) return NextResponse.json({ ok: false, salt: null });
+
+  // Backfill the encryption salt for PINs created before E2EE existed.
+  let salt = user.vaultSalt;
+  if (!salt) {
+    salt = crypto.randomBytes(16).toString("base64");
+    await prisma.user.update({ where: { id: session.user.id }, data: { vaultSalt: salt } });
+  }
+  return NextResponse.json({ ok: true, salt });
 }
