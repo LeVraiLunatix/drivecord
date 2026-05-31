@@ -24,6 +24,7 @@
     "dexie-react-hooks": "^4.4.0",
     "heic2any": "^0.0.4",
     "highlight.js": "^11.11.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.16.0",
     "motion": "^12.40.0",
     "nanoid": "^5.1.11",

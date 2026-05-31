@@ -117,7 +117,7 @@ function ListHeader({
 
 // ── Explorer ──────────────────────────────────────────────────────────────────
 
-export type BulkAction = "delete" | "move" | "tag";
+export type BulkAction = "download" | "delete" | "move" | "tag";
 
 type Props = {
   items: DriveItem[] | undefined;
@@ -392,6 +392,7 @@ export function DriveExplorer({
   const toolbar = onBulkAction && (
     <SelectionToolbar
       count={selectedIds.size}
+      onDownload={() => onBulkAction("download", selectedItems)}
       onDelete={() => onBulkAction("delete", selectedItems)}
       onMove={() => onBulkAction("move", selectedItems)}
       onTag={() => onBulkAction("tag", selectedItems)}

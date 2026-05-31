@@ -1,11 +1,12 @@
 "use client";
 
-import { FolderInput, Tag, Trash2, X } from "lucide-react";
+import { Download, FolderInput, Tag, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Props = {
   count: number;
+  onDownload: () => void;
   onDelete: () => void;
   onMove: () => void;
   onTag: () => void;
@@ -15,6 +16,7 @@ type Props = {
 
 export function SelectionToolbar({
   count,
+  onDownload,
   onDelete,
   onMove,
   onTag,
@@ -37,6 +39,18 @@ export function SelectionToolbar({
       </span>
 
       <div className="mx-1 h-4 w-px bg-border/60" />
+
+      {/* Download as ZIP */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-1.5 px-2 sm:px-2.5"
+        onClick={onDownload}
+        title="Télécharger (ZIP)"
+      >
+        <Download className="size-3.5" />
+        <span className="hidden sm:inline">Télécharger</span>
+      </Button>
 
       {/* Delete */}
       <Button

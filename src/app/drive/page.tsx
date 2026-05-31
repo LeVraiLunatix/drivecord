@@ -9,6 +9,7 @@ import { DriveTopbar } from "@/components/drive/topbar";
 import { CommandPalette } from "@/components/drive/command-palette";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
 import { createFolder } from "@/lib/storage";
+import { downloadItemsAsZip } from "@/lib/download-zip";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
 import { NewFolderDialog } from "@/components/drive/new-folder-dialog";
 import { RenameDialog } from "@/components/drive/rename-dialog";
@@ -312,8 +313,24 @@ export default function DrivePage() {
       if (action === "delete") setBulkDeleteItems(items);
       else if (action === "move") setBulkMoveItems(items);
       else if (action === "tag") setBulkTagItems(items);
+      else if (action === "download") {
+        if (!activeDrive || !client) { toast.error("Drive non prêt"); return; }
+        const onlyFolder = items.length === 1 && items[0].kind === "folder";
+        const zipName = onlyFolder
+          ? (items[0] as { name: string }).name
+          : `${activeDrive.name}-${new Date().toISOString().slice(0, 10)}`;
+        let done = 0;
+        toast.promise(
+          downloadItemsAsZip(items, activeDrive.id, client, zipName, () => { done += 1; }),
+          {
+            loading: "Préparation du ZIP… (téléchargement des fichiers)",
+            success: () => `ZIP téléchargé (${done} fichier${done > 1 ? "s" : ""})`,
+            error: "Échec de la création du ZIP",
+          },
+        );
+      }
     },
-    [],
+    [activeDrive, client],
   );
 
   const handleBulkConfirmDelete = React.useCallback(
