@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FolderPlus,
+  FolderUp,
   Menu,
   Search,
   Upload,
@@ -23,6 +24,7 @@ type Props = {
   onNavigate: (id: ParentId) => void;
   onNewFolder: () => void;
   onUploadClick: () => void;
+  onFolderUploadClick: () => void;
   search: string;
   onSearchChange: (v: string) => void;
   searchVisible: boolean;
@@ -48,6 +50,7 @@ export function DriveTopbar({
   onNavigate,
   onNewFolder,
   onUploadClick,
+  onFolderUploadClick,
   search,
   onSearchChange,
   searchVisible,
@@ -195,6 +198,15 @@ export function DriveTopbar({
           <Button variant="outline" size="sm" className="hidden sm:flex" onClick={onNewFolder}>
             <FolderPlus className="size-4" />
             Nouveau dossier
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="hidden size-8 sm:flex"
+            onClick={onFolderUploadClick}
+            title="Importer un dossier"
+          >
+            <FolderUp className="size-4" />
           </Button>
           <Button size="sm" className="hidden sm:flex" onClick={onUploadClick}>
             <Upload className="size-4" />

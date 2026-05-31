@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { DriveSidebar } from "@/components/drive/sidebar";
 import { DriveTopbar } from "@/components/drive/topbar";
 import { CommandPalette } from "@/components/drive/command-palette";
+import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
+import { createFolder } from "@/lib/storage";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
 import { NewFolderDialog } from "@/components/drive/new-folder-dialog";
 import { RenameDialog } from "@/components/drive/rename-dialog";
@@ -21,7 +23,7 @@ import { UploadDropzone } from "@/components/drive/upload-dropzone";
 import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
 import FloatingActionMenu from "@/components/ui/floating-action-menu";
-import { FolderPlus, Star, Tag, Trash2, Upload } from "lucide-react";
+import { FolderPlus, FolderUp, Star, Tag, Trash2, Upload } from "lucide-react";
 
 import { useDiscordClient } from "@/lib/discord/context";
 import { useUploadQueue } from "@/lib/upload-queue";
@@ -131,6 +133,7 @@ export default function DrivePage() {
   const [bulkMoveItems, setBulkMoveItems] = React.useState<DriveItem[]>([]);
   const [bulkTagItems, setBulkTagItems] = React.useState<DriveItem[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const folderInputRef = React.useRef<HTMLInputElement>(null);
 
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
@@ -168,17 +171,41 @@ export default function DrivePage() {
 
   // ---------- Actions ----------
 
-  const handleUploadFiles = React.useCallback(
-    (files: File[], parentOverride?: ParentId) => {
+  const handleUploadEntries = React.useCallback(
+    async (entries: UploadEntry[], parentOverride?: ParentId) => {
       if (!activeDrive || !client) { toast.error("Drive non prêt"); return; }
-      if (files.length === 0) return;
-      enqueue({
-        files,
-        driveId: activeDrive.id,
-        parentId: parentOverride ?? currentFolderId,
-        client,
-        onUploaded: (item) => toast.success(`« ${item.fileName} » uploadé`),
-      });
+      if (entries.length === 0) return;
+      const driveId = activeDrive.id;
+      const base = parentOverride ?? currentFolderId;
+      const onUploaded = (item: { fileName: string }) =>
+        toast.success(`« ${item.fileName} » uploadé`);
+
+      // Flat upload (no folders) — keep the simple path.
+      const hasFolders = entries.some((e) => e.path !== "");
+      if (!hasFolders) {
+        enqueue({ files: entries.map((e) => e.file), driveId, parentId: base, client, onUploaded });
+        return;
+      }
+
+      // Recreate the folder tree, then upload each file into its folder.
+      try {
+        const paths = new Set(entries.map((e) => e.path));
+        const folderMap = await ensureFolderTree(paths, base, ({ parentId, name }) =>
+          createFolder({ driveId, parentId, name }),
+        );
+        // Group files by their target folder id.
+        const groups = new Map<ParentId, File[]>();
+        for (const e of entries) {
+          const pid = folderMap.get(e.path) ?? base;
+          (groups.get(pid) ?? groups.set(pid, []).get(pid)!).push(e.file);
+        }
+        for (const [pid, files] of groups) {
+          enqueue({ files, driveId, parentId: pid, client, onUploaded });
+        }
+        toast.success(`Dossier importé (${entries.length} fichier(s))`);
+      } catch {
+        toast.error("Échec de l'import du dossier");
+      }
     },
     [activeDrive, client, currentFolderId, enqueue],
   );
@@ -347,7 +374,7 @@ export default function DrivePage() {
         onMobileClose={() => setSidebarOpen(false)}
       />
 
-      <UploadDropzone onFiles={(files) => handleUploadFiles(files)} className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <UploadDropzone onEntries={(entries) => handleUploadEntries(entries)} className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <DriveTopbar
           onMenuOpen={() => setSidebarOpen(true)}
           driveId={driveId}
@@ -359,6 +386,7 @@ export default function DrivePage() {
           onGoForward={goForward}
           onNewFolder={() => setNewFolderOpen(true)}
           onUploadClick={() => fileInputRef.current?.click()}
+          onFolderUploadClick={() => folderInputRef.current?.click()}
           search={search}
           onSearchChange={setSearch}
           searchVisible={section !== "trash"}
@@ -400,7 +428,7 @@ export default function DrivePage() {
               }}
               onDropExternalFiles={(files, targetFolder) => {
                 if (targetFolder.kind !== "folder") return;
-                handleUploadFiles(files, targetFolder.id);
+                handleUploadEntries(entriesFromFiles(files), targetFolder.id);
               }}
               onBulkAction={handleBulkAction}
             />
@@ -415,7 +443,23 @@ export default function DrivePage() {
         className="hidden"
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
-          if (files.length) handleUploadFiles(files);
+          if (files.length) handleUploadEntries(entriesFromFiles(files));
+          e.target.value = "";
+        }}
+      />
+
+      {/* Folder picker (webkitdirectory) — recreates the folder tree on upload */}
+      <input
+        ref={folderInputRef}
+        type="file"
+        multiple
+        // @ts-expect-error non-standard but supported by all target browsers
+        webkitdirectory=""
+        directory=""
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) handleUploadEntries(entriesFromFiles(files));
           e.target.value = "";
         }}
       />
@@ -470,9 +514,14 @@ export default function DrivePage() {
         className="lg:hidden right-4 z-40 bottom-[calc(1.5rem+env(safe-area-inset-bottom))]"
         options={[
           {
-            label: "Upload",
+            label: "Upload fichiers",
             Icon: <Upload className="size-4" />,
             onClick: () => fileInputRef.current?.click(),
+          },
+          {
+            label: "Importer un dossier",
+            Icon: <FolderUp className="size-4" />,
+            onClick: () => folderInputRef.current?.click(),
           },
           {
             label: "Nouveau dossier",

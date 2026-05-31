@@ -3,25 +3,27 @@
 import * as React from "react";
 import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { entriesFromDataTransfer, type UploadEntry } from "@/lib/upload-folder";
 
 /**
  * Whole-page drag&drop overlay.
  *
- * Wraps an area of the app. When the user drags files anywhere inside it,
- * a translucent overlay appears. Dropping triggers `onFiles`.
+ * Wraps an area of the app. When the user drags files (or whole folders)
+ * anywhere inside it, a translucent overlay appears. Dropping traverses any
+ * dropped directories and calls `onEntries` with { file, path } entries.
  *
  * Uses a small counter to handle dragenter/dragleave correctly — naive
  * implementations flicker because every child fires dragleave when the
  * mouse enters it.
  */
 type Props = {
-  onFiles: (files: File[]) => void;
+  onEntries: (entries: UploadEntry[]) => void;
   children: React.ReactNode;
   /** Optional className applied to the outer wrapper. */
   className?: string;
 };
 
-export function UploadDropzone({ onFiles, children, className }: Props) {
+export function UploadDropzone({ onEntries, children, className }: Props) {
   const [isOver, setIsOver] = React.useState(false);
   const counterRef = React.useRef(0);
 
@@ -53,8 +55,10 @@ export function UploadDropzone({ onFiles, children, className }: Props) {
     e.preventDefault();
     counterRef.current = 0;
     setIsOver(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length) onFiles(files);
+    // Traverse folders (if any) into { file, path } entries.
+    entriesFromDataTransfer(e.dataTransfer).then((entries) => {
+      if (entries.length) onEntries(entries);
+    });
   };
 
   return (
