@@ -7,6 +7,7 @@ import {
   ChevronsUpDown,
   CloudUpload,
   HardDrive,
+  Link2,
   Lock,
   LogOut,
   Plus,
@@ -178,6 +179,12 @@ function SidebarContent({
           icon={Lock}
           active={section === "vault"}
           onClick={() => { onSectionChange("vault"); close(); }}
+        />
+        <NavButton
+          label="Liens partagés"
+          icon={Link2}
+          active={false}
+          onClick={() => { router.push("/shares"); close(); }}
         />
         <NavButton
           label="Statistiques"

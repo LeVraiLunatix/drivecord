@@ -107,11 +107,16 @@ export function ShareDialog({
           <div className="flex justify-center py-6"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>
         ) : share ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 p-2">
-              <code className="min-w-0 flex-1 truncate font-mono text-xs">{shareUrl}</code>
-              <Button size="sm" variant="secondary" className="h-8 shrink-0 gap-1.5" onClick={copy}>
+            <div className="flex items-center gap-2 overflow-hidden rounded-lg border border-border/60 bg-background/60 p-2">
+              <code className="block min-w-0 flex-1 truncate font-mono text-xs">{shareUrl}</code>
+              <Button
+                size="icon"
+                variant="secondary"
+                className="size-8 shrink-0"
+                onClick={copy}
+                title={copied ? "Copié" : "Copier le lien"}
+              >
                 {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                {copied ? "Copié" : "Copier"}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">

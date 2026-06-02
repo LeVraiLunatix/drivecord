@@ -19,9 +19,10 @@ export const authConfig = {
       const isSettings = nextUrl.pathname.startsWith("/settings");
       const isAdmin = nextUrl.pathname.startsWith("/admin");
       const isStats = nextUrl.pathname.startsWith("/stats");
+      const isShares = nextUrl.pathname.startsWith("/shares");
 
-      // /drive, /setup, /settings, /admin and /stats require auth
-      if (isDrive || isSetup || isSettings || isAdmin || isStats) {
+      // /drive, /setup, /settings, /admin, /stats and /shares require auth
+      if (isDrive || isSetup || isSettings || isAdmin || isStats || isShares) {
         if (loggedIn) return true;
         // Redirect to login — Next.js appends callbackUrl automatically
         return false;
