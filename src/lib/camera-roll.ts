@@ -112,26 +112,64 @@ export async function streamCameraItem(
 }
 
 // ── Backed-up tracker (per drive, localStorage) ──────────────────────────────
+// Maps camera-roll identifier → the drive fileId it was uploaded as. Storing
+// the fileId lets us reconcile: if the file was deleted from the drive, the
+// media is considered NOT backed up and gets re-uploaded.
 
 const KEY = (driveId: string) => `drivecord:camroll:${driveId}`;
 
-export function getBackedUp(driveId: string): Set<string> {
-  if (typeof window === "undefined") return new Set();
+/** identifier → fileId ("" for legacy entries with no recorded fileId). */
+export function getBackedUpMap(driveId: string): Record<string, string> {
+  if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(KEY(driveId));
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      // Legacy format (array of identifiers) → migrate, fileId unknown.
+      const map: Record<string, string> = {};
+      for (const id of parsed as string[]) map[id] = "";
+      return map;
+    }
+    return parsed as Record<string, string>;
   } catch {
-    return new Set();
+    return {};
   }
 }
 
-export function markBackedUp(driveId: string, identifiers: string[]): void {
+function save(driveId: string, map: Record<string, string>): void {
+  try { localStorage.setItem(KEY(driveId), JSON.stringify(map)); } catch { /* quota */ }
+}
+
+/** Set of identifiers currently considered backed up. */
+export function getBackedUp(driveId: string): Set<string> {
+  return new Set(Object.keys(getBackedUpMap(driveId)));
+}
+
+export function markBackedUp(driveId: string, identifier: string, fileId: string): void {
   if (typeof window === "undefined") return;
-  const set = getBackedUp(driveId);
-  for (const id of identifiers) set.add(id);
-  try {
-    localStorage.setItem(KEY(driveId), JSON.stringify([...set]));
-  } catch {
-    /* quota — ignore */
+  const map = getBackedUpMap(driveId);
+  map[identifier] = fileId;
+  save(driveId, map);
+}
+
+/**
+ * Drop tracker entries whose uploaded file no longer exists in the drive
+ * (deleted/trashed). Entries with an unknown fileId ("") are kept. Returns the
+ * reconciled set of still-backed-up identifiers.
+ */
+export function reconcileTracker(driveId: string, existingFileIds: Set<string>): Set<string> {
+  const map = getBackedUpMap(driveId);
+  let changed = false;
+  for (const [identifier, fileId] of Object.entries(map)) {
+    if (fileId && !existingFileIds.has(fileId)) { delete map[identifier]; changed = true; }
   }
+  if (changed) save(driveId, map);
+  return new Set(Object.keys(map));
+}
+
+/** Forget all backed-up tracking for a drive (forces a full re-upload). */
+export function clearTracker(driveId: string): void {
+  if (typeof window === "undefined") return;
+  try { localStorage.removeItem(KEY(driveId)); } catch { /* ignore */ }
 }

@@ -18,6 +18,8 @@ import {
   readCameraItem,
   getBackedUp,
   markBackedUp,
+  reconcileTracker,
+  clearTracker,
 } from "@/lib/camera-roll";
 
 const FOLDER_KEY = (driveId: string) => `drivecord:camroll-folder:${driveId}`;
@@ -45,8 +47,26 @@ export default function BackupPage() {
   }, [drives, target]);
 
   React.useEffect(() => {
-    if (target) setBackedCount(getBackedUp(target).size);
+    if (!target) return;
+    setBackedCount(getBackedUp(target).size);
+    // Reconcile against the drive so the count reflects reality (deleted files).
+    (async () => {
+      try {
+        const r = await fetch(`/api/drive/${target}/file-ids`);
+        if (r.ok) {
+          const { ids } = await r.json();
+          setBackedCount(reconcileTracker(target, new Set<string>(ids)).size);
+        }
+      } catch { /* offline */ }
+    })();
   }, [target, running]);
+
+  const resetTracking = () => {
+    if (!target) return;
+    clearTracker(target);
+    setBackedCount(0);
+    toast.success("Suivi réinitialisé — la prochaine sauvegarde renverra tout.");
+  };
 
   const ensureRoot = async (driveId: string): Promise<string> => {
     const cached = localStorage.getItem(FOLDER_KEY(driveId));
@@ -74,7 +94,14 @@ export default function BackupPage() {
     cancelRef.current = false;
     try {
       const all = await listCameraRoll();
-      const done = getBackedUp(drive.id);
+      // Reconcile the tracker with what's actually still in the drive — anything
+      // deleted there will be re-uploaded.
+      let done = getBackedUp(drive.id);
+      try {
+        const r = await fetch(`/api/drive/${drive.id}/file-ids`);
+        if (r.ok) { const { ids } = await r.json(); done = reconcileTracker(drive.id, new Set<string>(ids)); }
+      } catch { /* offline → use local tracker as-is */ }
+      setBackedCount(done.size);
       const todo = all.filter((m) => !done.has(m.identifier));
       if (todo.length === 0) { toast.success("Pellicule déjà à jour ✅"); return; }
 
@@ -117,8 +144,8 @@ export default function BackupPage() {
             const file = new File([blob], filename, { type: mimeType });
             manifest = await client.uploadFile(file);
           }
-          await recordUploadedFile({ driveId: drive.id, parentId, manifest });
-          markBackedUp(drive.id, [it.identifier]);
+          const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest });
+          markBackedUp(drive.id, it.identifier, fileId);
           ok += 1;
         } catch (err) {
           if (!firstError) firstError = (err as Error).message;
@@ -221,9 +248,16 @@ export default function BackupPage() {
                     <Square className="size-4" /> Arrêter
                   </Button>
                 ) : (
-                  <Button className="w-full gap-2" onClick={run} disabled={!target}>
-                    <Play className="size-4" /> Sauvegarder maintenant
-                  </Button>
+                  <div className="space-y-2">
+                    <Button className="w-full gap-2" onClick={run} disabled={!target}>
+                      <Play className="size-4" /> Sauvegarder maintenant
+                    </Button>
+                    {backedCount > 0 && (
+                      <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={resetTracking}>
+                        Réinitialiser le suivi
+                      </Button>
+                    )}
+                  </div>
                 )}
                 {running && !progress && (
                   <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
