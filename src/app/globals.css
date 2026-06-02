@@ -349,3 +349,37 @@
 .md-body table { border-collapse: collapse; margin: 0.9em 0; width: 100%; display: block; overflow-x: auto; }
 .md-body th, .md-body td { border: 1px solid rgba(255,255,255,0.15); padding: 0.5em 0.8em; text-align: left; }
 .md-body th { background: rgba(255,255,255,0.05); font-weight: 600; }
+
+/* ── iOS "liquid glass" — applied only inside the app (html.is-native) ─────────
+   Translucent, blurred, saturated surfaces for the main menus/cards/sheets.
+   The web keeps its solid look. */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  html.is-native [data-slot="card"] {
+    background: color-mix(in oklab, var(--card) 55%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-color: color-mix(in oklab, var(--border) 45%, transparent);
+    border-radius: 1.25rem;
+  }
+  html.is-native [data-slot="dialog-content"],
+  html.is-native [data-slot="sheet-content"],
+  html.is-native [data-slot="dropdown-menu-content"],
+  html.is-native [data-slot="select-content"],
+  html.is-native [data-slot="alert-dialog-content"] {
+    background: color-mix(in oklab, var(--popover) 70%, transparent) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    backdrop-filter: blur(30px) saturate(200%);
+    border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+  }
+  html.is-native [data-slot="sheet-content"] { border-radius: 0 1.5rem 1.5rem 0; }
+  /* Drive top bar + view controls: frosted bar that content scrolls under. */
+  html.is-native .glass-bar {
+    background: color-mix(in oklab, var(--background) 62%, transparent);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+  /* Pill-ish buttons + soft inner highlight, very iOS. */
+  html.is-native [data-slot="button"] {
+    border-radius: 0.9rem;
+  }
+}

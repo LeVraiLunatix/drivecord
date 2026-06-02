@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { NativeDeepLink } from "@/components/native-deep-link";
+import { NativeClass } from "@/components/native-class";
 import "./globals.css";
 
 // Inter = substitut libre le plus proche de "gg sans" (la police de Discord).
@@ -63,6 +64,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <NativeDeepLink />
+        <NativeClass />
         <AuthSessionProvider>
           <ThemeProvider
             attribute="class"
