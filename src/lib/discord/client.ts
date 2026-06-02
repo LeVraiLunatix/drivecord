@@ -214,6 +214,73 @@ export class DiscordClient {
   }
 
   /**
+   * Upload directly from a ReadableStream, chunk by chunk, WITHOUT holding the
+   * whole file in memory (used for large camera-roll videos). Reads the stream,
+   * fills a chunkSize buffer, uploads it, repeats. Sequential by design.
+   */
+  async uploadStream(
+    stream: ReadableStream<Uint8Array>,
+    opts: {
+      filename: string;
+      mimeType?: string;
+      totalSize?: number;
+      chunkSize?: number;
+      signal?: AbortSignal;
+      onProgress?: (p: UploadProgress) => void;
+    },
+  ): Promise<FileManifest> {
+    const chunkSize = opts.chunkSize ?? DEFAULT_CHUNK_SIZE;
+    const mimeType = opts.mimeType ?? "";
+    const reader = stream.getReader();
+    const chunks: ChunkRef[] = [];
+    let index = 0;
+    let bytesDone = 0;
+
+    // Pending byte queue (array of Uint8Array views) with O(1) length tracking.
+    const pending: Uint8Array[] = [];
+    let pendingLen = 0;
+
+    const take = (n: number): Uint8Array => {
+      const out = new Uint8Array(n);
+      let off = 0;
+      while (off < n) {
+        const head = pending[0];
+        const need = n - off;
+        if (head.length <= need) {
+          out.set(head, off); off += head.length; pending.shift();
+        } else {
+          out.set(head.subarray(0, need), off); pending[0] = head.subarray(need); off += need;
+        }
+      }
+      pendingLen -= n;
+      return out;
+    };
+
+    const flush = async (bytes: Uint8Array) => {
+      if (opts.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      const blob = new Blob([bytes as BlobPart], { type: mimeType || "application/octet-stream" });
+      const name = `${opts.filename}.part${index}`;
+      const msg = await this.uploadChunk(blob, name, opts.signal);
+      const att = msg.attachments[0];
+      if (!att) throw new DiscordApiError(`Chunk ${index} returned no attachment`, { category: "transient" });
+      chunks.push({ index, size: bytes.length, messageId: msg.id, attachmentId: att.id, url: att.url, expiresAt: parseCdnExpiry(att.url) });
+      index += 1;
+      bytesDone += bytes.length;
+      opts.onProgress?.({ loaded: bytesDone, total: opts.totalSize ?? bytesDone, chunksDone: index, chunksTotal: -1 });
+    };
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value && value.length) { pending.push(value); pendingLen += value.length; }
+      while (pendingLen >= chunkSize) await flush(take(chunkSize));
+    }
+    if (pendingLen > 0) await flush(take(pendingLen));
+
+    return { size: bytesDone, mimeType, filename: opts.filename, chunkSize, chunks };
+  }
+
+  /**
    * Refresh a single chunk's CDN URL by re-fetching its parent message.
    * Returns the updated ChunkRef (the caller should persist it).
    */

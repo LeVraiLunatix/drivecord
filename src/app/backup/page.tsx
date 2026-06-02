@@ -14,7 +14,7 @@ import { DiscordClient } from "@/lib/discord/client";
 import {
   cameraRollAvailable,
   listCameraRoll,
-  readCameraItem,
+  streamCameraItem,
   getBackedUp,
   markBackedUp,
 } from "@/lib/camera-roll";
@@ -82,8 +82,8 @@ export default function BackupPage() {
       const folderCache = new Map<string, string>(); // album → folderId
       setProgress({ done: 0, total: todo.length });
 
-      // Skip very large files to avoid out-of-memory crashes in the WebView.
-      const MAX_BYTES = 700 * 1024 * 1024;
+      // DB stores size as a 32-bit Int → hard cap ~2 GB per file.
+      const MAX_BYTES = 2_000_000_000;
       let ok = 0;
       let skipped = 0;
       for (let i = 0; i < todo.length; i++) {
@@ -96,12 +96,12 @@ export default function BackupPage() {
             parentId = await ensureAlbumFolder(drive.id, rootId, it.album);
             folderCache.set(albumKey, parentId);
           }
-          const { blob, filename, mimeType } = await readCameraItem(it.identifier);
-          if (blob.size > MAX_BYTES) {
+          // Stream the file straight to Discord, chunk by chunk (memory-safe).
+          const { stream, size, filename, mimeType } = await streamCameraItem(it.identifier);
+          if (!stream || (size && size > MAX_BYTES)) {
             skipped += 1;
           } else {
-            const file = new File([blob], filename, { type: mimeType });
-            const manifest = await client.uploadFile(file);
+            const manifest = await client.uploadStream(stream, { filename, mimeType, totalSize: size });
             await recordUploadedFile({ driveId: drive.id, parentId, manifest });
             markBackedUp(drive.id, [it.identifier]);
             ok += 1;
@@ -110,11 +110,10 @@ export default function BackupPage() {
           /* skip this asset, continue */
         }
         setProgress({ done: i + 1, total: todo.length });
-        // Let the WebView reclaim memory between large items.
-        await new Promise((r) => setTimeout(r, 60));
+        await new Promise((r) => setTimeout(r, 30));
       }
       setBackedCount(getBackedUp(drive.id).size);
-      const extra = skipped > 0 ? ` · ${skipped} ignoré(s) (trop volumineux)` : "";
+      const extra = skipped > 0 ? ` · ${skipped} ignoré(s) (> 2 Go)` : "";
       toast.success(`${ok} média(s) sauvegardé(s) dans « ${drive.name} » › Pellicule${extra}`);
     } catch (e) {
       toast.error(`Échec : ${(e as Error).message}`);

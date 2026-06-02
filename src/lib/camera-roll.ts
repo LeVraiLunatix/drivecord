@@ -90,6 +90,27 @@ export async function readCameraItem(
   return { blob, filename, mimeType: blob.type || mimeType };
 }
 
+/**
+ * Open a media asset as a streaming response (no full buffering) for memory-safe
+ * upload of large videos. Returns the byte stream + metadata.
+ */
+export async function streamCameraItem(
+  identifier: string,
+): Promise<{ stream: ReadableStream<Uint8Array> | null; size: number; filename: string; mimeType: string }> {
+  const { Media } = await import("@capacitor-community/media");
+  const { Capacitor } = await import("@capacitor/core");
+  const { path } = await Media.getMediaByIdentifier({ identifier });
+  const ext = (path.split(".").pop() ?? "jpg").toLowerCase();
+  const mimeType = MIME_BY_EXT[ext] ?? "application/octet-stream";
+  const filename = path.split("/").pop() ?? `media-${identifier.slice(0, 8)}.${ext}`;
+
+  const src = Capacitor.convertFileSrc(path);
+  const res = await fetch(src);
+  if (!res.ok || !res.body) throw new Error("Lecture du média impossible");
+  const len = Number(res.headers.get("content-length") ?? 0);
+  return { stream: res.body, size: len, filename, mimeType };
+}
+
 // ── Backed-up tracker (per drive, localStorage) ──────────────────────────────
 
 const KEY = (driveId: string) => `drivecord:camroll:${driveId}`;
