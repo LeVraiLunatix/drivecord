@@ -11,6 +11,7 @@ import { ShareDialog } from "@/components/drive/share-dialog";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
 import { createFolder } from "@/lib/storage";
 import { downloadItemsAsZip } from "@/lib/download-zip";
+import { saveBlob } from "@/lib/native-save";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 import { getVaultKey, clearVaultKey } from "@/lib/crypto/vault-key-store";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
@@ -274,6 +275,30 @@ export default function DrivePage() {
     [driveId],
   );
 
+  // Download one file: fetch → decrypt → save (native: gallery/Files · web: download).
+  const downloadFileItem = React.useCallback(
+    async (item: Extract<DriveItem, { kind: "file" }>) => {
+      if (!client) { toast.error("Client Discord indisponible"); return; }
+      const t = toast.loading(`Téléchargement de « ${item.filename} »…`);
+      try {
+        const raw = await client.downloadFile({
+          size: item.size, mimeType: item.mimeType,
+          filename: item.filename, chunkSize: item.chunkSize, chunks: item.chunks,
+        });
+        const blob = await maybeDecrypt(raw, item);
+        const dest = await saveBlob(blob, item.filename, item.mimeType);
+        const msg =
+          dest === "gallery" ? `« ${item.filename} » enregistré dans la galerie 📸`
+          : dest === "files" ? `« ${item.filename} » enregistré dans Fichiers › Drivecord 📁`
+          : `« ${item.filename} » téléchargé`;
+        toast.success(msg, { id: t });
+      } catch (err) {
+        toast.error(`Échec : ${(err as Error).message}`, { id: t });
+      }
+    },
+    [client],
+  );
+
   const handleAction = React.useCallback(
     async (action: string, item: DriveItem) => {
       if (action === "open" && item.kind === "folder") { setCurrentFolderId(item.id); return; }
@@ -296,23 +321,10 @@ export default function DrivePage() {
         return;
       }
       if (action === "download" && item.kind === "file") {
-        if (!client) { toast.error("Client Discord indisponible"); return; }
-        toast.info(`Téléchargement de « ${item.filename} »…`);
-        try {
-          const raw = await client.downloadFile({
-            size: item.size, mimeType: item.mimeType,
-            filename: item.filename, chunkSize: item.chunkSize, chunks: item.chunks,
-          });
-          const blob = await maybeDecrypt(raw, item);
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url; a.download = item.filename; a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 60_000);
-          toast.success(`« ${item.filename} » téléchargé`);
-        } catch (err) { toast.error(`Échec : ${(err as Error).message}`); }
+        await downloadFileItem(item);
       }
     },
-    [client],
+    [client, downloadFileItem],
   );
 
   const handleConfirmDelete = React.useCallback(
@@ -361,6 +373,11 @@ export default function DrivePage() {
       else if (action === "tag") setBulkTagItems(items);
       else if (action === "download") {
         if (!activeDrive || !client) { toast.error("Drive non prêt"); return; }
+        // A single file → download it directly (no ZIP). Otherwise → ZIP.
+        if (items.length === 1 && items[0].kind === "file") {
+          downloadFileItem(items[0] as Extract<DriveItem, { kind: "file" }>);
+          return;
+        }
         const onlyFolder = items.length === 1 && items[0].kind === "folder";
         const zipName = onlyFolder
           ? (items[0] as { name: string }).name
@@ -370,13 +387,15 @@ export default function DrivePage() {
           downloadItemsAsZip(items, activeDrive.id, client, zipName, () => { done += 1; }),
           {
             loading: "Préparation du ZIP… (téléchargement des fichiers)",
-            success: () => `ZIP téléchargé (${done} fichier${done > 1 ? "s" : ""})`,
+            success: (dest) =>
+              dest === "files" ? `ZIP enregistré dans Fichiers › Drivecord 📁 (${done})`
+              : `ZIP téléchargé (${done} fichier${done > 1 ? "s" : ""})`,
             error: "Échec de la création du ZIP",
           },
         );
       }
     },
-    [activeDrive, client],
+    [activeDrive, client, downloadFileItem],
   );
 
   const handleBulkConfirmDelete = React.useCallback(

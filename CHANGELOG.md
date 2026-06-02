@@ -7,6 +7,21 @@
   à chaque changement notable.
 -->
 
+## Téléchargements natifs + partage + coffre-fort
+
+📥 **Téléchargements qui marchent vraiment dans l'app**
+- Les **images et vidéos** sont enregistrées dans ta **galerie** 📸
+- Les **autres fichiers** vont dans l'app **Fichiers**, dans un dossier **Drivecord** 📁
+- Un seul fichier = téléchargement direct ; plusieurs fichiers = ZIP
+
+🔗 **Partage par lien** : partage un fichier via un lien (mot de passe + expiration), gère tous tes liens dans une section dédiée.
+
+🔐 **Coffre-fort** : section verrouillée par code PIN / Face ID, avec chiffrement E2EE.
+
+✨ Aussi : aperçu enrichi (code + markdown), statistiques, palette Ctrl+K, import de dossiers, nouvelle icône.
+
+---
+
 ## Coffre-fort 🔐 + nouvelles fonctions
 
 🔐 **Coffre-fort sécurisé**

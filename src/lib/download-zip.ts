@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import type { DiscordClient } from "@/lib/discord/client";
 import type { DriveItem } from "@/lib/storage";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
+import { saveBlob, type SaveDestination } from "@/lib/native-save";
 
 /** Fetch the (non-trashed) items inside a folder. */
 async function listFolderItems(driveId: string, parentId: string): Promise<DriveItem[]> {
@@ -53,14 +54,10 @@ export async function downloadItemsAsZip(
   client: DiscordClient,
   zipName: string,
   onFile: () => void = () => {},
-): Promise<void> {
+): Promise<SaveDestination> {
   const zip = new JSZip();
   await addItems(zip, items, driveId, client, "", onFile);
   const blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = zipName.endsWith(".zip") ? zipName : `${zipName}.zip`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const name = zipName.endsWith(".zip") ? zipName : `${zipName}.zip`;
+  return saveBlob(blob, name, "application/zip");
 }
