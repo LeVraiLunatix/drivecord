@@ -61,7 +61,6 @@ jobs:
           VERSION="1.0.${{ github.run_number }}"
           echo "app_version=$VERSION" >> $GITHUB_ENV
           echo "Building version $VERSION"
-          set -o pipefail
           xcodebuild \
             -project ios/App/App.xcodeproj \
             -scheme App \
@@ -75,8 +74,16 @@ jobs:
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
-            build 2>&1 | tee /tmp/xcodebuild.log | grep -E "error:|Build succeeded|BUILD FAILED|warning:.*error" | tail -40 \
-            || { echo "::error::xcodebuild failed — last 80 lines:"; tail -80 /tmp/xcodebuild.log; exit 1; }
+            build > /tmp/xcodebuild.log 2>&1 || true
+          # Success is determined by xcodebuild's own marker, not by exit codes
+          # (which can be noisy). Show errors if it didn't succeed.
+          if grep -q "\*\* BUILD SUCCEEDED \*\*" /tmp/xcodebuild.log; then
+            echo "✅ BUILD SUCCEEDED"
+          else
+            echo "::error::Build failed — errors below:"
+            grep -E "error:|BUILD FAILED" /tmp/xcodebuild.log | tail -40 || tail -80 /tmp/xcodebuild.log
+            exit 1
+          fi
 
       - name: Locate .app
         id: app
