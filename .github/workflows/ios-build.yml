@@ -177,6 +177,11 @@ jobs:
               m = re.search(r'^##\s+(.*?)(?=^##\s|\Z)', text, flags=re.S | re.M)
               if m:
                   notes = m.group(0).lstrip('#').strip()
+              # AltStore shows the description as PLAIN TEXT — strip markdown.
+              notes = notes.replace('**', '').replace('`', '')
+              notes = re.sub(r'^#+\s*', '', notes, flags=re.M)   # headers
+              notes = re.sub(r'^\s*---\s*$', '', notes, flags=re.M)  # hr
+              notes = re.sub(r'\n{3,}', '\n\n', notes).strip()
           except Exception as e:
               print("changelog read failed:", e)
 
