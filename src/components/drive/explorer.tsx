@@ -6,7 +6,9 @@ import {
   ChevronUp,
   Filter,
   Folder,
+  ListChecks,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { DriveItemCard } from "./item-card";
 import { DriveItemRow } from "./item-row";
 import { EmptyState } from "./empty-state";
@@ -153,10 +155,13 @@ export function DriveExplorer({
   // ── Selection state ─────────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [lastSelectedId, setLastSelectedId] = React.useState<string | null>(null);
+  // Tap-to-multi-select mode (for touch — no Ctrl/Shift available).
+  const [selectMode, setSelectMode] = React.useState(false);
 
   const clearSelection = React.useCallback(() => {
     setSelectedIds(new Set());
     setLastSelectedId(null);
+    setSelectMode(false);
   }, []);
 
   // ── Rubber-band (lasso) selection ────────────────────────────────────────────
@@ -343,7 +348,8 @@ export function DriveExplorer({
       return;
     }
 
-    if (e.ctrlKey || e.metaKey) {
+    // Ctrl/Cmd-click OR touch "select mode" → toggle this item in the selection.
+    if (e.ctrlKey || e.metaKey || selectMode) {
       setSelectedIds((prev) => {
         const next = new Set(prev);
         if (next.has(id)) next.delete(id);
@@ -388,6 +394,34 @@ export function DriveExplorer({
     />
   );
 
+  // ── Select-mode bar (mainly for touch — multi-select without Ctrl/Shift) ─────
+  const allSelected = processed.length > 0 && selectedIds.size === processed.length;
+  const selectBar = onBulkAction && (
+    <div className="mb-3 flex items-center justify-end gap-2">
+      {selectMode ? (
+        <>
+          <span className="mr-auto text-sm font-medium tabular-nums">
+            {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
+          </span>
+          <Button
+            variant="outline" size="sm" className="h-8"
+            onClick={() => setSelectedIds(allSelected ? new Set() : new Set(processed.map((i) => i.id)))}
+          >
+            {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8" onClick={clearSelection}>
+            Terminé
+          </Button>
+        </>
+      ) : (
+        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setSelectMode(true)}>
+          <ListChecks className="size-3.5" />
+          Sélectionner
+        </Button>
+      )}
+    </div>
+  );
+
   // ── Shared toolbar ────────────────────────────────────────────────────────────
   const toolbar = onBulkAction && (
     <SelectionToolbar
@@ -405,6 +439,7 @@ export function DriveExplorer({
     return (
       <div ref={explorerRef} className="min-h-full">
         {rubberBand}
+        {selectBar}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {processed.map((item, index) => (
             <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />
@@ -419,6 +454,7 @@ export function DriveExplorer({
   return (
     <div ref={explorerRef} className="min-h-full">
       {rubberBand}
+      {selectBar}
       <div className="overflow-hidden rounded-xl border border-border/40 bg-card/20">
         <ListHeader
           sortField={sortField}

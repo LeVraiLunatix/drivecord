@@ -11,6 +11,11 @@ function invalidateDrive(driveId: string) {
   mutate((key) => typeof key === "string" && key.includes(`/api/drive/${driveId}`));
 }
 
+/** Public refresh — call once after a batch (e.g. camera-roll backup). */
+export function refreshDrive(driveId: string) {
+  invalidateDrive(driveId);
+}
+
 async function apiFetch(url: string, opts?: RequestInit): Promise<Response> {
   const res = await fetch(url, { ...opts, headers: { "Content-Type": "application/json", ...opts?.headers } });
   if (!res.ok) {
@@ -29,6 +34,8 @@ export async function recordUploadedFile(args: {
   /** Set when the file was E2EE-encrypted before upload (vault). */
   locked?: boolean;
   encIv?: string;
+  /** Skip SWR revalidation (batch uploads call refreshDrive once at the end). */
+  silent?: boolean;
 }): Promise<string> {
   const id = nanoid(12);
   await apiFetch(`/api/drive/${args.driveId}/files`, {
@@ -46,7 +53,7 @@ export async function recordUploadedFile(args: {
       encIv: args.encIv ?? null,
     }),
   });
-  invalidateDrive(args.driveId);
+  if (!args.silent) invalidateDrive(args.driveId);
   return id;
 }
 

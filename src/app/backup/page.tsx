@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/back-button";
 import { cn } from "@/lib/utils";
 import { useAllDrives } from "@/lib/storage";
-import { recordUploadedFile, createFolder } from "@/lib/storage";
+import { recordUploadedFile, createFolder, refreshDrive } from "@/lib/storage";
 import { DiscordClient } from "@/lib/discord/client";
 import {
   cameraRollAvailable,
@@ -144,7 +144,7 @@ export default function BackupPage() {
             const file = new File([blob], filename, { type: mimeType });
             manifest = await client.uploadFile(file);
           }
-          const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest });
+          const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, silent: true });
           markBackedUp(drive.id, it.identifier, fileId);
           ok += 1;
         } catch (err) {
@@ -153,6 +153,7 @@ export default function BackupPage() {
         setProgress({ done: i + 1, total: todo.length });
         await new Promise((r) => setTimeout(r, 30));
       }
+      refreshDrive(drive.id); // single SWR refresh after the whole batch
       setBackedCount(getBackedUp(drive.id).size);
       if (ok === 0 && firstError) {
         toast.error(`Aucun média sauvegardé. Erreur : ${firstError.slice(0, 120)}`);
