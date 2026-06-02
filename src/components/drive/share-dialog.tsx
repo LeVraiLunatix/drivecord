@@ -121,7 +121,11 @@ export function ShareDialog({
             </div>
             <p className="text-xs text-muted-foreground">
               {share.hasPassword ? "🔒 Protégé par mot de passe · " : ""}
-              {share.expiresAt ? `Expire le ${new Date(share.expiresAt).toLocaleDateString("fr")}` : "N'expire pas"}
+              {(() => {
+                if (!share.expiresAt) return "N'expire jamais";
+                const days = Math.ceil((share.expiresAt - Date.now()) / 86_400_000);
+                return days <= 0 ? "Expiré" : `Expire dans ${days} jour${days > 1 ? "s" : ""}`;
+              })()}
             </p>
             <div className="flex gap-2">
               <Button asChild variant="outline" size="sm" className="gap-1.5">

@@ -37,6 +37,19 @@ type Share = {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+/** "N'expire jamais" / "Expire dans X jour(s)" / "Expire bientôt". */
+function expiryLabel(expiresAt: number | null): string {
+  if (!expiresAt) return "N'expire jamais";
+  const ms = expiresAt - Date.now();
+  if (ms <= 0) return "Expiré";
+  const days = Math.ceil(ms / 86_400_000);
+  if (days <= 1) {
+    const hours = Math.ceil(ms / 3_600_000);
+    return hours <= 1 ? "Expire dans moins d'1h" : `Expire dans ${hours}h`;
+  }
+  return `Expire dans ${days} jours`;
+}
+
 const container: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.05, delayChildren: 0.03 } },
@@ -87,7 +100,7 @@ export default function SharesPage() {
       style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
     >
       <motion.div variants={v ?? item}>
-        <BackButton fallback="/settings" className="w-fit" />
+        <BackButton fallback="/drive" className="w-fit" />
       </motion.div>
 
       <motion.header variants={v ?? item} className="space-y-1">
@@ -135,12 +148,12 @@ export default function SharesPage() {
                     {s.hasPassword && <Badge variant="secondary" className="gap-1"><Lock className="size-3" /></Badge>}
                     {s.expired ? (
                       <Badge variant="outline" className="text-destructive">Expiré</Badge>
-                    ) : s.expiresAt ? (
+                    ) : (
                       <Badge variant="outline" className="gap-1 font-normal text-muted-foreground">
                         <CalendarClock className="size-3" />
-                        {new Date(s.expiresAt).toLocaleDateString("fr")}
+                        {expiryLabel(s.expiresAt)}
                       </Badge>
-                    ) : null}
+                    )}
                   </div>
                 </div>
 
