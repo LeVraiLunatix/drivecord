@@ -2,11 +2,16 @@
 
 import { isNativeApp } from "@/lib/use-platform";
 
-export type CamItem = { identifier: string };
+export type CamItem = { identifier: string; album: string | null };
 
 /** Camera-roll backup is app-only (needs native photo library access). */
 export function cameraRollAvailable(): boolean {
   return isNativeApp();
+}
+
+/** Make an album name safe to use as a folder name. */
+function sanitizeAlbum(name: string): string {
+  return (name || "Album").replace(/[\\/]/g, "-").trim().slice(0, 60) || "Album";
 }
 
 function base64ToBlob(b64: string, type: string): Blob {
@@ -16,21 +21,37 @@ function base64ToBlob(b64: string, type: string): Blob {
   return new Blob([bytes], { type });
 }
 
+const THUMB = { thumbnailWidth: 1, thumbnailHeight: 1, thumbnailQuality: 1 } as const;
+
 /**
- * List every photo/video identifier in the library (tiny thumbnails to keep
- * the payload small — we only need identifiers + order).
+ * List every photo/video in the library, each tagged with the USER album it
+ * belongs to (first match wins) so the backup can mirror albums as folders.
+ * Media not in any user album → album: null (goes to the Pellicule root).
  */
 export async function listCameraRoll(): Promise<CamItem[]> {
   if (!isNativeApp()) return [];
   const { Media } = await import("@capacitor-community/media");
-  const res = await Media.getMedias({
-    types: "all",
-    quantity: 100_000,
-    thumbnailWidth: 1,
-    thumbnailHeight: 1,
-    thumbnailQuality: 1,
-  });
-  return (res.medias ?? []).map((m) => ({ identifier: m.identifier }));
+
+  // identifier → user album name.
+  const albumOf = new Map<string, string>();
+  try {
+    const { albums } = await Media.getAlbums();
+    const userAlbums = (albums ?? []).filter((a) => a.type === "user" || a.type == null);
+    for (const al of userAlbums) {
+      try {
+        const r = await Media.getMedias({ albumIdentifier: al.identifier, quantity: 100_000, ...THUMB });
+        for (const m of r.medias ?? []) {
+          if (!albumOf.has(m.identifier)) albumOf.set(m.identifier, sanitizeAlbum(al.name));
+        }
+      } catch { /* skip album */ }
+    }
+  } catch { /* getAlbums unsupported → no album mapping */ }
+
+  const all = await Media.getMedias({ types: "all", quantity: 100_000, ...THUMB });
+  return (all.medias ?? []).map((m) => ({
+    identifier: m.identifier,
+    album: albumOf.get(m.identifier) ?? null,
+  }));
 }
 
 const MIME_BY_EXT: Record<string, string> = {

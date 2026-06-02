@@ -47,11 +47,22 @@ export default function BackupPage() {
     if (target) setBackedCount(getBackedUp(target).size);
   }, [target, running]);
 
-  const ensureFolder = async (driveId: string): Promise<string> => {
+  const ensureRoot = async (driveId: string): Promise<string> => {
     const cached = localStorage.getItem(FOLDER_KEY(driveId));
     if (cached) return cached;
     const id = await createFolder({ driveId, parentId: null, name: "Pellicule" });
     localStorage.setItem(FOLDER_KEY(driveId), id);
+    return id;
+  };
+
+  /** Folder for a given album (under Pellicule), creating it once and caching. */
+  const ensureAlbumFolder = async (driveId: string, rootId: string, album: string | null): Promise<string> => {
+    if (!album) return rootId;
+    const key = `${FOLDER_KEY(driveId)}:${album}`;
+    const cached = localStorage.getItem(key);
+    if (cached) return cached;
+    const id = await createFolder({ driveId, parentId: rootId, name: album });
+    localStorage.setItem(key, id);
     return id;
   };
 
@@ -67,18 +78,27 @@ export default function BackupPage() {
       if (todo.length === 0) { toast.success("Pellicule déjà à jour ✅"); return; }
 
       const client = DiscordClient.fromUrl(drive.webhookUrl);
-      const folderId = await ensureFolder(drive.id).catch(() => null);
+      const rootId = await ensureRoot(drive.id);
+      const folderCache = new Map<string, string>(); // album → folderId
       setProgress({ done: 0, total: todo.length });
 
       let ok = 0;
       for (let i = 0; i < todo.length; i++) {
         if (cancelRef.current) break;
         try {
-          const { blob, filename, mimeType } = await readCameraItem(todo[i].identifier);
+          const it = todo[i];
+          // Resolve (and create once) the album's folder under Pellicule.
+          const albumKey = it.album ?? "";
+          let parentId = folderCache.get(albumKey);
+          if (parentId === undefined) {
+            parentId = await ensureAlbumFolder(drive.id, rootId, it.album);
+            folderCache.set(albumKey, parentId);
+          }
+          const { blob, filename, mimeType } = await readCameraItem(it.identifier);
           const file = new File([blob], filename, { type: mimeType });
           const manifest = await client.uploadFile(file);
-          await recordUploadedFile({ driveId: drive.id, parentId: folderId, manifest });
-          markBackedUp(drive.id, [todo[i].identifier]);
+          await recordUploadedFile({ driveId: drive.id, parentId, manifest });
+          markBackedUp(drive.id, [it.identifier]);
           ok += 1;
         } catch {
           /* skip this asset, continue */
@@ -110,7 +130,7 @@ export default function BackupPage() {
           <Images className="size-7 text-primary" /> Sauvegarde pellicule
         </h1>
         <p className="text-sm text-muted-foreground">
-          Sauvegarde tes photos et vidéos dans un drive. Seuls les nouveaux médias sont envoyés.
+          Sauvegarde tes photos et vidéos dans un drive. Tes albums deviennent des sous-dossiers de « Pellicule ». Seuls les nouveaux médias sont envoyés.
         </p>
       </motion.header>
 
