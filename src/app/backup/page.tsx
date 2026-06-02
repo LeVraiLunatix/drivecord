@@ -82,12 +82,14 @@ export default function BackupPage() {
       const folderCache = new Map<string, string>(); // album → folderId
       setProgress({ done: 0, total: todo.length });
 
+      // Skip very large files to avoid out-of-memory crashes in the WebView.
+      const MAX_BYTES = 700 * 1024 * 1024;
       let ok = 0;
+      let skipped = 0;
       for (let i = 0; i < todo.length; i++) {
         if (cancelRef.current) break;
         try {
           const it = todo[i];
-          // Resolve (and create once) the album's folder under Pellicule.
           const albumKey = it.album ?? "";
           let parentId = folderCache.get(albumKey);
           if (parentId === undefined) {
@@ -95,18 +97,25 @@ export default function BackupPage() {
             folderCache.set(albumKey, parentId);
           }
           const { blob, filename, mimeType } = await readCameraItem(it.identifier);
-          const file = new File([blob], filename, { type: mimeType });
-          const manifest = await client.uploadFile(file);
-          await recordUploadedFile({ driveId: drive.id, parentId, manifest });
-          markBackedUp(drive.id, [it.identifier]);
-          ok += 1;
+          if (blob.size > MAX_BYTES) {
+            skipped += 1;
+          } else {
+            const file = new File([blob], filename, { type: mimeType });
+            const manifest = await client.uploadFile(file);
+            await recordUploadedFile({ driveId: drive.id, parentId, manifest });
+            markBackedUp(drive.id, [it.identifier]);
+            ok += 1;
+          }
         } catch {
           /* skip this asset, continue */
         }
         setProgress({ done: i + 1, total: todo.length });
+        // Let the WebView reclaim memory between large items.
+        await new Promise((r) => setTimeout(r, 60));
       }
       setBackedCount(getBackedUp(drive.id).size);
-      toast.success(`${ok} média(s) sauvegardé(s) dans « ${drive.name} » › Pellicule`);
+      const extra = skipped > 0 ? ` · ${skipped} ignoré(s) (trop volumineux)` : "";
+      toast.success(`${ok} média(s) sauvegardé(s) dans « ${drive.name} » › Pellicule${extra}`);
     } catch (e) {
       toast.error(`Échec : ${(e as Error).message}`);
     } finally {

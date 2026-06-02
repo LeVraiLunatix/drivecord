@@ -60,19 +60,34 @@ const MIME_BY_EXT: Record<string, string> = {
   mp4: "video/mp4", mov: "video/quicktime", m4v: "video/mp4",
 };
 
-/** Read a library asset's full-quality bytes by identifier. */
+/**
+ * Read a library asset's full-quality bytes by identifier.
+ * Streams the file via a WebView-accessible URL (no giant base64 string in
+ * memory — that was crashing on large videos). Falls back to base64 if needed.
+ */
 export async function readCameraItem(
   identifier: string,
 ): Promise<{ blob: Blob; filename: string; mimeType: string }> {
   const { Media } = await import("@capacitor-community/media");
-  const { Filesystem } = await import("@capacitor/filesystem");
   const { path } = await Media.getMediaByIdentifier({ identifier });
-  const read = await Filesystem.readFile({ path });
   const ext = (path.split(".").pop() ?? "jpg").toLowerCase();
   const mimeType = MIME_BY_EXT[ext] ?? "application/octet-stream";
   const filename = path.split("/").pop() ?? `media-${identifier.slice(0, 8)}.${ext}`;
-  const blob = base64ToBlob(read.data as string, mimeType);
-  return { blob, filename, mimeType };
+
+  let blob: Blob;
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    const src = Capacitor.convertFileSrc(path);
+    const res = await fetch(src);
+    if (!res.ok) throw new Error("fetch failed");
+    blob = await res.blob();
+  } catch {
+    // Fallback: base64 read (heavier on memory, but reliable for smaller files).
+    const { Filesystem } = await import("@capacitor/filesystem");
+    const read = await Filesystem.readFile({ path });
+    blob = base64ToBlob(read.data as string, mimeType);
+  }
+  return { blob, filename, mimeType: blob.type || mimeType };
 }
 
 // ── Backed-up tracker (per drive, localStorage) ──────────────────────────────
