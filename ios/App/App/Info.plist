@@ -51,6 +51,8 @@
 	<string>Drivecord utilise Face ID pour déverrouiller ton coffre-fort.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Drivecord enregistre les images et vidéos téléchargées dans ta galerie.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Drivecord accède à ta pellicule pour sauvegarder tes photos et vidéos.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

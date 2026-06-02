@@ -7,6 +7,7 @@ import {
   ChevronsUpDown,
   CloudUpload,
   HardDrive,
+  Images,
   Link2,
   Lock,
   LogOut,
@@ -237,7 +238,13 @@ function SidebarContent({
         </p>
       </div>
 
-      {/* Install the app — just above the account */}
+      {/* Camera-roll backup + install — just above the account */}
+      <NavButton
+        label="Sauvegarde pellicule"
+        icon={Images}
+        active={false}
+        onClick={() => { router.push("/backup"); close(); }}
+      />
       <NavButton
         label="Installer l'app"
         icon={Smartphone}
