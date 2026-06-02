@@ -7,6 +7,24 @@
   à chaque changement notable.
 -->
 
+## Design iOS liquid glass + sélection + sauvegarde pellicule
+
+🫧 **Nouveau design "liquid glass"** (dans l'app)
+- Menus, cartes, fenêtres et barre du haut translucides, floutés, façon iOS.
+
+✅ **Sélection multiple au doigt**
+- Bouton "Sélectionner" : tape les fichiers pour les cocher, "Tout sélectionner". Plus besoin de les prendre un par un.
+
+📸 **Sauvegarde de la pellicule**
+- Sauvegarde tes photos/vidéos dans un drive ; tes albums deviennent des dossiers. Re-upload fiable (plus de crash mémoire), suivi synchronisé avec le drive.
+
+📥 **Téléchargements natifs**
+- Images/vidéos → galerie, autres fichiers → app Fichiers (dossier Drivecord).
+
+🔗 **Partage par lien** + 🔐 **coffre-fort chiffré** + aperçu enrichi + statistiques + palette Ctrl+K.
+
+---
+
 ## Téléchargements natifs + partage + coffre-fort
 
 📥 **Téléchargements qui marchent vraiment dans l'app**
