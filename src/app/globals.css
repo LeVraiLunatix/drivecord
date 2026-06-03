@@ -352,34 +352,50 @@
 
 /* ── iOS "liquid glass" — applied only inside the app (html.is-native) ─────────
    Translucent, blurred, saturated surfaces for the main menus/cards/sheets.
-   The web keeps its solid look. */
-@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  html.is-native [data-slot="card"] {
-    background: color-mix(in oklab, var(--card) 55%, transparent);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    backdrop-filter: blur(20px) saturate(180%);
-    border-color: color-mix(in oklab, var(--border) 45%, transparent);
-    border-radius: 1.25rem;
-  }
-  html.is-native [data-slot="dialog-content"],
-  html.is-native [data-slot="sheet-content"],
-  html.is-native [data-slot="dropdown-menu-content"],
-  html.is-native [data-slot="select-content"],
-  html.is-native [data-slot="alert-dialog-content"] {
-    background: color-mix(in oklab, var(--popover) 70%, transparent) !important;
-    -webkit-backdrop-filter: blur(30px) saturate(200%);
-    backdrop-filter: blur(30px) saturate(200%);
-    border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
-  }
-  html.is-native [data-slot="sheet-content"] { border-radius: 0 1.5rem 1.5rem 0; }
-  /* Drive top bar + view controls: frosted bar that content scrolls under. */
-  html.is-native .glass-bar {
-    background: color-mix(in oklab, var(--background) 62%, transparent);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
-  }
-  /* Pill-ish buttons + soft inner highlight, very iOS. */
-  html.is-native [data-slot="button"] {
-    border-radius: 0.9rem;
-  }
+   Explicit rgba (no color-mix) so it works on every WebView. Web keeps its
+   solid look. The app is dark by default → dark glass values. */
+html.is-native [data-slot="card"] {
+  background: rgba(22, 22, 30, 0.55) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 30px rgba(0, 0, 0, 0.35);
 }
+html.is-native [data-slot="dialog-content"],
+html.is-native [data-slot="dropdown-menu-content"],
+html.is-native [data-slot="select-content"],
+html.is-native [data-slot="alert-dialog-content"],
+html.is-native [data-slot="sheet-content"] {
+  background: rgba(20, 20, 28, 0.62) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(200%);
+  backdrop-filter: blur(34px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 16px 50px rgba(0, 0, 0, 0.5);
+}
+html.is-native [data-slot="dialog-content"],
+html.is-native [data-slot="dropdown-menu-content"],
+html.is-native [data-slot="select-content"],
+html.is-native [data-slot="alert-dialog-content"] {
+  border-radius: 1.4rem !important;
+}
+html.is-native [data-slot="sheet-content"] { border-radius: 0 1.6rem 1.6rem 0 !important; }
+
+/* Frosted top bar that content scrolls under. */
+html.is-native .glass-bar {
+  background: rgba(12, 12, 18, 0.55) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  backdrop-filter: blur(26px) saturate(180%);
+}
+
+/* Softer iOS-style button corners. */
+html.is-native [data-slot="button"] { border-radius: 0.95rem; }
+
+/* Light-theme variant. */
+html.is-native.light [data-slot="card"] { background: rgba(255, 255, 255, 0.6) !important; border-color: rgba(0,0,0,0.08) !important; }
+html.is-native.light [data-slot="dialog-content"],
+html.is-native.light [data-slot="dropdown-menu-content"],
+html.is-native.light [data-slot="select-content"],
+html.is-native.light [data-slot="alert-dialog-content"],
+html.is-native.light [data-slot="sheet-content"] { background: rgba(250, 250, 252, 0.7) !important; border-color: rgba(0,0,0,0.08) !important; }
+html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.6) !important; }

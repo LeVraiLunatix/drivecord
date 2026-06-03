@@ -112,43 +112,64 @@ export default function BackupPage() {
 
       // DB stores size as a 32-bit Int → hard cap ~2 GB per file.
       const MAX_BYTES = 2_000_000_000;
+      // Skip any media that hangs (e.g. iCloud photo not downloaded locally).
+      const ITEM_TIMEOUT = 150_000;
       let ok = 0;
       let skipped = 0;
+      let stuck = 0;
       let firstError = "";
+
+      // Upload one media. Returns "ok" | "skipped"; throws on error/abort.
+      const processItem = async (
+        it: { identifier: string; album: string | null },
+        signal: AbortSignal,
+      ): Promise<"ok" | "skipped"> => {
+        const albumKey = it.album ?? "";
+        let parentId = folderCache.get(albumKey);
+        if (parentId === undefined) {
+          parentId = await ensureAlbumFolder(drive.id, rootId, it.album);
+          folderCache.set(albumKey, parentId);
+        }
+        let manifest = null;
+        // 1) Memory-safe streaming.
+        try {
+          const s = await streamCameraItem(it.identifier, signal);
+          if (s.size && s.size > MAX_BYTES) return "skipped";
+          if (s.stream) {
+            manifest = await client.uploadStream(s.stream, { filename: s.filename, mimeType: s.mimeType, totalSize: s.size, signal });
+          }
+        } catch (streamErr) {
+          if ((streamErr as Error).name === "AbortError") throw streamErr;
+          if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
+        }
+        // 2) Fallback: base64 read → upload.
+        if (!manifest) {
+          const { blob, filename, mimeType } = await readCameraItem(it.identifier, signal);
+          if (blob.size > MAX_BYTES) return "skipped";
+          const file = new File([blob], filename, { type: mimeType });
+          manifest = await client.uploadFile(file, { signal });
+        }
+        const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, silent: true });
+        markBackedUp(drive.id, it.identifier, fileId);
+        return "ok";
+      };
+
       for (let i = 0; i < todo.length; i++) {
         if (cancelRef.current) break;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), ITEM_TIMEOUT);
         try {
-          const it = todo[i];
-          const albumKey = it.album ?? "";
-          let parentId = folderCache.get(albumKey);
-          if (parentId === undefined) {
-            parentId = await ensureAlbumFolder(drive.id, rootId, it.album);
-            folderCache.set(albumKey, parentId);
-          }
-
-          let manifest = null;
-          // 1) Try memory-safe streaming (best for large videos).
-          try {
-            const s = await streamCameraItem(it.identifier);
-            if (s.size && s.size > MAX_BYTES) { skipped += 1; setProgress({ done: i + 1, total: todo.length }); continue; }
-            if (s.stream) {
-              manifest = await client.uploadStream(s.stream, { filename: s.filename, mimeType: s.mimeType, totalSize: s.size });
-            }
-          } catch (streamErr) {
-            if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
-          }
-          // 2) Fallback: base64 read → upload (proven path, OOM risk on huge files).
-          if (!manifest) {
-            const { blob, filename, mimeType } = await readCameraItem(it.identifier);
-            if (blob.size > MAX_BYTES) { skipped += 1; setProgress({ done: i + 1, total: todo.length }); continue; }
-            const file = new File([blob], filename, { type: mimeType });
-            manifest = await client.uploadFile(file);
-          }
-          const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, silent: true });
-          markBackedUp(drive.id, it.identifier, fileId);
-          ok += 1;
+          const res = await Promise.race<"ok" | "skipped">([
+            processItem(todo[i], controller.signal),
+            new Promise<never>((_, rej) => setTimeout(() => rej(new Error("__timeout__")), ITEM_TIMEOUT + 2000)),
+          ]);
+          if (res === "ok") ok += 1; else skipped += 1;
         } catch (err) {
-          if (!firstError) firstError = (err as Error).message;
+          const e = err as Error;
+          if (e.message === "__timeout__" || e.name === "AbortError") stuck += 1;
+          else if (!firstError) firstError = e.message;
+        } finally {
+          clearTimeout(timer);
         }
         setProgress({ done: i + 1, total: todo.length });
         await new Promise((r) => setTimeout(r, 30));
@@ -158,7 +179,10 @@ export default function BackupPage() {
       if (ok === 0 && firstError) {
         toast.error(`Aucun média sauvegardé. Erreur : ${firstError.slice(0, 120)}`);
       } else {
-        const extra = skipped > 0 ? ` · ${skipped} ignoré(s) (> 2 Go)` : "";
+        const parts: string[] = [];
+        if (skipped) parts.push(`${skipped} > 2 Go`);
+        if (stuck) parts.push(`${stuck} bloqué(s)`);
+        const extra = parts.length ? ` · ${parts.join(" · ")} ignoré(s)` : "";
         toast.success(`${ok} média(s) sauvegardé(s) dans « ${drive.name} » › Pellicule${extra}`);
       }
     } catch (e) {

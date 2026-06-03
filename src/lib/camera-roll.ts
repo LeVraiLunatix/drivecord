@@ -67,6 +67,7 @@ const MIME_BY_EXT: Record<string, string> = {
  */
 export async function readCameraItem(
   identifier: string,
+  signal?: AbortSignal,
 ): Promise<{ blob: Blob; filename: string; mimeType: string }> {
   const { Media } = await import("@capacitor-community/media");
   const { path } = await Media.getMediaByIdentifier({ identifier });
@@ -78,7 +79,7 @@ export async function readCameraItem(
   try {
     const { Capacitor } = await import("@capacitor/core");
     const src = Capacitor.convertFileSrc(path);
-    const res = await fetch(src);
+    const res = await fetch(src, { cache: "no-store", signal });
     if (!res.ok) throw new Error("fetch failed");
     blob = await res.blob();
   } catch {
@@ -96,6 +97,7 @@ export async function readCameraItem(
  */
 export async function streamCameraItem(
   identifier: string,
+  signal?: AbortSignal,
 ): Promise<{ stream: ReadableStream<Uint8Array> | null; size: number; filename: string; mimeType: string }> {
   const { Media } = await import("@capacitor-community/media");
   const { Capacitor } = await import("@capacitor/core");
@@ -105,7 +107,7 @@ export async function streamCameraItem(
   const filename = path.split("/").pop() ?? `media-${identifier.slice(0, 8)}.${ext}`;
 
   const src = Capacitor.convertFileSrc(path);
-  const res = await fetch(src);
+  const res = await fetch(src, { cache: "no-store", signal });
   if (!res.ok || !res.body) throw new Error("Lecture du média impossible");
   const len = Number(res.headers.get("content-length") ?? 0);
   return { stream: res.body, size: len, filename, mimeType };
