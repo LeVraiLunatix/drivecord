@@ -8,6 +8,7 @@ import { NativeDeepLink } from "@/components/native-deep-link";
 import { NativeClass } from "@/components/native-class";
 import { NativeBackdrop } from "@/components/native-backdrop";
 import { AppTabBar } from "@/components/app-tab-bar";
+import { NativeTabsBridge } from "@/components/native-tabs-bridge";
 import "./globals.css";
 
 // Inter = substitut libre le plus proche de "gg sans" (la police de Discord).
@@ -78,6 +79,7 @@ export default function RootLayout({
             <TooltipProvider delayDuration={200}>
               {children}
               <AppTabBar />
+              <NativeTabsBridge />
               <Toaster richColors position="bottom-right" />
             </TooltipProvider>
           </ThemeProvider>

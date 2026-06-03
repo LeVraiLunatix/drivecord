@@ -7,6 +7,15 @@
   à chaque changement notable.
 -->
 
+## Barre de navigation native (vrai Liquid Glass) + refonte app
+
+🧭 **Nouvelle barre d'onglets en bas, 100% native iOS**
+- Fichiers · Coffre · Pellicule · Partagés · Réglages. Sur iOS 26 elle affiche le vrai Liquid Glass du système (pas une imitation).
+- Le menu qui s'ouvrait par la gauche est supprimé dans l'app : un bouton en haut donne accès aux drives, favoris, corbeille et tags.
+- Le petit "+" en bas à droite a disparu.
+
+✨ **Fond ambiant coloré** derrière l'interface pour faire ressortir les surfaces en verre, animations soignées.
+
 ## Design iOS liquid glass + sélection + sauvegarde pellicule
 
 🫧 **Nouveau design "liquid glass"** (dans l'app)

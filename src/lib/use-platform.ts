@@ -22,6 +22,16 @@ export function useIsNativeApp(): boolean {
   return isNative;
 }
 
+/**
+ * True when running inside the iOS app build that provides a *native* UITabBar
+ * (the shell appends "DrivecordNative" to the user-agent). In that case the web
+ * hides its own CSS tab bar and lets the native bar drive navigation.
+ */
+export function hasNativeTabBar(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return navigator.userAgent.includes("DrivecordNative");
+}
+
 /** Synchronous check usable outside React (returns false during SSR). */
 export function isNativeApp(): boolean {
   if (typeof window === "undefined") return false;

@@ -1,5 +1,103 @@
 import UIKit
+import WebKit
 import Capacitor
+
+// MARK: - Native Liquid Glass tab bar
+//
+// The app loads the remote web UI in a single Capacitor WKWebView. To get the
+// *real* iOS 26 Liquid Glass (which CSS in a WebView can only fake), the bottom
+// navigation is a native UITabBar overlaid on the full-screen web view. On
+// iOS 26 a standard translucent UITabBar adopts the system Liquid Glass
+// material automatically; on older iOS it falls back to the classic blur.
+//
+// Contract with the web app (src/components/native-tabs-bridge.tsx):
+//   • UA carries "DrivecordNative" so the web hides its CSS tab bar.
+//   • Native → web (tab tapped):  window.__drivecordNavigate(path)
+//   • Web → native (route change): webkit.messageHandlers.nativeTabs.postMessage
+//        ({ index: Int, visible: Bool })
+//   • Native pushes the measured bar height to CSS var --native-tabbar-h so the
+//     web content reserves room (it scrolls *behind* the translucent bar).
+class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMessageHandler {
+
+    private let nativeTabBar = UITabBar()
+    private let routes = ["/drive", "/drive?section=vault", "/backup", "/shares", "/settings"]
+    private let tabDefs: [(title: String, symbol: String)] = [
+        ("Fichiers", "folder.fill"),
+        ("Coffre", "lock.fill"),
+        ("Pellicule", "photo.on.rectangle"),
+        ("Partagés", "link"),
+        ("Réglages", "gearshape.fill"),
+    ]
+    private var lastBarHeight: CGFloat = 0
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupTabBar()
+        // Receive selected-tab / visibility updates from the web app.
+        webView?.configuration.userContentController.add(self, name: "nativeTabs")
+    }
+
+    private func setupTabBar() {
+        nativeTabBar.delegate = self
+        nativeTabBar.translatesAutoresizingMaskIntoConstraints = false
+        // App accent (indigo) for the selected tab.
+        nativeTabBar.tintColor = UIColor(red: 0.51, green: 0.42, blue: 0.98, alpha: 1.0)
+        var items: [UITabBarItem] = []
+        for (i, def) in tabDefs.enumerated() {
+            items.append(UITabBarItem(title: def.title, image: UIImage(systemName: def.symbol), tag: i))
+        }
+        nativeTabBar.setItems(items, animated: false)
+        nativeTabBar.selectedItem = items.first
+        view.addSubview(nativeTabBar)
+        NSLayoutConstraint.activate([
+            nativeTabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            nativeTabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            nativeTabBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        view.bringSubviewToFront(nativeTabBar)
+        // Tell the web the bar's pixel height so content can clear it.
+        let h = nativeTabBar.frame.height
+        if h > 0 && abs(h - lastBarHeight) > 0.5 {
+            lastBarHeight = h
+            webView?.evaluateJavaScript(
+                "document.documentElement.style.setProperty('--native-tabbar-h','\(Int(h))px')",
+                completionHandler: nil
+            )
+        }
+    }
+
+    // Tab tapped → navigate the web app (client-side route, no reload).
+    func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+        let i = item.tag
+        guard i >= 0 && i < routes.count else { return }
+        let path = routes[i]
+        let js = "if(window.__drivecordNavigate){window.__drivecordNavigate('\(path)')}else{window.location.href='\(path)'}"
+        webView?.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    // Web → native: keep the selected tab + visibility in sync with the route.
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "nativeTabs" else { return }
+        DispatchQueue.main.async {
+            guard let body = message.body as? [String: Any] else { return }
+            if let visible = body["visible"] as? Bool {
+                self.nativeTabBar.isHidden = !visible
+            }
+            if let index = body["index"] as? Int {
+                let items = self.nativeTabBar.items
+                if index >= 0, let items = items, index < items.count {
+                    self.nativeTabBar.selectedItem = items[index]
+                } else {
+                    self.nativeTabBar.selectedItem = nil
+                }
+            }
+        }
+    }
+}
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {

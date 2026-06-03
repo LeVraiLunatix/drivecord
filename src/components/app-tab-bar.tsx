@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { HardDrive, Lock, Images, Link2, Settings, type LucideIcon } from "lucide-react";
-import { useIsNativeApp } from "@/lib/use-platform";
+import { useIsNativeApp, hasNativeTabBar } from "@/lib/use-platform";
 import { cn } from "@/lib/utils";
 
 type Tab = {
@@ -50,6 +50,8 @@ function TabBarInner() {
   const section = search.get("section");
 
   if (!native) return null;
+  // The native build provides a real UITabBar — don't double up with the CSS one.
+  if (hasNativeTabBar()) return null;
   if (pathname === "/" || HIDDEN_PREFIXES.some((p) => pathname.startsWith(p))) return null;
 
   return (

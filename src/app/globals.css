@@ -457,6 +457,11 @@ html:not(.is-native) .drive-native-menu { display: none !important; }
 /* Leave room for the bottom liquid-glass tab bar (app only). */
 html.is-native .tabbar-pad { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
 
+/* Native UITabBar build: the bar is drawn by iOS over the web view. Reserve its
+   measured height (pushed from Swift as --native-tabbar-h) so content clears it,
+   and drop the CSS-bar padding above. */
+html.native-tabs .tabbar-pad { padding-bottom: var(--native-tabbar-h, 83px) !important; }
+
 /* Light-theme variant. */
 html.is-native.light body { background: #eef0f6 !important; }
 html.is-native.light .native-backdrop { background: radial-gradient(120% 80% at 50% -10%, rgba(99,102,241,0.12), transparent 60%), #eef0f6; }

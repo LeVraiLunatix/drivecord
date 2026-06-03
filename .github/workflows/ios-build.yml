@@ -23,6 +23,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # iOS 26 SDK is required for the native UITabBar to render Liquid Glass.
+      # Pick the newest Xcode 26 on the runner; fall back to the default if none.
+      - name: Select Xcode 26 (iOS 26 SDK / Liquid Glass)
+        run: |
+          XC=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$XC" ]; then
+            sudo xcode-select -s "$XC"
+            echo "Selected $XC"
+          else
+            echo "No Xcode 26 found — using default (Liquid Glass needs iOS 26 SDK)."
+          fi
+          xcodebuild -version
+
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
