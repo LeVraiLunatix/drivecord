@@ -3,6 +3,9 @@
  */
 
 import type { DriveItem } from "@/lib/storage";
+import { nativeMenuAvailable, presentNativeMenu } from "@/lib/native-menu";
+
+export { nativeMenuAvailable };
 
 export type ItemAction =
   | "open"
@@ -58,4 +61,24 @@ export function buildItemMenu(item: DriveItem): MenuEntry[] {
     destructive: true,
   });
   return entries;
+}
+
+/**
+ * Present the item menu as a native iOS Liquid Glass action sheet and resolve
+ * with the chosen action (or null if cancelled). Used on the native app where
+ * a real system sheet beats the web dropdown.
+ */
+export async function presentItemMenuNative(
+  menu: MenuEntry[],
+  title: string,
+): Promise<ItemAction | null> {
+  const items = menu.filter(
+    (m): m is Extract<MenuEntry, { kind: "item" }> => m.kind === "item",
+  );
+  const i = await presentNativeMenu({
+    title,
+    items: items.map((m) => ({ label: m.label, destructive: m.destructive })),
+  });
+  if (i < 0 || i >= items.length) return null;
+  return items[i].action;
 }

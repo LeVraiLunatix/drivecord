@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Folder, MoreVertical, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, Folder, Star } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -10,13 +9,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { formatBytes, formatRelativeTime } from "@/lib/utils/format";
 import { iconFor, kindOf } from "@/lib/utils/file-icons";
@@ -30,6 +22,7 @@ import {
   setItemDrag,
 } from "@/lib/drive-dnd";
 import { buildItemMenu, type ItemAction } from "./item-menu";
+import { ItemMenuButton } from "./item-menu-button";
 import { useLongPress } from "./use-long-press";
 
 export type { ItemAction };
@@ -242,38 +235,8 @@ export const DriveItemRow = React.memo(function DriveItemRow({
               {formatRelativeTime(mtime)}
             </span>
 
-            {/* Inline action button */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {menu.map((m, i) =>
-                  m.kind === "separator" ? (
-                    <DropdownMenuSeparator key={`s-${i}`} />
-                  ) : (
-                    <DropdownMenuItem
-                      key={m.action}
-                      onSelect={() => onAction(m.action, item)}
-                      className={
-                        m.destructive
-                          ? "text-destructive focus:text-destructive"
-                          : undefined
-                      }
-                    >
-                      {m.label}
-                    </DropdownMenuItem>
-                  ),
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Action button — native sheet in the app, dropdown on web. */}
+            <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} className="shrink-0" />
           </div>
         </ContextMenuTrigger>
 

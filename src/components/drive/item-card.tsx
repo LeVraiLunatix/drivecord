@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Folder, MoreVertical, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, Folder, Star } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -10,13 +9,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { formatBytes, formatRelativeTime } from "@/lib/utils/format";
 import { iconFor, kindOf } from "@/lib/utils/file-icons";
@@ -34,6 +26,7 @@ import {
 import { useDiscordClient } from "@/lib/discord/context";
 import { getThumbnail, generateThumbnail } from "@/lib/thumbnail-cache";
 import { buildItemMenu, type ItemAction } from "./item-menu";
+import { ItemMenuButton } from "./item-menu-button";
 import { TagBadge } from "./tag-badge";
 import { useLongPress } from "./use-long-press";
 
@@ -231,37 +224,13 @@ export const DriveItemCard = React.memo(function DriveItemCard({
                   <Star className="absolute bottom-1.5 left-1.5 size-3.5 fill-amber-400 text-amber-400 drop-shadow" />
                 )}
                 <div className="absolute right-1 top-1">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7 bg-black/30 text-white opacity-0 transition-opacity hover:bg-black/50 group-hover:opacity-100 data-[state=open]:opacity-100"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {menu.map((m, i) =>
-                        m.kind === "separator" ? (
-                          <DropdownMenuSeparator key={`s-${i}`} />
-                        ) : (
-                          <DropdownMenuItem
-                            key={m.action}
-                            onSelect={() => onAction(m.action, item)}
-                            className={
-                              m.destructive
-                                ? "text-destructive focus:text-destructive"
-                                : undefined
-                            }
-                          >
-                            {m.label}
-                          </DropdownMenuItem>
-                        ),
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <ItemMenuButton
+                    item={item}
+                    menu={menu}
+                    name={name}
+                    onAction={onAction}
+                    className="bg-black/30 text-white hover:bg-black/50"
+                  />
                 </div>
               </div>
             ) : (
@@ -278,37 +247,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
                   {favorite && (
                     <Star className="size-3.5 fill-amber-400 text-amber-400" />
                   )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {menu.map((m, i) =>
-                        m.kind === "separator" ? (
-                          <DropdownMenuSeparator key={`s-${i}`} />
-                        ) : (
-                          <DropdownMenuItem
-                            key={m.action}
-                            onSelect={() => onAction(m.action, item)}
-                            className={
-                              m.destructive
-                                ? "text-destructive focus:text-destructive"
-                                : undefined
-                            }
-                          >
-                            {m.label}
-                          </DropdownMenuItem>
-                        ),
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} />
                 </div>
               </div>
             )}

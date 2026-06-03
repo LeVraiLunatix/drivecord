@@ -7,6 +7,11 @@
   à chaque changement notable.
 -->
 
+## Menus natifs Liquid Glass (drive, tri, actions fichiers)
+
+🫧 **Les menus s'ouvrent maintenant en vrai verre natif iOS**
+- Sélecteur de drive (+ favoris, coffre, corbeille, tags), tri, et le menu d'actions de chaque fichier (⋮) s'ouvrent en **feuille d'action native iOS** avec le matériau Liquid Glass du système.
+
 ## Barre de navigation native (vrai Liquid Glass) + refonte app
 
 🧭 **Nouvelle barre d'onglets en bas, 100% native iOS**

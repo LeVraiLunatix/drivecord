@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { tagDot } from "@/lib/tag-colors";
+import { nativeMenuAvailable, presentNativeMenu, type NativeMenuItem } from "@/lib/native-menu";
 import {
   setActiveDriveId,
   useActiveDrive,
@@ -56,6 +57,50 @@ export function DriveNativeMenu({
   const drives = useAllDrives();
   const tags = useAllTags(activeDrive?.id ?? null);
   const [open, setOpen] = React.useState(false);
+  const [useNative, setUseNative] = React.useState(false);
+
+  React.useEffect(() => { setUseNative(nativeMenuAvailable()); }, []);
+
+  // Native iOS path: present a real Liquid Glass action sheet listing drives +
+  // sections + tags, then run the chosen action.
+  const openNativeSheet = async () => {
+    const driveList = drives ?? [];
+    const tagList = tags ?? [];
+    const items: NativeMenuItem[] = [];
+    const actions: Array<() => void> = [];
+
+    for (const d of driveList) {
+      items.push({ label: d.name, selected: d.id === activeDrive?.id });
+      actions.push(() => { setActiveDriveId(d.id); onNavigateRoot(); });
+    }
+    items.push({ label: "＋  Ajouter un drive" });
+    actions.push(() => router.push("/setup"));
+
+    items.push({ label: "Tous les fichiers", selected: section === "files" });
+    actions.push(() => { onSectionChange("files"); onNavigateRoot(); });
+    items.push({ label: "Favoris", selected: section === "favorites" });
+    actions.push(() => onSectionChange("favorites"));
+    items.push({ label: "Coffre-fort", selected: section === "vault" });
+    actions.push(() => onSectionChange("vault"));
+    items.push({ label: "Corbeille", selected: section === "trash" });
+    actions.push(() => onSectionChange("trash"));
+
+    for (const t of tagList) {
+      items.push({ label: `#${t.tag} · ${t.count}`, selected: section === "tag" && activeTag === t.tag });
+      actions.push(() => onTagSelect?.(t.tag));
+    }
+
+    const i = await presentNativeMenu({ title: activeDrive?.name ?? "Mes drives", message: "Changer de drive ou de section", items });
+    if (i >= 0 && i < actions.length) actions[i]();
+  };
+
+  if (useNative) {
+    return (
+      <Button variant="ghost" size="icon" className="size-9" aria-label="Drives et sections" onClick={openNativeSheet}>
+        <ChevronsUpDown className="size-5" />
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>

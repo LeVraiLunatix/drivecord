@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { nativeMenuAvailable, presentNativeMenu } from "@/lib/native-menu";
 import type { FilterKind, SortDir, SortField, ViewMode } from "@/lib/view-prefs";
 
 type Props = {
@@ -65,6 +66,29 @@ export function ViewControls({
 }: Props) {
   const toggleDir = () =>
     onSortChange(sortField, sortDir === "asc" ? "desc" : "asc");
+
+  const [useNative, setUseNative] = React.useState(false);
+  React.useEffect(() => { setUseNative(nativeMenuAvailable()); }, []);
+
+  // Native iOS: pick the sort field via a real Liquid Glass action sheet.
+  const openNativeSort = async () => {
+    const i = await presentNativeMenu({
+      title: "Trier par",
+      items: SORT_OPTIONS.map((o) => ({ label: o.label, selected: o.field === sortField })),
+    });
+    if (i >= 0) onSortChange(SORT_OPTIONS[i].field, sortDir);
+  };
+
+  const sortButton = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+    >
+      <ArrowUpDown className="size-3" />
+      {SORT_LABELS[sortField]}
+    </Button>
+  );
 
   return (
     <div className="flex items-center gap-2 border-b border-border/30 bg-background/30 px-6 py-1.5">
@@ -122,34 +146,29 @@ export function ViewControls({
 
       {/* Sort field + direction */}
       <div className="flex shrink-0 items-center gap-0.5">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-              <ArrowUpDown className="size-3" />
-              {SORT_LABELS[sortField]}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {SORT_OPTIONS.map((opt) => (
-              <DropdownMenuItem
-                key={opt.field}
-                onSelect={() => onSortChange(opt.field, sortDir)}
-                className={cn(
-                  sortField === opt.field && "font-semibold text-foreground",
-                )}
-              >
-                {opt.label}
-                {sortField === opt.field && (
-                  <span className="ml-auto text-primary">✓</span>
-                )}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {useNative ? (
+          <span onClick={openNativeSort}>{sortButton}</span>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>{sortButton}</DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {SORT_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.field}
+                  onSelect={() => onSortChange(opt.field, sortDir)}
+                  className={cn(
+                    sortField === opt.field && "font-semibold text-foreground",
+                  )}
+                >
+                  {opt.label}
+                  {sortField === opt.field && (
+                    <span className="ml-auto text-primary">✓</span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         <Button
           variant="ghost"

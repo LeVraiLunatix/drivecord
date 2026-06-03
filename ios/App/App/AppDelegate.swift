@@ -35,6 +35,8 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         setupTabBar()
         // Receive selected-tab / visibility updates from the web app.
         webView?.configuration.userContentController.add(self, name: "nativeTabs")
+        // Receive requests to present native (Liquid Glass) action sheets.
+        webView?.configuration.userContentController.add(self, name: "nativeMenu")
     }
 
     private func setupTabBar() {
@@ -79,11 +81,22 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 
-    // Web → native: keep the selected tab + visibility in sync with the route.
+    // Web → native messages.
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "nativeTabs" else { return }
+        switch message.name {
+        case "nativeTabs":
+            handleTabsMessage(message.body)
+        case "nativeMenu":
+            handleMenuMessage(message.body)
+        default:
+            break
+        }
+    }
+
+    // Keep the selected tab + visibility in sync with the web route.
+    private func handleTabsMessage(_ raw: Any) {
         DispatchQueue.main.async {
-            guard let body = message.body as? [String: Any] else { return }
+            guard let body = raw as? [String: Any] else { return }
             if let visible = body["visible"] as? Bool {
                 self.nativeTabBar.isHidden = !visible
             }
@@ -96,6 +109,51 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
                 }
             }
         }
+    }
+
+    // Present a native (Liquid Glass) action sheet and report the choice back.
+    private func handleMenuMessage(_ raw: Any) {
+        DispatchQueue.main.async {
+            guard let body = raw as? [String: Any],
+                  let id = body["id"] as? String,
+                  let items = body["items"] as? [[String: Any]] else { return }
+            let title = body["title"] as? String
+            let messageText = body["message"] as? String
+            let cancel = (body["cancel"] as? String) ?? "Annuler"
+
+            let alert = UIAlertController(title: title, message: messageText, preferredStyle: .actionSheet)
+            for (i, it) in items.enumerated() {
+                let selected = (it["selected"] as? Bool) ?? false
+                let label = ((it["label"] as? String) ?? "")
+                let title = selected ? "✓ \(label)" : label
+                let style: UIAlertAction.Style = ((it["destructive"] as? Bool) ?? false) ? .destructive : .default
+                alert.addAction(UIAlertAction(title: title, style: style) { _ in
+                    self.reportMenuResult(id, i)
+                })
+            }
+            alert.addAction(UIAlertAction(title: cancel, style: .cancel) { _ in
+                self.reportMenuResult(id, -1)
+            })
+            // iPad / popover safety — anchor to the bottom centre.
+            if let pop = alert.popoverPresentationController {
+                pop.sourceView = self.view
+                pop.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.maxY - 80, width: 1, height: 1)
+                pop.permittedArrowDirections = []
+            }
+            // Don't stack sheets on top of an existing presentation.
+            if self.presentedViewController == nil {
+                self.present(alert, animated: true)
+            } else {
+                self.reportMenuResult(id, -1)
+            }
+        }
+    }
+
+    private func reportMenuResult(_ id: String, _ index: Int) {
+        webView?.evaluateJavaScript(
+            "window.__drivecordMenuResult && window.__drivecordMenuResult('\(id)', \(index))",
+            completionHandler: nil
+        )
     }
 }
 
