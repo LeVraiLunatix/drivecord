@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { DriveSidebar } from "@/components/drive/sidebar";
@@ -27,8 +27,7 @@ import { PreviewModal } from "@/components/drive/preview-modal";
 import { UploadDropzone } from "@/components/drive/upload-dropzone";
 import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
-import FloatingActionMenu from "@/components/ui/floating-action-menu";
-import { FolderPlus, FolderUp, Lock, Star, Tag, Trash2, Upload } from "lucide-react";
+import { Lock, Star, Tag, Trash2 } from "lucide-react";
 import { VaultGate } from "@/components/drive/vault-gate";
 
 import { useDiscordClient } from "@/lib/discord/context";
@@ -60,13 +59,29 @@ import {
 type Section = "files" | "favorites" | "vault" | "trash" | "tag";
 
 export default function DrivePage() {
+  // useSearchParams (tab-bar deep-links) requires a Suspense boundary.
+  return (
+    <React.Suspense fallback={null}>
+      <DriveContent />
+    </React.Suspense>
+  );
+}
+
+function DriveContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeDriveId] = useActiveDriveId();
   const activeDrive = useActiveDrive();
   const client = useDiscordClient();
   const enqueue = useUploadQueue((s) => s.enqueue);
 
   const [section, setSection] = React.useState<Section>("files");
+  // Bottom tab bar deep-links: /drive?section=vault → open the vault section.
+  React.useEffect(() => {
+    const sec = searchParams.get("section");
+    if (sec === "vault") setSection("vault");
+    else if (sec === "files") setSection("files");
+  }, [searchParams]);
   const [currentFolderId, setCurrentFolderId] =
     React.useState<ParentId>(ROOT_PARENT);
   const [search, setSearch] = React.useState("");
@@ -482,7 +497,7 @@ export default function DrivePage() {
           onFilterChange={setFilterKind}
         />
 
-        <main className="flex flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <main className="tabbar-pad flex flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           {section === "vault" && !vaultUnlocked && (
             <VaultGate onUnlock={() => setVaultUnlocked(true)} />
           )}
@@ -598,27 +613,6 @@ export default function DrivePage() {
       />
       <UploadQueuePanel />
 
-      {/* Mobile-only floating quick actions (desktop uses the topbar buttons) */}
-      <FloatingActionMenu
-        className="lg:hidden right-4 z-40 bottom-[calc(1.5rem+env(safe-area-inset-bottom))]"
-        options={[
-          {
-            label: "Upload fichiers",
-            Icon: <Upload className="size-4" />,
-            onClick: () => fileInputRef.current?.click(),
-          },
-          {
-            label: "Importer un dossier",
-            Icon: <FolderUp className="size-4" />,
-            onClick: () => folderInputRef.current?.click(),
-          },
-          {
-            label: "Nouveau dossier",
-            Icon: <FolderPlus className="size-4" />,
-            onClick: () => setNewFolderOpen(true),
-          },
-        ]}
-      />
     </div>
   );
 }

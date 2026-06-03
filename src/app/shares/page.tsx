@@ -96,7 +96,7 @@ export default function SharesPage() {
       variants={v ?? container}
       initial="hidden"
       animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 px-5 pb-20 sm:px-6"
+      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 tabbar-pad px-5 pb-20 sm:px-6"
       style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
     >
       <motion.div variants={v ?? item}>

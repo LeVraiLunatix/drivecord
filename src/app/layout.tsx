@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { NativeDeepLink } from "@/components/native-deep-link";
 import { NativeClass } from "@/components/native-class";
+import { AppTabBar } from "@/components/app-tab-bar";
 import "./globals.css";
 
 // Inter = substitut libre le plus proche de "gg sans" (la police de Discord).
@@ -74,6 +75,7 @@ export default function RootLayout({
           >
             <TooltipProvider delayDuration={200}>
               {children}
+              <AppTabBar />
               <Toaster richColors position="bottom-right" />
             </TooltipProvider>
           </ThemeProvider>

@@ -391,6 +391,9 @@ html.is-native .glass-bar {
 /* Softer iOS-style button corners. */
 html.is-native [data-slot="button"] { border-radius: 0.95rem; }
 
+/* Leave room for the bottom liquid-glass tab bar (app only). */
+html.is-native .tabbar-pad { padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+
 /* Light-theme variant. */
 html.is-native.light [data-slot="card"] { background: rgba(255, 255, 255, 0.6) !important; border-color: rgba(0,0,0,0.08) !important; }
 html.is-native.light [data-slot="dialog-content"],
