@@ -42,6 +42,7 @@ import {
   hardDeleteFolderSubtree,
   trashFile,
   trashFolder,
+  bulkTrash,
   moveFile,
   moveFolder,
   getFile,
@@ -418,37 +419,47 @@ function DriveContent() {
     async (items: DriveItem[]) => {
       if (!driveId) return;
       const isPermanent = section === "trash";
+
+      // Fast path — move to trash: a single bulk request (one DB updateMany +
+      // one cache refresh) instead of N sequential PATCHes.
+      if (!isPermanent) {
+        const fileIds = items.filter((i) => i.kind !== "folder").map((i) => i.id);
+        const folderIds = items.filter((i) => i.kind === "folder").map((i) => i.id);
+        try {
+          await bulkTrash(driveId, "trash", fileIds, folderIds);
+          const n = items.length;
+          toast.success(`${n} élément${n > 1 ? "s" : ""} mis à la corbeille`);
+        } catch (err) {
+          toast.error(`Échec : ${(err as Error).message}`);
+        }
+        setBulkDeleteItems([]);
+        return;
+      }
+
+      // Permanent delete needs Discord chunk deletions — run several at a time
+      // (bounded concurrency) instead of strictly one-by-one.
       let ok = 0;
-      for (const item of items) {
+      const tasks = items.map((item) => async () => {
         try {
           if (item.kind === "folder") {
-            if (isPermanent) {
-              const { deletedFiles } = await hardDeleteFolderSubtree(driveId, item.id);
-              if (client) {
-                for (const f of deletedFiles) {
-                  await client.deleteFile(f).catch(() => {});
-                }
-              }
-            } else {
-              await trashFolder(driveId, item.id);
-            }
+            const { deletedFiles } = await hardDeleteFolderSubtree(driveId, item.id);
+            if (client) await Promise.all(deletedFiles.map((f) => client.deleteFile(f).catch(() => {})));
           } else {
-            if (isPermanent) {
-              if (client) await client.deleteFile(item).catch(() => {});
-              await hardDeleteFile(driveId, item.id);
-            } else {
-              await trashFile(driveId, item.id);
-            }
+            if (client) await client.deleteFile(item).catch(() => {});
+            await hardDeleteFile(driveId, item.id);
           }
           ok++;
         } catch (err) { toast.error(`Échec : ${(err as Error).message}`); }
-      }
+      });
+      const POOL = 6;
+      let cursor = 0;
+      await Promise.all(
+        Array.from({ length: Math.min(POOL, tasks.length) }, async () => {
+          while (cursor < tasks.length) { const idx = cursor++; await tasks[idx](); }
+        }),
+      );
       if (ok > 0) {
-        toast.success(
-          isPermanent
-            ? `${ok} élément${ok > 1 ? "s" : ""} supprimé${ok > 1 ? "s" : ""} définitivement`
-            : `${ok} élément${ok > 1 ? "s" : ""} mis à la corbeille`,
-        );
+        toast.success(`${ok} élément${ok > 1 ? "s" : ""} supprimé${ok > 1 ? "s" : ""} définitivement`);
       }
       setBulkDeleteItems([]);
     },

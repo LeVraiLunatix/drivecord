@@ -113,6 +113,25 @@ export async function trashFile(driveId: string, id: string): Promise<void> {
   invalidateDrive(driveId);
 }
 
+/**
+ * Trash or restore many files/folders in a single request. Far faster than
+ * looping per-item (one round-trip + one DB updateMany each, one cache refresh).
+ * Returns how many rows changed.
+ */
+export async function bulkTrash(
+  driveId: string,
+  action: "trash" | "restore",
+  fileIds: string[],
+  folderIds: string[],
+): Promise<{ files: number; folders: number }> {
+  const res = await apiFetch(`/api/drive/${driveId}/bulk`, {
+    method: "POST",
+    body: JSON.stringify({ action, fileIds, folderIds }),
+  });
+  invalidateDrive(driveId);
+  return res.json();
+}
+
 export async function restoreFile(driveId: string, id: string): Promise<void> {
   await apiFetch(`/api/drive/${driveId}/files/${id}`, {
     method: "PATCH",
