@@ -28,7 +28,7 @@ export function SelectionToolbar({
   return (
     <div
       className={cn(
-        "fixed bottom-6 left-1/2 z-50 -translate-x-1/2",
+        "selection-toolbar fixed bottom-6 left-1/2 z-50 -translate-x-1/2",
         "flex items-center gap-0.5 rounded-xl border border-border/60 bg-card/95 px-2 py-1.5 shadow-2xl backdrop-blur-sm sm:gap-1 sm:px-3 sm:py-2",
         className,
       )}
