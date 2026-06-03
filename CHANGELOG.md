@@ -7,6 +7,10 @@
   à chaque changement notable.
 -->
 
+## Menu drive en pull-down natif (Liquid Glass ancré)
+
+🫧 Le menu **drive/sections** et le menu **tri** ne s'ouvrent plus en bas : ils s'ouvrent **ancrés sous leur bouton** (en haut), façon menu déroulant natif iOS, avec le vrai Liquid Glass du système.
+
 ## Menus natifs Liquid Glass (drive, tri, actions fichiers)
 
 🫧 **Les menus s'ouvrent maintenant en vrai verre natif iOS**

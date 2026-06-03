@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { tagDot } from "@/lib/tag-colors";
-import { nativeMenuAvailable, presentNativeMenu, type NativeMenuItem } from "@/lib/native-menu";
+import { type NativeMenuItem } from "@/lib/native-menu";
+import { useNativeAnchorMenu } from "@/lib/use-native-anchor-menu";
 import {
   setActiveDriveId,
   useActiveDrive,
@@ -57,13 +58,9 @@ export function DriveNativeMenu({
   const drives = useAllDrives();
   const tags = useAllTags(activeDrive?.id ?? null);
   const [open, setOpen] = React.useState(false);
-  const [useNative, setUseNative] = React.useState(false);
 
-  React.useEffect(() => { setUseNative(nativeMenuAvailable()); }, []);
-
-  // Native iOS path: present a real Liquid Glass action sheet listing drives +
-  // sections + tags, then run the chosen action.
-  const openNativeSheet = async () => {
+  // Build the flat menu (drives + sections + tags) and the parallel actions.
+  const { items, actions } = React.useMemo(() => {
     const driveList = drives ?? [];
     const tagList = tags ?? [];
     const items: NativeMenuItem[] = [];
@@ -89,14 +86,26 @@ export function DriveNativeMenu({
       items.push({ label: `#${t.tag} · ${t.count}`, selected: section === "tag" && activeTag === t.tag });
       actions.push(() => onTagSelect?.(t.tag));
     }
+    return { items, actions };
+  }, [drives, tags, activeDrive?.id, section, activeTag, onNavigateRoot, onSectionChange, onTagSelect, router]);
 
-    const i = await presentNativeMenu({ title: activeDrive?.name ?? "Mes drives", message: "Changer de drive ou de section", items });
-    if (i >= 0 && i < actions.length) actions[i]();
-  };
+  // Native iOS: a pull-down UIMenu (real Liquid Glass) anchored to this button.
+  const { ref, active } = useNativeAnchorMenu({
+    id: "driveSwitcher",
+    items,
+    onSelect: (i) => actions[i]?.(),
+    title: activeDrive?.name,
+  });
 
-  if (useNative) {
+  if (active) {
     return (
-      <Button variant="ghost" size="icon" className="size-9" aria-label="Drives et sections" onClick={openNativeSheet}>
+      <Button
+        ref={ref as React.Ref<HTMLButtonElement>}
+        variant="ghost"
+        size="icon"
+        className="size-9"
+        aria-label="Drives et sections"
+      >
         <ChevronsUpDown className="size-5" />
       </Button>
     );

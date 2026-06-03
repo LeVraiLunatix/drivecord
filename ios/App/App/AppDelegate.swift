@@ -37,7 +37,14 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         webView?.configuration.userContentController.add(self, name: "nativeTabs")
         // Receive requests to present native (Liquid Glass) action sheets.
         webView?.configuration.userContentController.add(self, name: "nativeMenu")
+        // Receive requests to anchor native pull-down menus to web buttons.
+        webView?.configuration.userContentController.add(self, name: "nativeAnchorMenu")
     }
+
+    // Transparent native buttons overlaid on web trigger buttons; each hosts a
+    // UIMenu so tapping shows the real iOS Liquid Glass pull-down, anchored in
+    // place (top bar etc.) instead of a bottom action sheet.
+    private var anchorButtons: [String: UIButton] = [:]
 
     private func setupTabBar() {
         nativeTabBar.delegate = self
@@ -88,8 +95,62 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
             handleTabsMessage(message.body)
         case "nativeMenu":
             handleMenuMessage(message.body)
+        case "nativeAnchorMenu":
+            handleAnchorMenuMessage(message.body)
         default:
             break
+        }
+    }
+
+    // Create/update/remove a native pull-down menu anchored to a web rect.
+    private func handleAnchorMenuMessage(_ raw: Any) {
+        DispatchQueue.main.async {
+            guard let body = raw as? [String: Any], let id = body["id"] as? String else { return }
+
+            if (body["remove"] as? Bool) == true {
+                self.anchorButtons[id]?.removeFromSuperview()
+                self.anchorButtons.removeValue(forKey: id)
+                return
+            }
+
+            guard let items = body["items"] as? [[String: Any]],
+                  let r = body["rect"] as? [String: Any],
+                  let x = (r["x"] as? NSNumber)?.doubleValue,
+                  let y = (r["y"] as? NSNumber)?.doubleValue,
+                  let w = (r["width"] as? NSNumber)?.doubleValue,
+                  let h = (r["height"] as? NSNumber)?.doubleValue else { return }
+
+            let title = (body["title"] as? String) ?? ""
+            let frame = CGRect(x: x, y: y, width: w, height: h)
+
+            let btn: UIButton
+            if let existing = self.anchorButtons[id] {
+                btn = existing
+            } else {
+                btn = UIButton(type: .custom)
+                btn.backgroundColor = .clear
+                self.view.addSubview(btn)
+                self.anchorButtons[id] = btn
+            }
+            btn.frame = frame
+
+            var actions: [UIAction] = []
+            for (i, it) in items.enumerated() {
+                let label = (it["label"] as? String) ?? ""
+                let selected = (it["selected"] as? Bool) ?? false
+                let destructive = (it["destructive"] as? Bool) ?? false
+                let action = UIAction(
+                    title: label,
+                    attributes: destructive ? .destructive : [],
+                    state: selected ? .on : .off
+                ) { [weak self] _ in
+                    self?.reportMenuResult(id, i)
+                }
+                actions.append(action)
+            }
+            btn.menu = UIMenu(title: title, children: actions)
+            btn.showsMenuAsPrimaryAction = true
+            self.view.bringSubviewToFront(btn)
         }
     }
 
