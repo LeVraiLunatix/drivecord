@@ -60,10 +60,11 @@ function TabBarInner() {
       <div
         className="mx-auto flex max-w-xl items-stretch justify-around border-t border-white/10 px-1"
         style={{
-          background: "rgba(14,14,20,0.7)",
-          backdropFilter: "blur(28px) saturate(180%)",
-          WebkitBackdropFilter: "blur(28px) saturate(180%)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0) 60%), rgba(12,12,20,0.55)",
+          backdropFilter: "blur(32px) saturate(190%)",
+          WebkitBackdropFilter: "blur(32px) saturate(190%)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
         }}
       >
         {TABS.map((tab) => {

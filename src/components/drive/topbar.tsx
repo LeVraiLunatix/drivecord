@@ -40,8 +40,10 @@ type Props = {
   onSortChange: (field: SortField, dir: SortDir) => void;
   filterKind: FilterKind;
   onFilterChange: (v: FilterKind) => void;
-  /** Mobile: open the sidebar drawer */
+  /** Mobile web: open the sidebar drawer */
   onMenuOpen?: () => void;
+  /** Native app: a compact drive/sections menu rendered in the hamburger slot. */
+  nativeMenu?: React.ReactNode;
 };
 
 export function DriveTopbar({
@@ -67,6 +69,7 @@ export function DriveTopbar({
   filterKind,
   onFilterChange,
   onMenuOpen,
+  nativeMenu,
 }: Props) {
   const [searchOpen, setSearchOpen] = React.useState(false);
 
@@ -75,16 +78,20 @@ export function DriveTopbar({
       {/* ── Main row ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-1.5 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">
 
-        {/* Hamburger — mobile only */}
+        {/* Hamburger — mobile web only (hidden in the native app, which uses the
+            bottom tab bar + the native drive menu below). */}
         <Button
           variant="ghost"
           size="icon"
-          className="shrink-0 lg:hidden"
+          className="drive-hamburger shrink-0 lg:hidden"
           onClick={onMenuOpen}
           aria-label="Menu"
         >
           <Menu className="size-5" />
         </Button>
+
+        {/* Native app: compact drive switcher + sections (replaces the drawer). */}
+        {nativeMenu && <div className="drive-native-menu shrink-0">{nativeMenu}</div>}
 
         {/* Back / Forward */}
         <div className="hidden items-center gap-0.5 sm:flex">

@@ -350,55 +350,126 @@
 .md-body th, .md-body td { border: 1px solid rgba(255,255,255,0.15); padding: 0.5em 0.8em; text-align: left; }
 .md-body th { background: rgba(255,255,255,0.05); font-weight: 600; }
 
-/* ── iOS "liquid glass" — applied only inside the app (html.is-native) ─────────
-   Translucent, blurred, saturated surfaces for the main menus/cards/sheets.
-   Explicit rgba (no color-mix) so it works on every WebView. Web keeps its
-   solid look. The app is dark by default → dark glass values. */
+/* ════════════════════════════════════════════════════════════════════════
+   iOS "liquid glass" — applied only inside the app (html.is-native)
+   ════════════════════════════════════════════════════════════════════════
+   backdrop-filter blur is only *visible* when there is colourful content
+   behind the surface. So we (1) paint a vivid ambient backdrop behind the
+   whole app, and (2) give every glass surface a built-in diagonal sheen +
+   bright hairline border so it reads as glass even where the backdrop is
+   partly covered. Web keeps its normal solid look. */
+
+/* Deep base + ambient coloured glows living behind all content. */
+html.is-native body { background: #06060d !important; }
+
+.native-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;            /* behind in-flow content, above body background */
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(99, 102, 241, 0.10), transparent 60%),
+    #06060d;
+}
+.native-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.native-blob-1 { top: -12%; left: -10%; width: 70vw; height: 70vw; background: radial-gradient(circle, #6d5dfc, transparent 68%); animation: blob-float-a 22s ease-in-out infinite; }
+.native-blob-2 { top: 8%;  right: -22%; width: 65vw; height: 65vw; background: radial-gradient(circle, #c026d3, transparent 68%); opacity: 0.42; animation: blob-float-b 26s ease-in-out infinite; }
+.native-blob-3 { bottom: -18%; left: -8%; width: 72vw; height: 72vw; background: radial-gradient(circle, #0ea5e9, transparent 68%); opacity: 0.38; animation: blob-float-a 30s ease-in-out infinite reverse; }
+.native-blob-4 { bottom: 4%; right: -6%; width: 50vw; height: 50vw; background: radial-gradient(circle, #f43f5e, transparent 70%); opacity: 0.30; animation: blob-float-b 24s ease-in-out infinite reverse; }
+
+@keyframes blob-float-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(6%, 8%, 0) scale(1.12); }
+}
+@keyframes blob-float-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50%      { transform: translate3d(-7%, -5%, 0) scale(0.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .native-blob { animation: none !important; }
+}
+
+/* Cards. Diagonal sheen layer over a translucent tinted base = glass. */
 html.is-native [data-slot="card"] {
-  background: rgba(22, 22, 30, 0.55) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
-  border-radius: 1.25rem !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 30px rgba(0, 0, 0, 0.35);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.02) 42%, rgba(255, 255, 255, 0.06)),
+    rgba(20, 21, 32, 0.46) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 1.4rem !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.04),
+    0 10px 34px rgba(0, 0, 0, 0.40) !important;
+}
+
+/* Floating surfaces — stronger blur (they sit over arbitrary content). */
+html.is-native [data-slot="dialog-content"],
+html.is-native [data-slot="dropdown-menu-content"],
+html.is-native [data-slot="select-content"],
+html.is-native [data-slot="alert-dialog-content"],
+html.is-native [data-slot="sheet-content"],
+html.is-native [data-slot="popover-content"] {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03) 45%, rgba(255, 255, 255, 0.07)),
+    rgba(18, 19, 28, 0.55) !important;
+  -webkit-backdrop-filter: blur(38px) saturate(200%);
+  backdrop-filter: blur(38px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 18px 56px rgba(0, 0, 0, 0.55) !important;
 }
 html.is-native [data-slot="dialog-content"],
 html.is-native [data-slot="dropdown-menu-content"],
 html.is-native [data-slot="select-content"],
 html.is-native [data-slot="alert-dialog-content"],
-html.is-native [data-slot="sheet-content"] {
-  background: rgba(20, 20, 28, 0.62) !important;
-  -webkit-backdrop-filter: blur(34px) saturate(200%);
-  backdrop-filter: blur(34px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 16px 50px rgba(0, 0, 0, 0.5);
-}
-html.is-native [data-slot="dialog-content"],
-html.is-native [data-slot="dropdown-menu-content"],
-html.is-native [data-slot="select-content"],
-html.is-native [data-slot="alert-dialog-content"] {
+html.is-native [data-slot="popover-content"] {
   border-radius: 1.4rem !important;
 }
 html.is-native [data-slot="sheet-content"] { border-radius: 0 1.6rem 1.6rem 0 !important; }
 
 /* Frosted top bar that content scrolls under. */
 html.is-native .glass-bar {
-  background: rgba(12, 12, 18, 0.55) !important;
-  -webkit-backdrop-filter: blur(26px) saturate(180%);
-  backdrop-filter: blur(26px) saturate(180%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
+    rgba(10, 11, 18, 0.45) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(28px) saturate(190%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Softer iOS-style button corners. */
 html.is-native [data-slot="button"] { border-radius: 0.95rem; }
 
+/* Native app uses the bottom tab bar instead of the left drawer. */
+html.is-native .drive-hamburger { display: none !important; }
+html:not(.is-native) .drive-native-menu { display: none !important; }
+
 /* Leave room for the bottom liquid-glass tab bar (app only). */
-html.is-native .tabbar-pad { padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+html.is-native .tabbar-pad { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
 
 /* Light-theme variant. */
-html.is-native.light [data-slot="card"] { background: rgba(255, 255, 255, 0.6) !important; border-color: rgba(0,0,0,0.08) !important; }
+html.is-native.light body { background: #eef0f6 !important; }
+html.is-native.light .native-backdrop { background: radial-gradient(120% 80% at 50% -10%, rgba(99,102,241,0.12), transparent 60%), #eef0f6; }
+html.is-native.light .native-blob { opacity: 0.30; }
+html.is-native.light [data-slot="card"] {
+  background: linear-gradient(135deg, rgba(255,255,255,0.7), rgba(255,255,255,0.35)), rgba(255,255,255,0.4) !important;
+  border-color: rgba(0,0,0,0.06) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 10px 30px rgba(0,0,0,0.12) !important;
+}
 html.is-native.light [data-slot="dialog-content"],
 html.is-native.light [data-slot="dropdown-menu-content"],
 html.is-native.light [data-slot="select-content"],
 html.is-native.light [data-slot="alert-dialog-content"],
-html.is-native.light [data-slot="sheet-content"] { background: rgba(250, 250, 252, 0.7) !important; border-color: rgba(0,0,0,0.08) !important; }
-html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.6) !important; }
+html.is-native.light [data-slot="sheet-content"],
+html.is-native.light [data-slot="popover-content"] { background: linear-gradient(135deg, rgba(255,255,255,0.75), rgba(255,255,255,0.5)), rgba(250,250,252,0.55) !important; border-color: rgba(0,0,0,0.06) !important; }
+html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.5) !important; }

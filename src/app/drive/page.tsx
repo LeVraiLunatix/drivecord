@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { DriveSidebar } from "@/components/drive/sidebar";
+import { DriveNativeMenu } from "@/components/drive/native-menu";
 import { DriveTopbar } from "@/components/drive/topbar";
 import { CommandPalette } from "@/components/drive/command-palette";
 import { ShareDialog } from "@/components/drive/share-dialog";
@@ -474,6 +475,15 @@ function DriveContent() {
       <UploadDropzone onEntries={(entries) => handleUploadEntries(entries)} className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <DriveTopbar
           onMenuOpen={() => setSidebarOpen(true)}
+          nativeMenu={
+            <DriveNativeMenu
+              section={section}
+              onSectionChange={setSection}
+              onNavigateRoot={() => { resetHistory(ROOT_PARENT); setSection("files"); }}
+              activeTag={activeTag}
+              onTagSelect={(tag) => { setActiveTag(tag); setSection("tag"); resetHistory(ROOT_PARENT); }}
+            />
+          }
           driveId={driveId}
           currentFolderId={currentFolderId}
           onNavigate={navigateTo}

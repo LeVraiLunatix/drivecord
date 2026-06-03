@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { NativeDeepLink } from "@/components/native-deep-link";
 import { NativeClass } from "@/components/native-class";
+import { NativeBackdrop } from "@/components/native-backdrop";
 import { AppTabBar } from "@/components/app-tab-bar";
 import "./globals.css";
 
@@ -66,6 +67,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <NativeDeepLink />
         <NativeClass />
+        <NativeBackdrop />
         <AuthSessionProvider>
           <ThemeProvider
             attribute="class"
