@@ -36,7 +36,7 @@ export function UploadQueuePanel() {
   const finishedCount = items.length - inProgress.length;
 
   return (
-    <div className="fixed bottom-4 right-2 z-40 w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-border/60 bg-card/95 shadow-lg backdrop-blur sm:right-4">
+    <div className="upload-panel fixed bottom-4 right-2 z-40 w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-border/60 bg-card/95 shadow-lg backdrop-blur sm:right-4">
       <div className="flex items-center justify-between gap-2 border-b border-border/50 px-3 py-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           {inProgress.length > 0 ? (

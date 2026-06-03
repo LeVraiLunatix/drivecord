@@ -462,9 +462,17 @@ html.is-native .tabbar-pad { padding-bottom: calc(80px + env(safe-area-inset-bot
    and drop the CSS-bar padding above. */
 html.native-tabs .tabbar-pad { padding-bottom: var(--native-tabbar-h, 83px) !important; }
 
-/* Floating selection toolbar must sit ABOVE the bottom bar, not behind it. */
+/* Floating bottom overlays must sit ABOVE the bottom bar, not behind it:
+   the multi-select toolbar, the upload-queue panel, and the toasts
+   (confirmations / errors). */
 html.native-tabs .selection-toolbar { bottom: calc(var(--native-tabbar-h, 83px) + 0.75rem) !important; }
 html.is-native:not(.native-tabs) .selection-toolbar { bottom: calc(80px + env(safe-area-inset-bottom) + 0.75rem) !important; }
+
+html.native-tabs .upload-panel { bottom: calc(var(--native-tabbar-h, 83px) + 0.5rem) !important; }
+html.is-native:not(.native-tabs) .upload-panel { bottom: calc(80px + env(safe-area-inset-bottom) + 0.5rem) !important; }
+
+html.native-tabs [data-sonner-toaster][data-y-position="bottom"] { bottom: calc(var(--native-tabbar-h, 83px) + 0.5rem) !important; }
+html.is-native:not(.native-tabs) [data-sonner-toaster][data-y-position="bottom"] { bottom: calc(80px + env(safe-area-inset-bottom) + 0.5rem) !important; }
 
 /* Light-theme variant. */
 html.is-native.light body { background: #eef0f6 !important; }
