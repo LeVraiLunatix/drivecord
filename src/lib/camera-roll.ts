@@ -92,25 +92,58 @@ export async function readCameraItem(
 }
 
 /**
- * Open a media asset as a streaming response (no full buffering) for memory-safe
- * upload of large videos. Returns the byte stream + metadata.
+ * Open a media asset as a **range-read** stream: each pull fetches the next
+ * `chunkSize` slice via an HTTP Range request, so we never hold more than one
+ * chunk in memory. This is the key fix for large videos — a plain `fetch()` on
+ * Capacitor's file server returns the ENTIRE file in one shot (it buffers the
+ * whole thing), which OOM-crashed the WebView mid-backup. Range requests make
+ * Capacitor `seek` + read only the requested bytes (HTTP 206).
  */
-export async function streamCameraItem(
+export async function streamCameraItemRanged(
   identifier: string,
+  chunkSize: number,
   signal?: AbortSignal,
-): Promise<{ stream: ReadableStream<Uint8Array> | null; size: number; filename: string; mimeType: string }> {
+): Promise<{ stream: ReadableStream<Uint8Array>; size: number; filename: string; mimeType: string }> {
   const { Media } = await import("@capacitor-community/media");
   const { Capacitor } = await import("@capacitor/core");
   const { path } = await Media.getMediaByIdentifier({ identifier });
   const ext = (path.split(".").pop() ?? "jpg").toLowerCase();
   const mimeType = MIME_BY_EXT[ext] ?? "application/octet-stream";
   const filename = path.split("/").pop() ?? `media-${identifier.slice(0, 8)}.${ext}`;
-
   const src = Capacitor.convertFileSrc(path);
-  const res = await fetch(src, { cache: "no-store", signal });
-  if (!res.ok || !res.body) throw new Error("Lecture du média impossible");
-  const len = Number(res.headers.get("content-length") ?? 0);
-  return { stream: res.body, size: len, filename, mimeType };
+
+  let offset = 0;
+  let total = -1;
+
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (signal?.aborted) { controller.error(new DOMException("Aborted", "AbortError")); return; }
+      if (total >= 0 && offset >= total) { controller.close(); return; }
+      const end = offset + chunkSize - 1;
+      const res = await fetch(src, { headers: { Range: `bytes=${offset}-${end}` }, cache: "no-store", signal });
+      if (!res.ok && res.status !== 206) { controller.error(new Error(`range ${res.status}`)); return; }
+      // Learn the real total from the first response's Content-Range.
+      if (total < 0) {
+        const cr = res.headers.get("Content-Range"); // "bytes 0-9999/123456"
+        total = cr ? Number(cr.split("/")[1]) || 0 : Number(res.headers.get("Content-Length")) || 0;
+      }
+      const buf = new Uint8Array(await res.arrayBuffer());
+      if (buf.length === 0) { controller.close(); return; }
+      offset += buf.length;
+      controller.enqueue(buf);
+      if (total >= 0 && offset >= total) controller.close();
+    },
+  });
+
+  // Probe total size up-front (so callers can size-cap before streaming).
+  try {
+    const head = await fetch(src, { headers: { Range: "bytes=0-0" }, cache: "no-store", signal });
+    const cr = head.headers.get("Content-Range");
+    if (cr) total = Number(cr.split("/")[1]) || -1;
+    await head.arrayBuffer().catch(() => {});
+  } catch { /* size stays unknown; streaming still works */ }
+
+  return { stream, size: total > 0 ? total : 0, filename, mimeType };
 }
 
 // ── Backed-up tracker (per drive, localStorage) ──────────────────────────────

@@ -14,13 +14,14 @@ import { DiscordClient } from "@/lib/discord/client";
 import {
   cameraRollAvailable,
   listCameraRoll,
-  streamCameraItem,
+  streamCameraItemRanged,
   readCameraItem,
   getBackedUp,
   markBackedUp,
   reconcileTracker,
   clearTracker,
 } from "@/lib/camera-roll";
+import { DEFAULT_CHUNK_SIZE } from "@/lib/discord/constants";
 
 const FOLDER_KEY = (driveId: string) => `drivecord:camroll-folder:${driveId}`;
 
@@ -112,8 +113,12 @@ export default function BackupPage() {
 
       // DB stores size as a 32-bit Int → hard cap ~2 GB per file.
       const MAX_BYTES = 2_000_000_000;
+      // The base64 fallback loads the whole file into memory → only use it for
+      // small media to avoid OOM (the ranged stream handles everything bigger).
+      const BASE64_MAX = 60_000_000; // 60 MB
+      const CHUNK = DEFAULT_CHUNK_SIZE;
       // Skip any media that hangs (e.g. iCloud photo not downloaded locally).
-      const ITEM_TIMEOUT = 150_000;
+      const ITEM_TIMEOUT = 120_000;
       let ok = 0;
       let skipped = 0;
       let stuck = 0;
@@ -131,21 +136,22 @@ export default function BackupPage() {
           folderCache.set(albumKey, parentId);
         }
         let manifest = null;
-        // 1) Memory-safe streaming.
+        // 1) Range-read streaming — never holds more than one chunk in memory
+        //    (this is what stops the WebView OOM-crash on big videos).
         try {
-          const s = await streamCameraItem(it.identifier, signal);
+          const s = await streamCameraItemRanged(it.identifier, CHUNK, signal);
           if (s.size && s.size > MAX_BYTES) return "skipped";
-          if (s.stream) {
-            manifest = await client.uploadStream(s.stream, { filename: s.filename, mimeType: s.mimeType, totalSize: s.size, signal });
-          }
+          manifest = await client.uploadStream(s.stream, {
+            filename: s.filename, mimeType: s.mimeType, totalSize: s.size, chunkSize: CHUNK, signal,
+          });
         } catch (streamErr) {
           if ((streamErr as Error).name === "AbortError") throw streamErr;
           if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
         }
-        // 2) Fallback: base64 read → upload.
+        // 2) Fallback: base64 read → upload (small files only, to stay safe).
         if (!manifest) {
           const { blob, filename, mimeType } = await readCameraItem(it.identifier, signal);
-          if (blob.size > MAX_BYTES) return "skipped";
+          if (blob.size > BASE64_MAX) return "skipped";
           const file = new File([blob], filename, { type: mimeType });
           manifest = await client.uploadFile(file, { signal });
         }
