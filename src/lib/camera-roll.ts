@@ -103,7 +103,7 @@ export async function streamCameraItemRanged(
   identifier: string,
   chunkSize: number,
   signal?: AbortSignal,
-): Promise<{ stream: ReadableStream<Uint8Array>; size: number; filename: string; mimeType: string }> {
+): Promise<{ stream: ReadableStream<Uint8Array>; size: number; ranged: boolean; filename: string; mimeType: string }> {
   const { Media } = await import("@capacitor-community/media");
   const { Capacitor } = await import("@capacitor/core");
   const { path } = await Media.getMediaByIdentifier({ identifier });
@@ -135,15 +135,24 @@ export async function streamCameraItemRanged(
     },
   });
 
-  // Probe total size up-front (so callers can size-cap before streaming).
+  // Probe size + whether Range is honored, WITHOUT downloading the file. If the
+  // server ignores Range (status 200), reading the body would pull the whole
+  // file into memory — so we cancel it and let the caller size-cap / skip.
+  let ranged = false;
   try {
     const head = await fetch(src, { headers: { Range: "bytes=0-0" }, cache: "no-store", signal });
-    const cr = head.headers.get("Content-Range");
-    if (cr) total = Number(cr.split("/")[1]) || -1;
-    await head.arrayBuffer().catch(() => {});
-  } catch { /* size stays unknown; streaming still works */ }
+    if (head.status === 206) {
+      ranged = true;
+      const cr = head.headers.get("Content-Range"); // "bytes 0-0/123456"
+      if (cr) total = Number(cr.split("/")[1]) || -1;
+    } else {
+      const cl = head.headers.get("Content-Length");
+      if (cl) total = Number(cl) || -1;
+    }
+    await head.body?.cancel().catch(() => {});
+  } catch { /* size/range unknown */ }
 
-  return { stream, size: total > 0 ? total : 0, filename, mimeType };
+  return { stream, size: total > 0 ? total : 0, ranged, filename, mimeType };
 }
 
 // ── Backed-up tracker (per drive, localStorage) ──────────────────────────────

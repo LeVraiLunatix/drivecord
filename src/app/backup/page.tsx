@@ -69,22 +69,28 @@ export default function BackupPage() {
     toast.success("Suivi réinitialisé — la prochaine sauvegarde renverra tout.");
   };
 
-  const ensureRoot = async (driveId: string): Promise<string> => {
+  // `existing` = ids of folders that ACTUALLY still exist in the drive. A cached
+  // id is only reused if it's still there — otherwise the folder was deleted and
+  // reusing its id would orphan every uploaded file (saved on the server but
+  // invisible because their parent folder is gone). In that case we recreate it.
+  const ensureRoot = async (driveId: string, existing: Set<string>): Promise<string> => {
     const cached = localStorage.getItem(FOLDER_KEY(driveId));
-    if (cached) return cached;
+    if (cached && existing.has(cached)) return cached;
     const id = await createFolder({ driveId, parentId: null, name: "Pellicule" });
     localStorage.setItem(FOLDER_KEY(driveId), id);
+    existing.add(id);
     return id;
   };
 
   /** Folder for a given album (under Pellicule), creating it once and caching. */
-  const ensureAlbumFolder = async (driveId: string, rootId: string, album: string | null): Promise<string> => {
+  const ensureAlbumFolder = async (driveId: string, rootId: string, album: string | null, existing: Set<string>): Promise<string> => {
     if (!album) return rootId;
     const key = `${FOLDER_KEY(driveId)}:${album}`;
     const cached = localStorage.getItem(key);
-    if (cached) return cached;
+    if (cached && existing.has(cached)) return cached;
     const id = await createFolder({ driveId, parentId: rootId, name: album });
     localStorage.setItem(key, id);
+    existing.add(id);
     return id;
   };
 
@@ -95,19 +101,37 @@ export default function BackupPage() {
     cancelRef.current = false;
     try {
       const all = await listCameraRoll();
+
+      // Which folders still exist on the server (so we don't upload into a
+      // deleted folder and orphan the files).
+      const existingFolders = new Set<string>();
+      try {
+        const fr = await fetch(`/api/drive/${drive.id}/folders`);
+        if (fr.ok) { const { folders } = await fr.json(); for (const f of folders ?? []) existingFolders.add(f.id); }
+      } catch { /* offline → cached ids used as-is */ }
+
+      // If the cached "Pellicule" root no longer exists on the server, every
+      // previously-uploaded media is orphaned (invisible). Reset the tracker so
+      // the whole library re-uploads into a fresh, visible folder.
+      const cachedRoot = localStorage.getItem(FOLDER_KEY(drive.id));
+      const rootStale = Boolean(cachedRoot) && !existingFolders.has(cachedRoot as string);
+      if (rootStale) clearTracker(drive.id);
+
       // Reconcile the tracker with what's actually still in the drive — anything
       // deleted there will be re-uploaded.
-      let done = getBackedUp(drive.id);
-      try {
-        const r = await fetch(`/api/drive/${drive.id}/file-ids`);
-        if (r.ok) { const { ids } = await r.json(); done = reconcileTracker(drive.id, new Set<string>(ids)); }
-      } catch { /* offline → use local tracker as-is */ }
+      let done = rootStale ? new Set<string>() : getBackedUp(drive.id);
+      if (!rootStale) {
+        try {
+          const r = await fetch(`/api/drive/${drive.id}/file-ids`);
+          if (r.ok) { const { ids } = await r.json(); done = reconcileTracker(drive.id, new Set<string>(ids)); }
+        } catch { /* offline → use local tracker as-is */ }
+      }
       setBackedCount(done.size);
       const todo = all.filter((m) => !done.has(m.identifier));
       if (todo.length === 0) { toast.success("Pellicule déjà à jour ✅"); return; }
 
       const client = DiscordClient.fromUrl(drive.webhookUrl);
-      const rootId = await ensureRoot(drive.id);
+      const rootId = await ensureRoot(drive.id, existingFolders);
       const folderCache = new Map<string, string>(); // album → folderId
       setProgress({ done: 0, total: todo.length });
 
@@ -132,22 +156,32 @@ export default function BackupPage() {
         const albumKey = it.album ?? "";
         let parentId = folderCache.get(albumKey);
         if (parentId === undefined) {
-          parentId = await ensureAlbumFolder(drive.id, rootId, it.album);
+          parentId = await ensureAlbumFolder(drive.id, rootId, it.album, existingFolders);
           folderCache.set(albumKey, parentId);
         }
         let manifest = null;
+        let tooBig = false;
         // 1) Range-read streaming — never holds more than one chunk in memory
         //    (this is what stops the WebView OOM-crash on big videos).
         try {
           const s = await streamCameraItemRanged(it.identifier, CHUNK, signal);
-          if (s.size && s.size > MAX_BYTES) return "skipped";
-          manifest = await client.uploadStream(s.stream, {
-            filename: s.filename, mimeType: s.mimeType, totalSize: s.size, chunkSize: CHUNK, signal,
-          });
+          if (s.size && s.size > MAX_BYTES) { await s.stream.cancel().catch(() => {}); return "skipped"; }
+          if (s.ranged) {
+            manifest = await client.uploadStream(s.stream, {
+              filename: s.filename, mimeType: s.mimeType, totalSize: s.size, chunkSize: CHUNK, signal,
+            });
+          } else {
+            // Range NOT honored → consuming the stream would load the whole file
+            // and crash the WebView on big media. Only the small base64 path is
+            // safe; bigger files are skipped rather than risking a crash.
+            await s.stream.cancel().catch(() => {});
+            if (!s.size || s.size > BASE64_MAX) tooBig = true;
+          }
         } catch (streamErr) {
           if ((streamErr as Error).name === "AbortError") throw streamErr;
           if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
         }
+        if (tooBig) return "skipped";
         // 2) Fallback: base64 read → upload (small files only, to stay safe).
         if (!manifest) {
           const { blob, filename, mimeType } = await readCameraItem(it.identifier, signal);
@@ -178,15 +212,18 @@ export default function BackupPage() {
           clearTimeout(timer);
         }
         setProgress({ done: i + 1, total: todo.length });
+        // Refresh the drive periodically so files show up live and survive an
+        // unexpected reload mid-backup.
+        if ((i + 1) % 15 === 0) refreshDrive(drive.id);
         await new Promise((r) => setTimeout(r, 30));
       }
-      refreshDrive(drive.id); // single SWR refresh after the whole batch
+      refreshDrive(drive.id); // final SWR refresh
       setBackedCount(getBackedUp(drive.id).size);
       if (ok === 0 && firstError) {
         toast.error(`Aucun média sauvegardé. Erreur : ${firstError.slice(0, 120)}`);
       } else {
         const parts: string[] = [];
-        if (skipped) parts.push(`${skipped} > 2 Go`);
+        if (skipped) parts.push(`${skipped} trop volumineux`);
         if (stuck) parts.push(`${stuck} bloqué(s)`);
         const extra = parts.length ? ` · ${parts.join(" · ")} ignoré(s)` : "";
         toast.success(`${ok} média(s) sauvegardé(s) dans « ${drive.name} » › Pellicule${extra}`);
