@@ -16,6 +16,8 @@ import {
   listCameraRoll,
   streamCameraItemRanged,
   readCameraItem,
+  deleteCameraTemp,
+  cleanupCameraTemps,
   getBackedUp,
   markBackedUp,
   reconcileTracker,
@@ -100,6 +102,7 @@ export default function BackupPage() {
     setRunning(true);
     cancelRef.current = false;
     try {
+      await cleanupCameraTemps(); // clear leftover temp copies from past runs
       const all = await listCameraRoll();
 
       // Which folders still exist on the server (so we don't upload into a
@@ -159,39 +162,47 @@ export default function BackupPage() {
           parentId = await ensureAlbumFolder(drive.id, rootId, it.album, existingFolders);
           folderCache.set(albumKey, parentId);
         }
-        let manifest = null;
-        let tooBig = false;
-        // 1) Range-read streaming — never holds more than one chunk in memory
-        //    (this is what stops the WebView OOM-crash on big videos).
+        // The native plugin copies the media into Library/Caches; we MUST delete
+        // that copy afterwards or the cache fills the disk mid-backup.
+        let tempPath = "";
         try {
-          const s = await streamCameraItemRanged(it.identifier, CHUNK, signal);
-          if (s.size && s.size > MAX_BYTES) { await s.stream.cancel().catch(() => {}); return "skipped"; }
-          if (s.ranged) {
-            manifest = await client.uploadStream(s.stream, {
-              filename: s.filename, mimeType: s.mimeType, totalSize: s.size, chunkSize: CHUNK, signal,
-            });
-          } else {
-            // Range NOT honored → consuming the stream would load the whole file
-            // and crash the WebView on big media. Only the small base64 path is
-            // safe; bigger files are skipped rather than risking a crash.
-            await s.stream.cancel().catch(() => {});
-            if (!s.size || s.size > BASE64_MAX) tooBig = true;
+          let manifest = null;
+          let tooBig = false;
+          // 1) Range-read streaming — never holds more than one chunk in memory.
+          try {
+            const s = await streamCameraItemRanged(it.identifier, CHUNK, signal);
+            tempPath = s.path;
+            if (s.size && s.size > MAX_BYTES) { await s.stream.cancel().catch(() => {}); return "skipped"; }
+            if (s.ranged) {
+              manifest = await client.uploadStream(s.stream, {
+                filename: s.filename, mimeType: s.mimeType, totalSize: s.size, chunkSize: CHUNK, signal,
+              });
+            } else {
+              // Range NOT honored → consuming the stream would load the whole file
+              // and crash the WebView on big media. Skip big ones; small files use
+              // the base64 path below.
+              await s.stream.cancel().catch(() => {});
+              if (!s.size || s.size > BASE64_MAX) tooBig = true;
+            }
+          } catch (streamErr) {
+            if ((streamErr as Error).name === "AbortError") throw streamErr;
+            if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
           }
-        } catch (streamErr) {
-          if ((streamErr as Error).name === "AbortError") throw streamErr;
-          if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
+          if (tooBig) return "skipped";
+          // 2) Fallback: base64 read → upload (small files only, to stay safe).
+          if (!manifest) {
+            const r = await readCameraItem(it.identifier, signal);
+            tempPath = r.path;
+            if (r.blob.size > BASE64_MAX) return "skipped";
+            const file = new File([r.blob], r.filename, { type: r.mimeType });
+            manifest = await client.uploadFile(file, { signal });
+          }
+          const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, silent: true });
+          markBackedUp(drive.id, it.identifier, fileId);
+          return "ok";
+        } finally {
+          await deleteCameraTemp(tempPath);
         }
-        if (tooBig) return "skipped";
-        // 2) Fallback: base64 read → upload (small files only, to stay safe).
-        if (!manifest) {
-          const { blob, filename, mimeType } = await readCameraItem(it.identifier, signal);
-          if (blob.size > BASE64_MAX) return "skipped";
-          const file = new File([blob], filename, { type: mimeType });
-          manifest = await client.uploadFile(file, { signal });
-        }
-        const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, silent: true });
-        markBackedUp(drive.id, it.identifier, fileId);
-        return "ok";
       };
 
       for (let i = 0; i < todo.length; i++) {
@@ -231,6 +242,7 @@ export default function BackupPage() {
     } catch (e) {
       toast.error(`Échec : ${(e as Error).message}`);
     } finally {
+      await cleanupCameraTemps(); // free any temp copies left by this run
       setRunning(false);
       setProgress(null);
     }

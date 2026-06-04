@@ -68,7 +68,7 @@ const MIME_BY_EXT: Record<string, string> = {
 export async function readCameraItem(
   identifier: string,
   signal?: AbortSignal,
-): Promise<{ blob: Blob; filename: string; mimeType: string }> {
+): Promise<{ blob: Blob; filename: string; mimeType: string; path: string }> {
   const { Media } = await import("@capacitor-community/media");
   const { path } = await Media.getMediaByIdentifier({ identifier });
   const ext = (path.split(".").pop() ?? "jpg").toLowerCase();
@@ -88,7 +88,35 @@ export async function readCameraItem(
     const read = await Filesystem.readFile({ path });
     blob = base64ToBlob(read.data as string, mimeType);
   }
-  return { blob, filename, mimeType: blob.type || mimeType };
+  return { blob, filename, mimeType: blob.type || mimeType, path };
+}
+
+/**
+ * Delete the temp copy that `getMediaByIdentifier` writes into Library/Caches.
+ * The plugin copies EVERY media (photo + video) to disk and never cleans up, so
+ * without this the cache fills the device storage mid-backup → "Failed to save
+ * video to disk" + crash around ~50 items. Call this after each media is done.
+ */
+export async function deleteCameraTemp(path: string): Promise<void> {
+  if (!path) return;
+  try {
+    const { Filesystem } = await import("@capacitor/filesystem");
+    await Filesystem.deleteFile({ path });
+  } catch { /* best effort */ }
+}
+
+/** Remove leftover temp copies from previous (crashed) runs. */
+export async function cleanupCameraTemps(): Promise<void> {
+  try {
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
+    const { files } = await Filesystem.readdir({ directory: Directory.Cache, path: "" });
+    for (const f of files) {
+      const name = typeof f === "string" ? f : f.name;
+      if (/^(image|video)-\d+\./.test(name)) {
+        await Filesystem.deleteFile({ directory: Directory.Cache, path: name }).catch(() => {});
+      }
+    }
+  } catch { /* best effort */ }
 }
 
 /**
@@ -103,7 +131,7 @@ export async function streamCameraItemRanged(
   identifier: string,
   chunkSize: number,
   signal?: AbortSignal,
-): Promise<{ stream: ReadableStream<Uint8Array>; size: number; ranged: boolean; filename: string; mimeType: string }> {
+): Promise<{ stream: ReadableStream<Uint8Array>; size: number; ranged: boolean; filename: string; mimeType: string; path: string }> {
   const { Media } = await import("@capacitor-community/media");
   const { Capacitor } = await import("@capacitor/core");
   const { path } = await Media.getMediaByIdentifier({ identifier });
@@ -152,7 +180,7 @@ export async function streamCameraItemRanged(
     await head.body?.cancel().catch(() => {});
   } catch { /* size/range unknown */ }
 
-  return { stream, size: total > 0 ? total : 0, ranged, filename, mimeType };
+  return { stream, size: total > 0 ? total : 0, ranged, filename, mimeType, path };
 }
 
 // ── Backed-up tracker (per drive, localStorage) ──────────────────────────────
