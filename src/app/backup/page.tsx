@@ -151,9 +151,6 @@ export default function BackupPage() {
 
       // DB stores size as a 32-bit Int → hard cap ~2 GB per file.
       const MAX_BYTES = 2_000_000_000;
-      // The base64 fallback loads the whole file into memory → only use it for
-      // small media to avoid OOM (the ranged stream handles everything bigger).
-      const BASE64_MAX = 60_000_000; // 60 MB
       const CHUNK = DEFAULT_CHUNK_SIZE;
       // Skip any media that hangs (e.g. iCloud photo not downloaded locally).
       const ITEM_TIMEOUT = 120_000;
@@ -178,8 +175,8 @@ export default function BackupPage() {
         let tempPath = "";
         try {
           let manifest = null;
-          let tooBig = false;
-          // 1) Range-read streaming — never holds more than one chunk in memory.
+          // 1) If the file server honors Range, stream chunk-by-chunk (lowest
+          //    memory). Otherwise we DON'T skip — we just read the whole file.
           try {
             const s = await streamCameraItemRanged(it.identifier, CHUNK, signal);
             tempPath = s.path;
@@ -189,22 +186,18 @@ export default function BackupPage() {
                 filename: s.filename, mimeType: s.mimeType, totalSize: s.size, chunkSize: CHUNK, signal,
               });
             } else {
-              // Range NOT honored → consuming the stream would load the whole file
-              // and crash the WebView on big media. Skip big ones; small files use
-              // the base64 path below.
-              await s.stream.cancel().catch(() => {});
-              if (!s.size || s.size > BASE64_MAX) tooBig = true;
+              await s.stream.cancel().catch(() => {}); // fall through to whole-file read
             }
           } catch (streamErr) {
             if ((streamErr as Error).name === "AbortError") throw streamErr;
             if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
           }
-          if (tooBig) return "skipped";
-          // 2) Fallback: base64 read → upload (small files only, to stay safe).
+          // 2) Whole-file read → upload (the temp copy is deleted afterwards so
+          //    the disk no longer fills up; only truly huge files are skipped).
           if (!manifest) {
             const r = await readCameraItem(it.identifier, signal);
             tempPath = r.path;
-            if (r.blob.size > BASE64_MAX) return "skipped";
+            if (r.blob.size > MAX_BYTES) return "skipped";
             const file = new File([r.blob], r.filename, { type: r.mimeType });
             manifest = await client.uploadFile(file, { signal });
           }
