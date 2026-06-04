@@ -49,6 +49,17 @@ export default function BackupPage() {
     if (!target && drives && drives.length) setTarget(drives[0].id);
   }, [drives, target]);
 
+  // Free disk space on open: delete the plugin's leftover temp copies (these
+  // had accumulated to several GB and were filling the device storage).
+  const [freeing, setFreeing] = React.useState(false);
+  React.useEffect(() => {
+    if (!cameraRollAvailable()) return;
+    setFreeing(true);
+    cleanupCameraTemps()
+      .then((n) => { if (n > 0) toast.success(`Espace libéré : ${n} fichier(s) temporaire(s) supprimé(s).`); })
+      .finally(() => setFreeing(false));
+  }, []);
+
   React.useEffect(() => {
     if (!target) return;
     setBackedCount(getBackedUp(target).size);
@@ -278,6 +289,11 @@ export default function BackupPage() {
         </motion.div>
       ) : (
         <>
+          {freeing && (
+            <motion.p variants={v ?? item} className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" /> Libération de l&apos;espace temporaire…
+            </motion.p>
+          )}
           <motion.div variants={v ?? item}>
             <Card>
               <CardHeader className="pb-3">

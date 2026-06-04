@@ -105,18 +105,21 @@ export async function deleteCameraTemp(path: string): Promise<void> {
   } catch { /* best effort */ }
 }
 
-/** Remove leftover temp copies from previous (crashed) runs. */
-export async function cleanupCameraTemps(): Promise<void> {
+/** Remove leftover temp copies from previous (crashed) runs. Returns how many. */
+export async function cleanupCameraTemps(): Promise<number> {
+  let removed = 0;
   try {
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
     const { files } = await Filesystem.readdir({ directory: Directory.Cache, path: "" });
     for (const f of files) {
       const name = typeof f === "string" ? f : f.name;
       if (/^(image|video)-\d+\./.test(name)) {
-        await Filesystem.deleteFile({ directory: Directory.Cache, path: name }).catch(() => {});
+        try { await Filesystem.deleteFile({ directory: Directory.Cache, path: name }); removed += 1; }
+        catch { /* skip */ }
       }
     }
   } catch { /* best effort */ }
+  return removed;
 }
 
 /**
