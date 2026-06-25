@@ -36,6 +36,7 @@ import { VaultGate } from "@/components/drive/vault-gate";
 
 import { useDiscordClient } from "@/lib/discord/context";
 import { useUploadQueue } from "@/lib/upload-queue";
+import { useWebhookSync } from "@/components/auth/webhook-sync-provider";
 import { useViewPrefs } from "@/lib/view-prefs";
 import {
   ROOT_PARENT,
@@ -52,6 +53,7 @@ import {
   getFolder,
   useActiveDrive,
   useActiveDriveId,
+  useAllDrives,
   useDriveItems,
   useFavorites,
   useVaultItems,
@@ -75,8 +77,10 @@ export default function DrivePage() {
 function DriveContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeDriveId] = useActiveDriveId();
+  const [activeDriveId, selectDrive] = useActiveDriveId();
   const activeDrive = useActiveDrive();
+  const allDrives = useAllDrives();
+  const { synced } = useWebhookSync();
   const client = useDiscordClient();
   const enqueue = useUploadQueue((s) => s.enqueue);
 
@@ -168,9 +172,18 @@ function DriveContent() {
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+  // Where a driveless page goes — but only once the initial webhook sync has
+  // settled, so we never flash /setup before the account's drives arrive, and
+  // we auto-select a drive when one exists instead of asking for a webhook.
   React.useEffect(() => {
-    if (mounted && activeDriveId === null) router.replace("/setup");
-  }, [mounted, activeDriveId, router]);
+    if (!mounted || activeDriveId !== null) return;
+    if (!synced || allDrives === undefined) return;
+    if (allDrives.length > 0) {
+      selectDrive(allDrives[0].id);
+    } else {
+      router.replace("/setup");
+    }
+  }, [mounted, activeDriveId, synced, allDrives, selectDrive, router]);
 
   const driveId = activeDrive?.id ?? null;
   const [vaultUnlocked, setVaultUnlocked] = React.useState(false);

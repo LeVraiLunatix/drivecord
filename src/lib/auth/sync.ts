@@ -10,7 +10,7 @@
  */
 
 import { db } from "@/lib/storage/db";
-import { getActiveDriveId, clearActiveDriveId } from "@/lib/storage/drives";
+import { getActiveDriveId, setActiveDriveId, clearActiveDriveId } from "@/lib/storage/drives";
 import type { Drive } from "@/lib/storage/schema";
 import { generateDriveKeyB64, importDriveKey } from "@/lib/crypto/drive-crypto";
 
@@ -71,6 +71,13 @@ export async function syncWebhooksFromServer(): Promise<number> {
     // 3) If the active drive was one of the removed ones, clear the selection.
     const active = getActiveDriveId();
     if (active && staleIds.includes(active)) clearActiveDriveId();
+  }
+
+  // Auto-select a drive if none is active, so the user lands straight on their
+  // files after signing in (instead of the "add a webhook" screen).
+  if (!getActiveDriveId()) {
+    const recent = await db().drives.orderBy("lastOpenedAt").reverse().first();
+    if (recent) setActiveDriveId(recent.id);
   }
 
   return webhooks.length;

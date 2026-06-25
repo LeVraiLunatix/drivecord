@@ -14,9 +14,8 @@ export async function fullSignOut(): Promise<void> {
   await mutate(() => true, undefined, { revalidate: false }).catch(() => {});
   // Wipe local IndexedDB drives + active selection.
   await wipeLocalDrives().catch(() => {});
-  // End the session WITHOUT next-auth's own redirect…
-  await signOut({ redirect: false }).catch(() => {});
-  // …then hard-reload to "/" so every in-memory cache (SessionProvider, SWR,
-  // React state) is fully discarded. Guarantees the next account starts clean.
-  window.location.href = "/";
+  // Let next-auth clear the session cookie AND navigate in one shot. Doing the
+  // redirect ourselves (window.location) used to race the session state: "/"
+  // could load while still "authenticated" and bounce the user to /setup.
+  await signOut({ redirectTo: "/" });
 }

@@ -4,9 +4,20 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import { syncWebhooksFromServer } from "@/lib/auth/sync";
 
+type SyncState = { synced: boolean };
+
+const WebhookSyncContext = React.createContext<SyncState>({ synced: false });
+
+/** Whether the initial webhook sync has settled (or there's nothing to sync). */
+export function useWebhookSync(): SyncState {
+  return React.useContext(WebhookSyncContext);
+}
+
 /**
- * Silently syncs server webhooks into local IndexedDB once per session load.
- * Runs in the background — no loading state exposed to the UI.
+ * Silently syncs server webhooks into local IndexedDB once per session load,
+ * and exposes `synced` so consumers (e.g. the drive page) can wait for it
+ * before deciding to show "add a webhook" — otherwise a freshly logged-in user
+ * gets bounced to /setup before their drives arrive.
  */
 export function WebhookSyncProvider({
   children,
@@ -14,15 +25,27 @@ export function WebhookSyncProvider({
   children: React.ReactNode;
 }) {
   const { status } = useSession();
-  const synced = React.useRef(false);
+  const [synced, setSynced] = React.useState(false);
+  const ran = React.useRef(false);
 
   React.useEffect(() => {
-    if (status !== "authenticated" || synced.current) return;
-    synced.current = true;
-    syncWebhooksFromServer().catch(() => {
-      // Non-fatal: user just won't have server webhooks pre-loaded.
-    });
+    if (status === "loading" || ran.current) return;
+    ran.current = true;
+    if (status === "authenticated") {
+      syncWebhooksFromServer()
+        .catch(() => {
+          // Non-fatal: user just won't have server webhooks pre-loaded.
+        })
+        .finally(() => setSynced(true));
+    } else {
+      // Logged-out: nothing to pull, local drives are authoritative.
+      setSynced(true);
+    }
   }, [status]);
 
-  return <>{children}</>;
+  return (
+    <WebhookSyncContext.Provider value={{ synced }}>
+      {children}
+    </WebhookSyncContext.Provider>
+  );
 }
