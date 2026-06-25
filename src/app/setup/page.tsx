@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
+  ChevronLeft,
   CloudUpload,
   ExternalLink,
   Loader2,
@@ -22,10 +23,13 @@ import {
 import { addDriveFromWebhook, useAllDrives } from "@/lib/storage";
 import { pushWebhookToServer } from "@/lib/auth/sync";
 import { BackButton } from "@/components/back-button";
+import { useSession } from "next-auth/react";
+import { fullSignOut } from "@/lib/auth/logout";
 
 export default function SetupPage() {
   const router = useRouter();
   const drives = useAllDrives();
+  const { status } = useSession();
   const [url, setUrl] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
@@ -49,10 +53,24 @@ export default function SetupPage() {
       className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 px-6 pb-12"
       style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
     >
-      <BackButton
-        fallback={drives && drives.length > 0 ? "/drive" : "/"}
-        className="w-fit"
-      />
+      {status === "authenticated" && drives !== undefined && drives.length === 0 ? (
+        // Signed in but no drive yet: the only escape is to sign out — going
+        // "back" to "/" would just bounce the user straight here again.
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => fullSignOut()}
+          className="w-fit gap-1 text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="size-4" />
+          Se déconnecter
+        </Button>
+      ) : (
+        <BackButton
+          fallback={drives && drives.length > 0 ? "/drive" : "/"}
+          className="w-fit"
+        />
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center gap-2 font-mono text-sm uppercase tracking-wider text-muted-foreground">
@@ -72,7 +90,7 @@ export default function SetupPage() {
         <CardHeader>
           <CardTitle className="text-base">URL du webhook</CardTitle>
           <CardDescription>
-            Tes drives sont stockés <strong>localement</strong> dans ton
+            Tes drives sont stockés <strong>localement</strong>{" "}dans ton
             navigateur. L&apos;URL n&apos;est jamais envoyée à un serveur tiers.
           </CardDescription>
         </CardHeader>
