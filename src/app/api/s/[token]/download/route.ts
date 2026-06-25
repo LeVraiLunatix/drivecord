@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
+import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
 import type { ChunkRef } from "@/lib/discord";
 
 export const runtime = "nodejs";
@@ -71,6 +72,39 @@ export async function POST(
     data: { downloads: { increment: 1 } },
   }).catch(() => {});
 
+  // Encrypted file → decrypt server-side and serve the plaintext bytes directly.
+  // (Vault-locked files can't be served: the server doesn't hold the PIN key.)
+  if (file.encIv) {
+    if (file.locked || !share.webhook.encKey) {
+      return NextResponse.json(
+        { error: "Ce fichier chiffré ne peut pas être partagé." },
+        { status: 403 },
+      );
+    }
+    const ordered = [...fresh].sort((a, b) => a.index - b.index);
+    const parts: Buffer[] = [];
+    for (const c of ordered) {
+      const r = await fetch(c.url);
+      if (!r.ok) {
+        return NextResponse.json(
+          { error: "Téléchargement interrompu." },
+          { status: 502 },
+        );
+      }
+      parts.push(Buffer.from(await r.arrayBuffer()));
+    }
+    const keyB64 = decryptUrl(share.webhook.encKey);
+    const plain = decryptFileBuffer(Buffer.concat(parts), keyB64, file.encIv);
+    return new NextResponse(new Uint8Array(plain), {
+      headers: {
+        "Content-Type": file.mimeType || "application/octet-stream",
+        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+        "Content-Length": String(plain.length),
+      },
+    });
+  }
+
+  // Plaintext file → return a manifest the visitor's browser fetches via /api/proxy.
   return NextResponse.json({
     filename: file.filename,
     size: file.size,

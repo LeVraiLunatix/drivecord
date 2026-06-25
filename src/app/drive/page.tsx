@@ -15,6 +15,9 @@ import { downloadItemsAsZip } from "@/lib/download-zip";
 import { saveBlob } from "@/lib/native-save";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 import { getVaultKey, clearVaultKey } from "@/lib/crypto/vault-key-store";
+import { setDriveKey } from "@/lib/crypto/drive-key-store";
+import { importDriveKey } from "@/lib/crypto/drive-crypto";
+import { ensureDriveKey } from "@/lib/auth/sync";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
 import { NewFolderDialog } from "@/components/drive/new-folder-dialog";
 import { RenameDialog } from "@/components/drive/rename-dialog";
@@ -171,6 +174,23 @@ function DriveContent() {
 
   const driveId = activeDrive?.id ?? null;
   const [vaultUnlocked, setVaultUnlocked] = React.useState(false);
+
+  // Keep the active drive's file key in memory so reads (download, preview, ZIP)
+  // decrypt transparently. Regular files use this key; the vault uses its own
+  // PIN-derived key.
+  React.useEffect(() => {
+    let cancelled = false;
+    if (activeDrive?.encKey) {
+      importDriveKey(activeDrive.encKey).then((k) => {
+        if (!cancelled) setDriveKey(k);
+      });
+    } else {
+      setDriveKey(null);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDrive?.encKey]);
   const items      = useDriveItems(driveId, currentFolderId);
   const favorites  = useFavorites(driveId);
   const trashed    = useTrashedItems(driveId);
@@ -231,15 +251,26 @@ function DriveContent() {
           files: entries.map((e) => e.file),
           driveId, parentId: base, client,
           encryptKey: vaultKey,
+          locked: true,
           onUploaded: (item) => toast.success(`« ${item.fileName} » chiffré 🔒`),
         });
         return;
       }
 
+      // Non-vault uploads are encrypted with the drive's key (when signed in;
+      // null otherwise → uploaded in clear, exactly as before).
+      const driveKey = await ensureDriveKey(activeDrive);
+
       // Flat upload (no folders) — keep the simple path.
       const hasFolders = entries.some((e) => e.path !== "");
       if (!hasFolders) {
-        enqueue({ files: entries.map((e) => e.file), driveId, parentId: base, client, onUploaded });
+        enqueue({
+          files: entries.map((e) => e.file),
+          driveId, parentId: base, client,
+          encryptKey: driveKey ?? undefined,
+          locked: false,
+          onUploaded,
+        });
         return;
       }
 
@@ -256,7 +287,12 @@ function DriveContent() {
           (groups.get(pid) ?? groups.set(pid, []).get(pid)!).push(e.file);
         }
         for (const [pid, files] of groups) {
-          enqueue({ files, driveId, parentId: pid, client, onUploaded });
+          enqueue({
+            files, driveId, parentId: pid, client,
+            encryptKey: driveKey ?? undefined,
+            locked: false,
+            onUploaded,
+          });
         }
         toast.success(`Dossier importé (${entries.length} fichier(s))`);
       } catch {

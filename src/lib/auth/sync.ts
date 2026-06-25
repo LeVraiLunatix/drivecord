@@ -12,6 +12,7 @@
 import { db } from "@/lib/storage/db";
 import { getActiveDriveId, clearActiveDriveId } from "@/lib/storage/drives";
 import type { Drive } from "@/lib/storage/schema";
+import { generateDriveKeyB64, importDriveKey } from "@/lib/crypto/drive-crypto";
 
 type ServerWebhook = {
   driveId: string;
@@ -19,6 +20,8 @@ type ServerWebhook = {
   name: string;
   channelId: string;
   guildId?: string;
+  /** base64 raw per-drive file key (decrypted server-side), or null if unset. */
+  encKey?: string | null;
   createdAt: number;
   lastOpenedAt: number;
 };
@@ -48,6 +51,7 @@ export async function syncWebhooksFromServer(): Promise<number> {
       name: existing?.name ?? w.name,
       channelId: w.channelId,
       guildId: w.guildId,
+      encKey: w.encKey ?? existing?.encKey,
       createdAt: existing?.createdAt ?? w.createdAt,
       lastOpenedAt: w.lastOpenedAt,
     };
@@ -77,7 +81,11 @@ export async function syncWebhooksFromServer(): Promise<number> {
  * Called after addDriveFromWebhook() succeeds locally.
  */
 export async function pushWebhookToServer(drive: Drive): Promise<void> {
-  await fetch("/api/webhooks", {
+  // Ensure the drive has an encryption key, but persist it LOCALLY only after
+  // the server confirms storage — so a key never exists unless it's safely
+  // backed up on the account (losing the only copy = files unreadable forever).
+  const encKey = drive.encKey ?? generateDriveKeyB64();
+  const res = await fetch("/api/webhooks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -86,8 +94,28 @@ export async function pushWebhookToServer(drive: Drive): Promise<void> {
       name: drive.name,
       channelId: drive.channelId,
       guildId: drive.guildId,
+      encKey,
     }),
   });
+  if (res.ok && !drive.encKey) {
+    await db().drives.update(drive.id, { encKey });
+  }
+}
+
+/**
+ * Resolve the AES-GCM key that encrypts a drive's regular files.
+ *
+ * If the drive has no key yet, try to create one (pushWebhookToServer generates
+ * + persists it — but only when signed in). Returns null when no key is
+ * available (e.g. not signed in), in which case uploads stay unencrypted.
+ */
+export async function ensureDriveKey(drive: Drive): Promise<CryptoKey | null> {
+  let encKey = drive.encKey;
+  if (!encKey) {
+    await pushWebhookToServer(drive);
+    encKey = (await db().drives.get(drive.id))?.encKey;
+  }
+  return encKey ? importDriveKey(encKey) : null;
 }
 
 /**

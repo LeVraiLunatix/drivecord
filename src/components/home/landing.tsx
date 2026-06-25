@@ -85,6 +85,9 @@ export function Landing() {
             drivecord
           </Link>
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Link href="/docs">Docs</Link>
+            </Button>
             <Button asChild variant="ghost" size="sm">
               <Link href="/login">Connexion</Link>
             </Button>
@@ -257,7 +260,7 @@ export function Landing() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="ghost" className="w-full gap-2 sm:w-auto">
-                <Link href="https://github.com/LeVraiLunatix/discloud" target="_blank" rel="noopener noreferrer">
+                <Link href="https://github.com/LeVraiLunatix/drivecord" target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="size-4" />
                   Code source
                 </Link>
@@ -271,9 +274,10 @@ export function Landing() {
       <footer className="border-t border-border/40">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-6 text-xs text-muted-foreground/60 sm:flex-row sm:px-6">
           <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link href="/docs" className="hover:text-foreground">Documentation</Link>
             <Link href="/conditions" className="hover:text-foreground">Conditions & mentions légales</Link>
             <Link
-              href="https://github.com/LeVraiLunatix/discloud"
+              href="https://github.com/LeVraiLunatix/drivecord"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground"

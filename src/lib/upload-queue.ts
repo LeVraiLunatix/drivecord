@@ -47,8 +47,10 @@ type InternalQueueItem = QueueItem & {
   /** Not part of the public type — kept here to actually run the upload. */
   _file: File;
   _abort: AbortController;
-  /** When set, the file is E2EE-encrypted (vault) before upload. */
+  /** When set, the file bytes are AES-GCM encrypted with this key before upload. */
   _encryptKey?: CryptoKey;
+  /** When true, the file is marked vault-locked in storage. */
+  _locked?: boolean;
 };
 
 type UploadQueueState = {
@@ -58,8 +60,12 @@ type UploadQueueState = {
     driveId: string;
     parentId: ParentId;
     client: DiscordClient;
-    /** When provided, files are AES-GCM encrypted before upload + marked locked. */
+    /** When provided, the file bytes are AES-GCM encrypted with this key. */
     encryptKey?: CryptoKey;
+    /** Marks the file vault-locked (hidden, PIN-gated) in storage. Independent
+     *  from encryption: regular files are encrypted with the drive key but are
+     *  NOT locked. */
+    locked?: boolean;
     onUploaded?: (item: QueueItem, manifest: FileManifest) => void;
   }) => string[];
   cancel: (id: string) => void;
@@ -88,7 +94,7 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
     });
   },
 
-  enqueue: ({ files, driveId, parentId, client, encryptKey, onUploaded }) => {
+  enqueue: ({ files, driveId, parentId, client, encryptKey, locked, onUploaded }) => {
     const ids: string[] = [];
     const map = get()._internal;
     for (const f of files) {
@@ -104,6 +110,7 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
         _file: f,
         _abort: new AbortController(),
         _encryptKey: encryptKey,
+        _locked: locked,
       };
       map.set(id, item);
       ids.push(id);
@@ -164,7 +171,7 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
 function stripInternal(item: InternalQueueItem): QueueItem {
   // Don't leak File refs / abort controllers into React render trees.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { _file, _abort, _encryptKey, ...rest } = item;
+  const { _file, _abort, _encryptKey, _locked, ...rest } = item;
   return rest;
 }
 
@@ -194,7 +201,7 @@ async function runOne(
       driveId: item.driveId,
       parentId: item.parentId,
       manifest,
-      locked: Boolean(item._encryptKey),
+      locked: item._locked ?? false,
       encIv,
     });
     setItem(item.id, {

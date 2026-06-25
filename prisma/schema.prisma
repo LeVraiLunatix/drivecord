@@ -81,6 +81,9 @@ model Webhook {
   driveId      String
   /// AES-256-GCM encrypted webhook URL (base64)
   encryptedUrl String
+  /// AES-256-GCM encrypted per-drive file key (base64) — null until set.
+  /// Encrypts all of this drive's regular (non-vault) file uploads.
+  encKey       String?
   name         String
   channelId    String
   guildId      String?

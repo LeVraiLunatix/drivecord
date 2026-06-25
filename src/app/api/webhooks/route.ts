@@ -27,6 +27,7 @@ export async function GET() {
       name: r.name,
       channelId: r.channelId,
       guildId: r.guildId,
+      encKey: r.encKey ? decryptUrl(r.encKey) : null,
       createdAt: r.createdAt.getTime(),
       lastOpenedAt: r.lastOpenedAt.getTime(),
     })),
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest) {
     name: string;
     channelId: string;
     guildId?: string;
+    /** base64 raw per-drive file key — encrypted here before storage. */
+    encKey?: string;
   };
 
   if (!body.driveId || !body.webhookUrl || !body.name || !body.channelId) {
@@ -52,18 +55,22 @@ export async function POST(req: NextRequest) {
   }
 
   const encryptedUrl = encryptUrl(body.webhookUrl);
+  const encKey = body.encKey ? encryptUrl(body.encKey) : undefined;
   const row = await prisma.webhook.upsert({
     where: { userId_driveId: { userId: session.user.id, driveId: body.driveId } },
     create: {
       userId: session.user.id,
       driveId: body.driveId,
       encryptedUrl,
+      encKey,
       name: body.name,
       channelId: body.channelId,
       guildId: body.guildId,
     },
     update: {
       encryptedUrl,
+      // Only overwrite the key if the client actually sent one — never wipe it.
+      ...(encKey ? { encKey } : {}),
       name: body.name,
       channelId: body.channelId,
       guildId: body.guildId,

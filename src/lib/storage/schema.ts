@@ -31,6 +31,10 @@ export type Drive = {
   createdAt: number;
   /** Last time the user opened this drive. */
   lastOpenedAt: number;
+  /** base64 AES-256-GCM key encrypting this drive's regular files. Backed up
+   *  (encrypted) on the account; present locally only once confirmed
+   *  server-side, so a key never exists unless it's safely synced. */
+  encKey?: string;
 };
 
 /** Sentinel used for `parentId` to mean "drive root".

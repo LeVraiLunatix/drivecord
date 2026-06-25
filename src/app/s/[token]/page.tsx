@@ -43,6 +43,15 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
       .finally(() => setLoading(false));
   }, [token]);
 
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
   const download = async () => {
     setBusy(true);
     setError("");
@@ -52,10 +61,20 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: password || undefined }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Échec");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Échec");
+      }
 
-      const manifest = data as Manifest;
+      // Encrypted files are decrypted server-side and returned as raw bytes.
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        triggerDownload(await res.blob(), info?.filename ?? "fichier");
+        return;
+      }
+
+      // Plaintext files come back as a manifest the browser fetches + assembles.
+      const manifest = (await res.json()) as Manifest;
       const ordered = [...manifest.chunks].sort((a, b) => a.index - b.index);
       const parts: Blob[] = [];
       for (let i = 0; i < ordered.length; i++) {
@@ -64,13 +83,10 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
         parts.push(await r.blob());
         setProgress(Math.round(((i + 1) / ordered.length) * 100));
       }
-      const blob = new Blob(parts, { type: manifest.mimeType || "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = manifest.filename;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      triggerDownload(
+        new Blob(parts, { type: manifest.mimeType || "application/octet-stream" }),
+        manifest.filename,
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {
