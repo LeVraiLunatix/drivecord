@@ -172,15 +172,19 @@ function DriveContent() {
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
-  // Where a driveless page goes — but only once the initial webhook sync has
-  // settled, so we never flash /setup before the account's drives arrive, and
-  // we auto-select a drive when one exists instead of asking for a webhook.
+  // Decide what a driveless page does — only once the sync for the current
+  // account has settled. A stale activeDriveId (e.g. a drive from a previous
+  // account that no longer exists) counts as "no selection", so switching
+  // accounts never leaves the page blank.
   React.useEffect(() => {
-    if (!mounted || activeDriveId !== null) return;
-    if (!synced || allDrives === undefined) return;
+    if (!mounted || !synced || allDrives === undefined) return;
+    const validSelection =
+      activeDriveId !== null && allDrives.some((d) => d.id === activeDriveId);
+    if (validSelection) return;
     if (allDrives.length > 0) {
-      selectDrive(allDrives[0].id);
+      selectDrive(allDrives[0].id); // auto-select the most recent drive
     } else {
+      if (activeDriveId !== null) selectDrive(null); // clear stale selection
       router.replace("/setup");
     }
   }, [mounted, activeDriveId, synced, allDrives, selectDrive, router]);

@@ -8,40 +8,45 @@ type SyncState = { synced: boolean };
 
 const WebhookSyncContext = React.createContext<SyncState>({ synced: false });
 
-/** Whether the initial webhook sync has settled (or there's nothing to sync). */
+/** Whether the webhook sync for the CURRENT account has settled. */
 export function useWebhookSync(): SyncState {
   return React.useContext(WebhookSyncContext);
 }
 
 /**
- * Silently syncs server webhooks into local IndexedDB once per session load,
- * and exposes `synced` so consumers (e.g. the drive page) can wait for it
- * before deciding to show "add a webhook" — otherwise a freshly logged-in user
- * gets bounced to /setup before their drives arrive.
+ * Syncs server webhooks into local IndexedDB, re-running whenever the signed-in
+ * account changes (not just once per load) — otherwise switching accounts leaves
+ * the new account's drives unsynced and the page stuck. Exposes `synced` so the
+ * drive page can wait before deciding to show "add a webhook".
  */
 export function WebhookSyncProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { status } = useSession();
+  const { data, status } = useSession();
+  const account = data?.user?.email ?? null;
   const [synced, setSynced] = React.useState(false);
-  const ran = React.useRef(false);
+  const syncedFor = React.useRef<string | null | undefined>(undefined);
 
   React.useEffect(() => {
-    if (status === "loading" || ran.current) return;
-    ran.current = true;
-    if (status === "authenticated") {
+    if (status === "loading") return;
+
+    if (status === "authenticated" && account) {
+      if (syncedFor.current === account) return; // already synced this account
+      syncedFor.current = account;
+      setSynced(false);
       syncWebhooksFromServer()
         .catch(() => {
           // Non-fatal: user just won't have server webhooks pre-loaded.
         })
         .finally(() => setSynced(true));
     } else {
-      // Logged-out: nothing to pull, local drives are authoritative.
+      // Logged-out: nothing to pull; reset so the next sign-in re-syncs.
+      syncedFor.current = null;
       setSynced(true);
     }
-  }, [status]);
+  }, [status, account]);
 
   return (
     <WebhookSyncContext.Provider value={{ synced }}>
