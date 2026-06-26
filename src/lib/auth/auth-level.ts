@@ -37,15 +37,16 @@ export type LevelResult = { level: AuthLevel; reason: PendingReason };
 export function levelFromUser(u: LevelInput): LevelResult {
   // 1) Email never proven (typically a password sign-up) → verify email.
   if (!u.emailVerified) return { level: "pending", reason: "email_verify" };
-  // 2) Never logged in, or last login older than 24h → email login code.
+  // 2) 2FA enabled → second factor. Takes precedence over the 24h rule so a 2FA
+  //    user isn't asked for BOTH an email code and their 2FA on the same login.
+  if (u.twoFactorEnabled) return { level: "pending", reason: "2fa" };
+  // 3) Never logged in, or last login older than 24h → email login code.
   if (
     !u.lastLoginAt ||
     Date.now() - u.lastLoginAt.getTime() > LOGIN_REVERIFY_MS
   ) {
     return { level: "pending", reason: "login_24h" };
   }
-  // 3) 2FA enabled (wired in Phase 4) → second factor.
-  if (u.twoFactorEnabled) return { level: "pending", reason: "2fa" };
   return { level: "full", reason: null };
 }
 
