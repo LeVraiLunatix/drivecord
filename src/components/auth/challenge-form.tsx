@@ -3,12 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Loader2, MailCheck } from "lucide-react";
+import { Loader2, MailCheck, MonitorSmartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { OtpInput } from "@/components/auth/otp-input";
+import { CrossDeviceWait } from "@/components/auth/cross-device-wait";
 import type { PendingReason } from "@/lib/auth/auth-level";
 
 const COPY: Record<string, { title: string; desc: (email: string) => string }> = {
@@ -27,11 +28,14 @@ const COPY: Record<string, { title: string; desc: (email: string) => string }> =
 export function ChallengeForm({
   email,
   reason,
+  canCrossDevice = false,
 }: {
   email: string;
   reason: PendingReason;
+  canCrossDevice?: boolean;
 }) {
   const router = useRouter();
+  const [crossDevice, setCrossDevice] = React.useState(false);
   const [code, setCode] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -108,6 +112,26 @@ export function ChallengeForm({
     }
   };
 
+  if (crossDevice) {
+    return (
+      <div className="relative flex min-h-[100dvh] flex-col">
+        <AuthBackground />
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-12">
+          <Card className="border-border/60 bg-card/70 backdrop-blur-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                Approuver depuis un autre appareil
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CrossDeviceWait onBack={() => setCrossDevice(false)} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex min-h-[100dvh] flex-col">
       <AuthBackground />
@@ -150,6 +174,17 @@ export function ChallengeForm({
               {busy && <Loader2 className="size-4 animate-spin" />}
               Valider
             </Button>
+
+            {reason === "login_24h" && canCrossDevice && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setCrossDevice(true)}
+              >
+                <MonitorSmartphone className="size-4" />
+                Approuver depuis un autre appareil
+              </Button>
+            )}
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <button
