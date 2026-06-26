@@ -1,6 +1,6 @@
 /**
  * Full Auth.js v5 configuration (Node.js runtime only).
- * Includes Prisma adapter, bcrypt, and all providers.
+ * Includes Prisma adapter, bcrypt, all providers, and the step-up jwt callback.
  */
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -10,12 +10,43 @@ import Discord from "next-auth/providers/discord";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
+import { evaluateUserLevel } from "@/lib/auth/auth-level";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   // JWT strategy required when using Credentials provider alongside an adapter
   session: { strategy: "jwt" },
+  callbacks: {
+    ...authConfig.callbacks,
+    /**
+     * Node-runtime jwt callback: computes the step-up level from DB state on
+     * sign-in (and update), and slides the 24h window by stamping lastLoginAt
+     * whenever the session opens fully.
+     */
+    async jwt({ token, user, trigger }) {
+      if (user?.id) token.id = user.id;
+      const uid = (token.id as string | undefined) ?? token.sub;
+      if (
+        uid &&
+        (trigger === "signIn" || trigger === "signUp" || trigger === "update")
+      ) {
+        const result = await evaluateUserLevel(uid);
+        if (result) {
+          token.level = result.level;
+          token.pendingReason = result.reason;
+          if (result.level === "full") {
+            await prisma.user
+              .update({ where: { id: uid }, data: { lastLoginAt: new Date() } })
+              .catch(() => {});
+          }
+        }
+      }
+      // Legacy tokens minted before step-up existed are treated as full.
+      if (token.level === undefined) token.level = "full";
+      return token;
+    },
+  },
   providers: [
     // Force Google to always show the account chooser. Without this, the
     // in-app WebView silently re-signs in the last Google account, so trying
