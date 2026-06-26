@@ -27,9 +27,22 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
-  webhooks Webhook[]
+  /// Dernière connexion réussie (sert à la règle de re-vérification email 24 h).
+  lastLoginAt      DateTime?
+  /// 2FA activée (TOTP ou email).
+  twoFactorEnabled Boolean   @default(false)
+  /// Méthode de 2FA active : "totp" | "email" | null.
+  twoFactorMethod  String?
+
+  accounts       Account[]
+  sessions       Session[]
+  webhooks       Webhook[]
+  authenticators Authenticator[]
+  emailTokens    EmailVerificationToken[]
+  totpSecret     TotpSecret?
+  recoveryCodes  RecoveryCode[]
+  trustedDevices TrustedDevice[]
+  loginRequests  LoginRequest[]
 }
 
 model Account {
@@ -164,4 +177,129 @@ model DriveFolder {
 
   @@index([webhookId, parentId])
   @@index([webhookId, trashed])
+}
+
+// ── Authentification avancée ──────────────────────────────────────────────────
+
+/// Passkey WebAuthn (clé d'accès) enregistrée pour un utilisateur.
+model Authenticator {
+  id           String    @id @default(cuid())
+  userId       String
+  /// base64url de l'identifiant de credential (unique).
+  credentialId String    @unique
+  /// Clé publique COSE (bytea).
+  publicKey    Bytes
+  /// Compteur de signature anti-rejeu.
+  counter      BigInt    @default(0)
+  /// Transports annoncés ("usb", "ble", "nfc", "internal", "hybrid"…).
+  transports   String[]
+  /// "singleDevice" | "multiDevice".
+  deviceType   String?
+  backedUp     Boolean   @default(false)
+  /// Libellé éditable par l'utilisateur.
+  name         String
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Code de vérification email à usage unique (6 chiffres, hashé SHA-256).
+model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  /// Null possible pour un flux pré-compte ; rempli dès que l'user existe.
+  userId     String?
+  email      String
+  codeHash   String
+  /// "signup" | "login_24h" | "2fa" | "email_change".
+  purpose    String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email, purpose])
+  @@index([userId])
+}
+
+/// Secret TOTP (app d'authentification), chiffré au repos via ENCRYPTION_KEY.
+model TotpSecret {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  /// Secret base32 chiffré (AES-256-GCM, même format que les webhooks).
+  secretEncrypted String
+  enabled         Boolean   @default(false)
+  confirmedAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Code de récupération 2FA (usage unique, hashé). Lot de 10 à l'activation.
+model RecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Appareil de confiance (identifié par un cookie persistant `deviceId`).
+model TrustedDevice {
+  id          String   @id @default(cuid())
+  userId      String
+  /// Identifiant d'appareil stocké côté client (cookie httpOnly persistant).
+  deviceId    String
+  deviceLabel String
+  userAgent   String?
+  ip          String?
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+}
+
+/// Demande d'approbation de connexion depuis un nouvel appareil (style Epic Games).
+model LoginRequest {
+  id                    String   @id @default(cuid())
+  userId                String
+  requestingDeviceLabel String
+  requestingIp          String?
+  requestingLocation    String?
+  /// Code court (4-6 chiffres) affiché sur les deux appareils (anti-phishing).
+  shortCode             String
+  /// Secret aléatoire connu du seul nouvel appareil, pour poll + claim de session.
+  pollToken             String   @unique
+  /// "pending" | "approved" | "denied" | "expired".
+  status                String   @default("pending")
+  expiresAt             DateTime
+  approvedByDeviceId    String?
+  createdAt             DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+/// Compteur de rate-limiting (fenêtre fixe), backend PostgreSQL.
+model RateLimit {
+  id        String   @id @default(cuid())
+  /// Clé logique "<action>:<dimension>:<valeur>" (ex. "emailcode:ip:1.2.3.4").
+  key       String   @unique
+  count     Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
 }
