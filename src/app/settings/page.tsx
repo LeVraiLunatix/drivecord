@@ -32,6 +32,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { PasskeyManager } from "@/components/auth/passkey-manager";
+import { TwoFactorManager } from "@/components/auth/two-factor-manager";
+import { TrustedDevicesManager } from "@/components/auth/trusted-devices-manager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -308,6 +312,15 @@ function SecuritySection({ account, onUpdate }: { account?: Account; onUpdate: (
             {hasPassword ? "Modifier le mot de passe" : "Définir un mot de passe"}
           </Button>
         </form>
+
+        <Separator className="my-6" />
+        <TwoFactorManager />
+
+        <Separator className="my-6" />
+        <PasskeyManager />
+
+        <Separator className="my-6" />
+        <TrustedDevicesManager />
       </CardContent>
     </Card>
   );
