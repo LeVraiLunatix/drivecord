@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { CloudUpload, Loader2 } from "lucide-react";
+import { CloudUpload, Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { oauthSignIn } from "@/lib/auth/oauth";
+import { loginWithPasskey } from "@/lib/auth/passkey-client";
 
 const container: Variants = {
   hidden: {},
@@ -101,6 +102,18 @@ function LoginContent() {
 
   const handleGoogle = () => {
     oauthSignIn("google", callbackUrl);
+  };
+
+  const handlePasskey = async () => {
+    setBusy(true);
+    const r = await loginWithPasskey();
+    setBusy(false);
+    if (r.ok) {
+      router.push(callbackUrl);
+      router.refresh();
+    } else {
+      toast.error(r.error ?? "Connexion par passkey impossible.");
+    }
   };
 
   const reduce = useReducedMotion();
@@ -189,6 +202,15 @@ function LoginContent() {
             </div>
 
             <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handlePasskey}
+                disabled={busy}
+              >
+                <KeyRound className="size-4" />
+                Se connecter avec un passkey
+              </Button>
               <Button variant="outline" className="w-full" onClick={handleGoogle}>
                 <GoogleIcon />
                 Continuer avec Google
