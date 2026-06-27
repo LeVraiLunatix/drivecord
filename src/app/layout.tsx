@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { LoginApprovalWatcher } from "@/components/auth/login-approval-watcher";
+import { BfcacheAuthGuard } from "@/components/auth/bfcache-guard";
 import { NativeDeepLink } from "@/components/native-deep-link";
 import { NativeClass } from "@/components/native-class";
 import { NativeBackdrop } from "@/components/native-backdrop";
@@ -83,6 +84,7 @@ export default function RootLayout({
               <AppTabBar />
               <NativeTabsBridge />
               <LoginApprovalWatcher />
+              <BfcacheAuthGuard />
               <AnnouncementPopup />
               <Toaster richColors position="bottom-right" />
             </TooltipProvider>

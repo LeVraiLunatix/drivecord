@@ -15,11 +15,11 @@ export async function fullSignOut(): Promise<void> {
   // Wipe local IndexedDB drives + active selection.
   await wipeLocalDrives().catch(() => {});
   // Clear the session cookie FIRST (await → the signout request, with its
-  // Set-Cookie, has completed), THEN do a hard navigation to /login. Targeting
-  // /login (not "/") avoids the home gate, which reads the client session state
-  // and used to bounce to /drive while the sign-out was still settling — that
-  // was the "need to click twice to log out" bug. A hard nav also guarantees a
-  // fresh SessionProvider with the cookie already gone.
+  // Set-Cookie, has completed), THEN hard-navigate to /login. We use
+  // `replace`, not `href`, so the protected page we're leaving (/drive, …) is
+  // dropped from the history stack — otherwise the browser Back button restores
+  // it from the bfcache as a stale "logged-in" snapshot. The BfcacheAuthGuard
+  // (mounted in the layout) catches any other bfcache-restored protected page.
   await signOut({ redirect: false }).catch(() => {});
-  window.location.href = "/login";
+  window.location.replace("/login");
 }
