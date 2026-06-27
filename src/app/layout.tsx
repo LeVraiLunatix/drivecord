@@ -10,6 +10,7 @@ import { NativeClass } from "@/components/native-class";
 import { NativeBackdrop } from "@/components/native-backdrop";
 import { AppTabBar } from "@/components/app-tab-bar";
 import { NativeTabsBridge } from "@/components/native-tabs-bridge";
+import { AnnouncementPopup } from "@/components/announcement-popup";
 import "./globals.css";
 
 // Inter = substitut libre le plus proche de "gg sans" (la police de Discord).
@@ -82,6 +83,7 @@ export default function RootLayout({
               <AppTabBar />
               <NativeTabsBridge />
               <LoginApprovalWatcher />
+              <AnnouncementPopup />
               <Toaster richColors position="bottom-right" />
             </TooltipProvider>
           </ThemeProvider>

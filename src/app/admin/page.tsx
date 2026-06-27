@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { BackButton } from "@/components/back-button";
+import { AnnouncementAdmin } from "@/components/admin/announcement-admin";
 
 type AdminUser = {
   id: string;
@@ -107,6 +108,15 @@ export default function AdminPage() {
           {data ? `${data.users.length} compte(s) enregistré(s)` : "Gestion des comptes"}
         </p>
       </motion.header>
+
+      <motion.div variants={v ?? item}>
+        <AnnouncementAdmin />
+      </motion.div>
+
+      <motion.h2 variants={v ?? item} className="flex items-center gap-2 pt-2 text-lg font-semibold">
+        <UserIcon className="size-5 text-muted-foreground" />
+        Comptes
+      </motion.h2>
 
       {isLoading && (
         <div className="flex justify-center py-10">

@@ -303,3 +303,18 @@ model RateLimit {
 
   @@index([expiresAt])
 }
+
+/// Annonce affichée en popup sur le site (configurée par l'admin).
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  /// Annonce marquée « importante » → style accentué dans la popup.
+  important Boolean  @default(false)
+  /// Date jusqu'à laquelle la popup s'affiche aux visiteurs.
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}
