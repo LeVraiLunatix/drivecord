@@ -60,6 +60,7 @@ function renderHtml(
   code: string,
   purpose: EmailPurpose,
   expiresMinutes: number,
+  secureUrl?: string,
 ): string {
   const c = COPY[purpose];
   const spaced = code.split("").join("&#8202;"); // hair-space for readability
@@ -81,7 +82,12 @@ function renderHtml(
             <div style="background:#0b0b12;border:1px solid #2a2a3d;border-radius:12px;padding:18px;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#fff;">${spaced}</div>
           </td></tr>
           <tr><td style="padding:18px 32px 28px;">
-            <p style="font-size:13px;line-height:1.6;color:#7a7a8c;margin:0;">Ce code expire dans <strong style="color:#a7a7b8;">${expiresMinutes} minutes</strong>. Si tu n'es pas à l'origine de cette demande, ignore cet email — ton compte reste protégé.</p>
+            <p style="font-size:13px;line-height:1.6;color:#7a7a8c;margin:0;">Ce code expire dans <strong style="color:#a7a7b8;">${expiresMinutes} minutes</strong>.</p>
+            ${
+              secureUrl
+                ? `<p style="font-size:13px;line-height:1.6;color:#7a7a8c;margin:14px 0 0;">Ce n'est pas toi qui essaies de te connecter ? <a href="${secureUrl}" style="color:#a78bfa;font-weight:600;text-decoration:none;">Sécurise ton compte &rarr;</a> (change ton mot de passe et déconnecte les appareils).</p>`
+                : `<p style="font-size:13px;line-height:1.6;color:#7a7a8c;margin:14px 0 0;">Si tu n'es pas à l'origine de cette demande, ignore cet email — ton compte reste protégé.</p>`
+            }
           </td></tr>
         </table>
         <p style="font-size:11px;color:#55556a;margin:16px 0 0;">Drivecord · ton cloud illimité, propulsé par Discord</p>
@@ -100,13 +106,14 @@ export async function sendVerificationEmail(
   code: string,
   purpose: EmailPurpose,
   expiresMinutes = 10,
+  secureUrl?: string,
 ): Promise<void> {
   const c = COPY[purpose];
   const { error } = await getResend().emails.send({
     from: FROM,
     to: email,
     subject: c.subject,
-    html: renderHtml(code, purpose, expiresMinutes),
+    html: renderHtml(code, purpose, expiresMinutes, secureUrl),
   });
   if (error) {
     throw new Error(`Échec de l'envoi de l'email : ${error.message}`);

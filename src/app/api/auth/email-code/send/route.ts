@@ -8,8 +8,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { createEmailCode, emailPurposeFromReason } from "@/lib/auth/email-code";
+import { createSecureAccountToken } from "@/lib/auth/secure-account";
 import { sendVerificationEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+
+const APP_URL = process.env.WEBAUTHN_ORIGIN ?? "https://drivecord.vercel.app";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -64,8 +67,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Lien « ce n'était pas moi » (sécuriser le compte) — best-effort, non bloquant.
+  let secureUrl: string | undefined;
   try {
-    await sendVerificationEmail(user.email, created.code, purpose);
+    const token = await createSecureAccountToken(user.id, user.email);
+    secureUrl = `${APP_URL}/secure-account?token=${token}`;
+  } catch (err) {
+    console.error("[email-code/send] secure token", err);
+  }
+
+  try {
+    await sendVerificationEmail(user.email, created.code, purpose, 10, secureUrl);
   } catch (err) {
     console.error("[email-code/send]", err);
     return NextResponse.json(
