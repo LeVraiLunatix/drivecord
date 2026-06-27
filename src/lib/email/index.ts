@@ -26,6 +26,9 @@ function getResend(): Resend {
 
 const FROM = process.env.EMAIL_FROM ?? "Drivecord <no-reply@drivecord.app>";
 
+/** Base URL of the app, used to host the logo embedded in emails. */
+const APP_URL = process.env.WEBAUTHN_ORIGIN ?? "https://drivecord.vercel.app";
+
 const COPY: Record<
   EmailPurpose,
   { subject: string; title: string; intro: string }
@@ -67,7 +70,7 @@ function renderHtml(
       <tr><td align="center">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#13131d;border:1px solid #232334;border-radius:16px;overflow:hidden;">
           <tr><td style="padding:28px 32px 8px;">
-            <div style="display:inline-block;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#d946ef);"></div>
+            <img src="${APP_URL}/icon.png" width="44" height="44" alt="Drivecord" style="display:block;width:44px;height:44px;border-radius:12px;border:0;outline:none;text-decoration:none;" />
             <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:600;margin-top:12px;">drivecord</div>
           </td></tr>
           <tr><td style="padding:8px 32px 0;">

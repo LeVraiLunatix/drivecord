@@ -93,7 +93,7 @@ export function OtpInput({
   };
 
   return (
-    <div className="flex justify-center gap-2" onPaste={handlePaste}>
+    <div className="flex w-full justify-center gap-2.5" onPaste={handlePaste}>
       {digits.map((d, i) => (
         <input
           key={i}
@@ -110,7 +110,7 @@ export function OtpInput({
           onChange={(e) => handleChange(i, e)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           className={cn(
-            "size-12 rounded-xl border border-border/60 bg-card/70 text-center text-lg font-semibold outline-none transition",
+            "aspect-square w-full max-w-[3.25rem] rounded-xl border border-border/60 bg-card/70 text-center text-xl font-semibold outline-none transition",
             "focus:border-violet-500 focus:ring-2 focus:ring-violet-500/30",
             disabled && "opacity-50",
           )}
