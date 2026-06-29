@@ -34,14 +34,14 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://drivecord.app"),
 
   title: {
-    default: "DriveCord",
-    template: "%s · DriveCord",
+    default: "Drivecord",
+    template: "%s · Drivecord",
   },
 
   description:
-    "DriveCord est un service de stockage cloud sécurisé avec chiffrement de bout en bout, partage de fichiers, synchronisation et accès multiplateforme.",
+    "Drivecord est un service de stockage cloud sécurisé avec chiffrement de bout en bout, partage de fichiers, synchronisation et accès multiplateforme.",
 
-  applicationName: "DriveCord",
+  applicationName: "Drivecord",
 
   authors: [
     {
@@ -51,10 +51,10 @@ export const metadata: Metadata = {
 
   creator: "Lunatix",
 
-  publisher: "DriveCord",
+  publisher: "Drivecord",
 
   keywords: [
-    "DriveCord",
+    "Drivecord",
     "Cloud",
     "Cloud Storage",
     "Stockage",
@@ -77,13 +77,13 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title: "DriveCord",
+    title: "Drivecord",
     description:
       "Stockage cloud sécurisé avec chiffrement de bout en bout et partage de fichiers.",
 
     url: "https://drivecord.app",
 
-    siteName: "DriveCord",
+    siteName: "Drivecord",
 
     locale: "fr_FR",
 
@@ -91,21 +91,21 @@ export const metadata: Metadata = {
 
     images: [
       {
-        url: "/banner.png",
-        width: 1200,
-        height: 630,
-        alt: "DriveCord",
+        url: "/icon.png",
+        width: 1024,
+        height: 1024,
+        alt: "Drivecord",
       },
     ],
   },
 
   twitter: {
-    card: "summary_large_image",
-    title: "DriveCord",
+    card: "summary",
+    title: "Drivecord",
     description:
       "Stockage cloud sécurisé avec chiffrement de bout en bout.",
 
-    images: ["/banner.png"],
+    images: ["/icon.png"],
   },
 
   icons: {
