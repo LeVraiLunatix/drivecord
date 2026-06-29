@@ -1,14 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, MonitorSmartphone, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type State = "creating" | "waiting" | "denied" | "expired" | "error";
 
 export function CrossDeviceWait({ onBack }: { onBack: () => void }) {
-  const router = useRouter();
   const [state, setState] = React.useState<State>("creating");
   const [shortCode, setShortCode] = React.useState("");
   const tokenRef = React.useRef<string | null>(null);
@@ -51,8 +49,10 @@ export function CrossDeviceWait({ onBack }: { onBack: () => void }) {
         const d = await res.json().catch(() => ({}));
         if (d.status === "approved") {
           clearInterval(iv);
-          router.push("/drive");
-          router.refresh();
+          // Navigation DURE : session ouverte côté serveur (route custom) →
+          // recharge pour que useSession + la sync des drives suivent (sinon
+          // bascule vers /setup faute de drives synchronisés).
+          window.location.assign("/drive");
         } else if (d.status === "denied") {
           clearInterval(iv);
           setState("denied");
@@ -65,7 +65,7 @@ export function CrossDeviceWait({ onBack }: { onBack: () => void }) {
       }
     }, 3000);
     return () => clearInterval(iv);
-  }, [state, router]);
+  }, [state]);
 
   const errorText =
     state === "denied"

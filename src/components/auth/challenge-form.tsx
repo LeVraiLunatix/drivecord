@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Loader2, MailCheck, MonitorSmartphone } from "lucide-react";
 import { toast } from "sonner";
@@ -34,7 +33,6 @@ export function ChallengeForm({
   reason: PendingReason;
   canCrossDevice?: boolean;
 }) {
-  const router = useRouter();
   const [crossDevice, setCrossDevice] = React.useState(false);
   const [code, setCode] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -99,8 +97,11 @@ export function ChallengeForm({
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success("Vérifié !");
-        router.push("/drive");
-        router.refresh();
+        // Navigation DURE : la session vient d'être promue côté serveur (route
+        // custom), donc on recharge pour que le SessionProvider + la sync des
+        // drives prennent le relais (sinon possible bascule vers /setup).
+        window.location.assign("/drive");
+        return;
       } else {
         setError(data.error ?? "Code invalide.");
         setCode("");

@@ -107,13 +107,17 @@ function LoginContent() {
   const handlePasskey = async () => {
     setBusy(true);
     const r = await loginWithPasskey();
-    setBusy(false);
     if (r.ok) {
-      router.push(callbackUrl);
-      router.refresh();
-    } else {
-      toast.error(r.error ?? "Connexion par passkey impossible.");
+      // Le login passkey pose le cookie de session via une route custom : le
+      // SessionProvider client ne le voit pas (pas de broadcast comme signIn).
+      // Une navigation DURE recharge la page → useSession repasse
+      // "authenticated" → WebhookSyncProvider synchronise les drives. Sans ça,
+      // la page /drive ne voit aucun drive et bascule vers /setup.
+      window.location.assign(callbackUrl);
+      return;
     }
+    setBusy(false);
+    toast.error(r.error ?? "Connexion par passkey impossible.");
   };
 
   const reduce = useReducedMotion();

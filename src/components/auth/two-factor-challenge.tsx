@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -23,7 +22,6 @@ export function TwoFactorChallenge({
   email: string;
   method: string;
 }) {
-  const router = useRouter();
   const [code, setCode] = React.useState("");
   const [recoveryMode, setRecoveryMode] = React.useState(false);
   const [recoveryCode, setRecoveryCode] = React.useState("");
@@ -82,8 +80,10 @@ export function TwoFactorChallenge({
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success("Connexion confirmée !");
-        router.push("/drive");
-        router.refresh();
+        // Navigation DURE : session promue via route custom → recharge pour que
+        // useSession + la sync des drives suivent (sinon bascule vers /setup).
+        window.location.assign("/drive");
+        return;
       } else {
         setError(data.error ?? "Code incorrect.");
         setCode("");
