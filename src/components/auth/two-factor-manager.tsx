@@ -10,15 +10,20 @@ import {
   Loader2,
   Copy,
   Download,
+  Star,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OtpInput } from "@/components/auth/otp-input";
 
+type Method = "totp" | "email";
+
 type Status = {
   enabled: boolean;
-  method: string | null;
-  totpConfigured: boolean;
+  totpEnabled: boolean;
+  emailEnabled: boolean;
+  preferred: Method | null;
   recoveryRemaining: number;
 };
 
@@ -26,7 +31,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const T = {
   intro:
-    "Ajoute une seconde étape à la connexion : un code temporaire en plus de ton mot de passe.",
+    "Ajoute une seconde étape à la connexion : un code temporaire en plus de ton mot de passe. Tu peux activer plusieurs méthodes et choisir ta préférée.",
   recoveryWarn:
     "Chaque code ne fonctionne qu'une seule fois. Garde-les en lieu sûr : ils te permettent de te connecter si tu perds ton second facteur.",
   recoveryTitle: "Conserve tes codes de récupération",
@@ -34,13 +39,7 @@ const T = {
   emailDesc: "Reçois un code à 6 chiffres par email à chaque connexion.",
 };
 
-function RecoveryCodes({
-  codes,
-  onDone,
-}: {
-  codes: string[];
-  onDone: () => void;
-}) {
+function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
   const copy = () => {
     void navigator.clipboard.writeText(codes.join("\n"));
     toast.success("Codes copiés.");
@@ -83,15 +82,12 @@ function RecoveryCodes({
 }
 
 export function TwoFactorManager() {
-  const { data, mutate, isLoading } = useSWR<Status>(
-    "/api/settings/2fa",
-    fetcher,
-  );
+  const { data, mutate, isLoading } = useSWR<Status>("/api/settings/2fa", fetcher);
   const [qr, setQr] = React.useState<string | null>(null);
   const [token, setToken] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [codes, setCodes] = React.useState<string[] | null>(null);
-  const [showDisable, setShowDisable] = React.useState(false);
+  const [disableTarget, setDisableTarget] = React.useState<Method | null>(null);
   const [disableCode, setDisableCode] = React.useState("");
 
   const startTotp = async () => {
@@ -113,7 +109,8 @@ export function TwoFactorManager() {
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (res.ok) {
-      setCodes(d.recoveryCodes);
+      if (d.recoveryCodes) setCodes(d.recoveryCodes);
+      else toast.success("Application d'authentification activée.");
       setQr(null);
       setToken("");
       mutate();
@@ -128,7 +125,8 @@ export function TwoFactorManager() {
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (res.ok) {
-      setCodes(d.recoveryCodes);
+      if (d.recoveryCodes) setCodes(d.recoveryCodes);
+      else toast.success("Code par email activé.");
       mutate();
     } else {
       toast.error(d.error ?? "Erreur.");
@@ -148,18 +146,36 @@ export function TwoFactorManager() {
     }
   };
 
-  const disable = async () => {
+  const setPreferred = async (method: Method) => {
+    setBusy(true);
+    const res = await fetch("/api/settings/2fa/preferred", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ method }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      toast.success("Méthode préférée mise à jour.");
+      mutate();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.error(d.error ?? "Erreur.");
+    }
+  };
+
+  const confirmDisable = async () => {
+    if (!disableTarget) return;
     setBusy(true);
     const res = await fetch("/api/settings/2fa/disable", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: disableCode.trim() }),
+      body: JSON.stringify({ code: disableCode.trim(), method: disableTarget }),
     });
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (res.ok) {
-      toast.success("Double authentification désactivée.");
-      setShowDisable(false);
+      toast.success("Méthode désactivée.");
+      setDisableTarget(null);
       setDisableCode("");
       mutate();
     } else {
@@ -183,7 +199,7 @@ export function TwoFactorManager() {
     );
   }
 
-  // TOTP setup in progress: show the QR + confirmation field.
+  // TOTP setup in progress.
   if (qr) {
     return (
       <div className="space-y-4">
@@ -236,41 +252,74 @@ export function TwoFactorManager() {
     );
   }
 
-  // Enabled state.
-  if (data.enabled) {
+  const methodCard = (
+    method: Method,
+    icon: React.ReactNode,
+    name: string,
+    desc: string,
+    enabled: boolean,
+    onEnable: () => void,
+    enableLabel: string,
+  ) => {
+    const isPreferred = data.preferred === method;
     return (
-      <div className="space-y-4">
-        {header}
-        <div className="rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3">
-          <p className="text-sm font-medium text-green-400">
-            Activée ·{" "}
-            {data.method === "email" ? "code par email" : "application"}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {data.recoveryRemaining} code
-            {data.recoveryRemaining > 1 ? "s" : ""} de récupération restant
-            {data.recoveryRemaining > 1 ? "s" : ""}.
-          </p>
+      <div className="rounded-lg border border-border/60 bg-card/40 p-3">
+        <div className="flex items-center gap-3">
+          <span className="shrink-0 text-violet-400">{icon}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="text-sm font-medium">{name}</p>
+              {enabled && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+                  <Check className="size-2.5" /> Activée
+                </span>
+              )}
+              {enabled && isPreferred && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
+                  <Star className="size-2.5" /> Préférée
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
+          </div>
+          {!enabled ? (
+            <Button size="sm" onClick={onEnable} disabled={busy} className="shrink-0">
+              {enableLabel}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 text-red-400 hover:text-red-300"
+              onClick={() => {
+                setDisableTarget(method);
+                setDisableCode("");
+              }}
+              disabled={busy}
+            >
+              Désactiver
+            </Button>
+          )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={regenerate} disabled={busy}>
-            Régénérer les codes
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-red-400 hover:text-red-300"
-            onClick={() => setShowDisable((s) => !s)}
+        {/* Bouton « définir préférée » (si activée, pas déjà préférée, et l'autre méthode est aussi active) */}
+        {enabled && !isPreferred && data.totpEnabled && data.emailEnabled && (
+          <button
+            type="button"
+            onClick={() => setPreferred(method)}
+            disabled={busy}
+            className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
           >
-            Désactiver
-          </Button>
-        </div>
+            <Star className="size-3" /> Définir comme préférée
+          </button>
+        )}
 
-        {showDisable && (
-          <div className="space-y-2 rounded-lg border border-border/60 bg-card/40 p-3">
+        {/* Confirmation de désactivation */}
+        {disableTarget === method && (
+          <div className="mt-3 space-y-2 rounded-lg border border-border/60 bg-background/40 p-3">
             <p className="text-xs text-muted-foreground">
-              Entre un code 2FA ou un code de récupération pour confirmer.
+              Entre un code 2FA (de l&apos;app) ou un code de récupération pour
+              confirmer.
             </p>
             <div className="flex gap-2">
               <Input
@@ -281,47 +330,65 @@ export function TwoFactorManager() {
               />
               <Button
                 variant="destructive"
-                onClick={disable}
+                onClick={confirmDisable}
                 disabled={busy || !disableCode.trim()}
               >
+                {busy && <Loader2 className="size-4 animate-spin" />}
                 Confirmer
               </Button>
             </div>
+            <button
+              type="button"
+              onClick={() => setDisableTarget(null)}
+              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Annuler
+            </button>
           </div>
         )}
       </div>
     );
-  }
+  };
 
-  // Disabled state: offer the two methods.
   return (
     <div className="space-y-4">
       {header}
       <p className="text-xs text-muted-foreground">{T.intro}</p>
 
       <div className="space-y-2">
-        <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-3 py-3">
-          <Smartphone className="size-5 shrink-0 text-violet-400" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Application d&apos;authentification</p>
-            <p className="text-xs text-muted-foreground">{T.appDesc}</p>
-          </div>
-          <Button size="sm" onClick={startTotp} disabled={busy}>
-            Configurer
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-3 py-3">
-          <Mail className="size-5 shrink-0 text-violet-400" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Code par email</p>
-            <p className="text-xs text-muted-foreground">{T.emailDesc}</p>
-          </div>
-          <Button size="sm" variant="outline" onClick={enableEmail} disabled={busy}>
-            Activer
-          </Button>
-        </div>
+        {methodCard(
+          "totp",
+          <Smartphone className="size-5" />,
+          "Application d'authentification",
+          T.appDesc,
+          data.totpEnabled,
+          startTotp,
+          "Configurer",
+        )}
+        {methodCard(
+          "email",
+          <Mail className="size-5" />,
+          "Code par email",
+          T.emailDesc,
+          data.emailEnabled,
+          enableEmail,
+          "Activer",
+        )}
       </div>
+
+      {/* Codes de récupération (si 2FA active) */}
+      {data.enabled && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/50 bg-card/30 px-3 py-2.5">
+          <p className="mr-auto text-xs text-muted-foreground">
+            {data.recoveryRemaining} code
+            {data.recoveryRemaining > 1 ? "s" : ""} de récupération restant
+            {data.recoveryRemaining > 1 ? "s" : ""}.
+          </p>
+          <Button size="sm" variant="outline" onClick={regenerate} disabled={busy}>
+            Régénérer
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

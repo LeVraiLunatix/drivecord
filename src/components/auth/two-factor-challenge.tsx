@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { signOut } from "next-auth/react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, Smartphone, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,56 +15,71 @@ import {
 import { AuthBackground } from "@/components/auth/auth-background";
 import { OtpInput } from "@/components/auth/otp-input";
 
+type Method = "totp" | "email";
+
 export function TwoFactorChallenge({
   email,
-  method,
+  preferred,
+  totpEnabled,
+  emailEnabled,
 }: {
   email: string;
-  method: string;
+  preferred: Method;
+  totpEnabled: boolean;
+  emailEnabled: boolean;
 }) {
-  const [code, setCode] = React.useState("");
+  // Méthode affichée, contrainte à une méthode activée.
+  const initial: Method =
+    preferred === "email" && emailEnabled
+      ? "email"
+      : totpEnabled
+        ? "totp"
+        : "email";
+  const [active, setActive] = React.useState<Method>(initial);
   const [recoveryMode, setRecoveryMode] = React.useState(false);
+  const [code, setCode] = React.useState("");
   const [recoveryCode, setRecoveryCode] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [cooldown, setCooldown] = React.useState(0);
 
-  const isEmail = method === "email";
+  const hasBoth = totpEnabled && emailEnabled;
+  const isEmail = active === "email" && !recoveryMode;
 
-  // For email 2FA, send the code once on mount.
-  const startedRef = React.useRef(false);
-  React.useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    const start = async () => {
-      try {
-        const res = await fetch("/api/auth/2fa/start", { method: "POST" });
-        const data = await res.json().catch(() => ({}));
-        if (isEmail && res.ok) setCooldown(data.cooldownSec ?? 60);
-      } catch {
-        /* user can retry */
+  const sendEmailCode = React.useCallback(async (notify: boolean) => {
+    try {
+      const res = await fetch("/api/auth/2fa/start", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.emailSent) {
+        setCooldown(data.cooldownSec ?? 60);
+        if (notify) toast.success("Nouveau code envoyé.");
+      } else if (!res.ok) {
+        setCooldown(data.cooldownSec ?? 0);
+        if (notify) toast.error(data.error ?? "Erreur.");
       }
-    };
-    void start();
-  }, [isEmail]);
+    } catch {
+      if (notify) toast.error("Erreur réseau.");
+    }
+  }, []);
+
+  // Envoie un code email à l'entrée en mode email ; remet à zéro sinon (pour
+  // qu'un retour vers l'email renvoie un nouveau code).
+  const sentRef = React.useRef(false);
+  React.useEffect(() => {
+    if (active === "email" && !recoveryMode) {
+      if (sentRef.current) return;
+      sentRef.current = true;
+      void sendEmailCode(false);
+    } else {
+      sentRef.current = false;
+    }
+  }, [active, recoveryMode, sendEmailCode]);
 
   React.useEffect(() => {
     if (cooldown <= 0) return;
     const t = setInterval(() => setCooldown((c) => (c <= 1 ? 0 : c - 1)), 1000);
     return () => clearInterval(t);
   }, [cooldown]);
-
-  const resend = async () => {
-    if (cooldown > 0) return;
-    const res = await fetch("/api/auth/2fa/start", { method: "POST" });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      setCooldown(data.cooldownSec ?? 60);
-      toast.success("Nouveau code envoyé.");
-    } else {
-      toast.error(data.error ?? "Erreur.");
-    }
-  };
 
   const submit = async (value?: string) => {
     const c = recoveryMode ? recoveryCode.trim() : (value ?? code);
@@ -94,6 +109,15 @@ export function TwoFactorChallenge({
       setBusy(false);
     }
   };
+
+  const switchTo = (m: Method) => {
+    setActive(m);
+    setRecoveryMode(false);
+    setCode("");
+    setError(null);
+  };
+
+  const otherMethod: Method = active === "totp" ? "email" : "totp";
 
   const title = recoveryMode
     ? "Code de récupération"
@@ -140,6 +164,7 @@ export function TwoFactorChallenge({
               />
             ) : (
               <OtpInput
+                key={active}
                 value={code}
                 onChange={setCode}
                 onComplete={(v) => submit(v)}
@@ -163,38 +188,60 @@ export function TwoFactorChallenge({
               Valider
             </Button>
 
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              {isEmail && !recoveryMode ? (
+            {/* Renvoyer le code (email) */}
+            {isEmail && (
+              <div className="text-center text-xs text-muted-foreground">
                 <button
                   type="button"
-                  onClick={resend}
+                  onClick={() => cooldown <= 0 && sendEmailCode(true)}
                   disabled={cooldown > 0}
                   className="underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50"
                 >
                   {cooldown > 0 ? `Renvoyer le code (${cooldown}s)` : "Renvoyer le code"}
                 </button>
-              ) : (
-                <span />
+              </div>
+            )}
+
+            {/* Autres méthodes */}
+            <div className="space-y-2 border-t border-border/50 pt-3">
+              {hasBoth && !recoveryMode && (
+                <button
+                  type="button"
+                  onClick={() => switchTo(otherMethod)}
+                  className="flex w-full items-center justify-center gap-2 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  {otherMethod === "email" ? (
+                    <Mail className="size-3.5" />
+                  ) : (
+                    <Smartphone className="size-3.5" />
+                  )}
+                  {otherMethod === "email"
+                    ? "Recevoir un code par email"
+                    : "Utiliser l'application d'authentification"}
+                </button>
               )}
+
               <button
                 type="button"
                 onClick={() => {
                   setRecoveryMode((m) => !m);
                   setError(null);
                 }}
-                className="underline-offset-4 hover:underline"
+                className="block w-full text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
               >
-                {recoveryMode ? "Revenir au code" : "Utiliser un code de récupération"}
+                {recoveryMode
+                  ? "Revenir au code"
+                  : "Utiliser un code de récupération"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="block w-full text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
+              >
+                Annuler et se déconnecter
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="w-full text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
-            >
-              Annuler et se déconnecter
-            </button>
           </CardContent>
         </Card>
       </div>

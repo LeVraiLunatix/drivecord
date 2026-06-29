@@ -6,10 +6,10 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { verifySecondFactor } from "@/lib/auth/second-factor";
 import { consumeRecoveryCode } from "@/lib/auth/recovery-codes";
 import { verifyEmailCode } from "@/lib/auth/email-code";
+import { loadTwoFactor } from "@/lib/auth/two-factor";
 import { markFullSession } from "@/lib/auth/login";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -45,24 +45,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Code requis." }, { status: 400 });
   }
 
-  const profile = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { twoFactorMethod: true },
-  });
-  const method = profile?.twoFactorMethod ?? "totp";
+  // Multi-méthodes : on accepte n'importe quelle méthode ACTIVÉE (TOTP et/ou
+  // email), peu importe la préférée, plus toujours un code de récupération.
+  const state = await loadTwoFactor(user.id);
 
   let ok = false;
   if (body.recovery) {
     ok = await consumeRecoveryCode(user.id, code);
-  } else if (method === "email") {
-    const r = await verifyEmailCode({ email: user.email, purpose: "2fa", code });
-    ok = r.ok;
   } else {
-    ok = (await verifySecondFactor(user.id, code, false)) !== null;
-  }
-  // Recovery code also accepted without the explicit flag.
-  if (!ok && !body.recovery) {
-    ok = await consumeRecoveryCode(user.id, code);
+    if (state.totpEnabled) {
+      ok = (await verifySecondFactor(user.id, code, false)) !== null;
+    }
+    if (!ok && state.emailEnabled) {
+      const r = await verifyEmailCode({ email: user.email, purpose: "2fa", code });
+      ok = r.ok;
+    }
+    // Un code de récupération est aussi accepté sans le flag explicite.
+    if (!ok) {
+      ok = await consumeRecoveryCode(user.id, code);
+    }
   }
 
   if (!ok) {

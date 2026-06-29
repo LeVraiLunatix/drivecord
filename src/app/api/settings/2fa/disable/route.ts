@@ -1,13 +1,20 @@
 /**
- * POST /api/settings/2fa/disable   body: { code }
+ * POST /api/settings/2fa/disable   body: { code, method? }
  *
- * Disables 2FA after re-verifying with a TOTP token or a recovery code
- * (email-method users disable with a recovery code).
+ * Re-vérifie avec un code TOTP ou un code de récupération, puis désactive :
+ *  - method "totp" | "email" → désactive uniquement cette méthode (l'autre reste).
+ *  - method absent           → désactive complètement la 2FA.
+ * Les codes de récupération ne sont supprimés que s'il ne reste aucune méthode.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { verifySecondFactor } from "@/lib/auth/second-factor";
+import {
+  loadTwoFactor,
+  resolvePreferred,
+  type TwoFactorMethod,
+} from "@/lib/auth/two-factor";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
@@ -22,19 +29,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Trop de tentatives." }, { status: 429 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { twoFactorEnabled: true },
-  });
-  if (!user?.twoFactorEnabled) {
+  const state = await loadTwoFactor(userId);
+  if (!state.enabled) {
     return NextResponse.json(
       { error: "La double authentification n'est pas activée." },
       { status: 400 },
     );
   }
 
-  const body = (await req.json().catch(() => ({}))) as { code?: string };
+  const body = (await req.json().catch(() => ({}))) as {
+    code?: string;
+    method?: TwoFactorMethod;
+  };
   const code = body.code?.trim() ?? "";
+  const target = body.method;
+
   const kind = await verifySecondFactor(userId, code, true);
   if (!kind) {
     return NextResponse.json(
@@ -43,14 +52,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await prisma.$transaction([
-    prisma.totpSecret.deleteMany({ where: { userId } }),
-    prisma.recoveryCode.deleteMany({ where: { userId } }),
-    prisma.user.update({
+  const dropTotp = target === "totp" || !target;
+  const dropEmail = target === "email" || !target;
+  const totpEnabled = state.totpEnabled && !dropTotp;
+  const emailEnabled = state.emailEnabled && !dropEmail;
+  const stillEnabled = totpEnabled || emailEnabled;
+  const preferred = stillEnabled
+    ? resolvePreferred(state.preferred, totpEnabled, emailEnabled)
+    : null;
+
+  await prisma.$transaction(async (tx) => {
+    if (dropTotp) await tx.totpSecret.deleteMany({ where: { userId } });
+    await tx.user.update({
       where: { id: userId },
-      data: { twoFactorEnabled: false, twoFactorMethod: null },
-    }),
-  ]);
+      data: {
+        twoFactorEnabled: stillEnabled,
+        emailOtpEnabled: emailEnabled,
+        twoFactorMethod: preferred,
+      },
+    });
+    if (!stillEnabled) await tx.recoveryCode.deleteMany({ where: { userId } });
+  });
 
   return NextResponse.json({ ok: true });
 }

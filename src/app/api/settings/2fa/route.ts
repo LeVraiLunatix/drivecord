@@ -1,9 +1,10 @@
 /**
- * GET /api/settings/2fa — current 2FA status for the settings UI.
+ * GET /api/settings/2fa — état 2FA (multi-méthodes) pour l'UI des réglages.
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { loadTwoFactor } from "@/lib/auth/two-factor";
 
 export async function GET() {
   const session = await auth();
@@ -12,22 +13,16 @@ export async function GET() {
   }
   const userId = session.user.id;
 
-  const [user, totp, recoveryRemaining] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { twoFactorEnabled: true, twoFactorMethod: true },
-    }),
-    prisma.totpSecret.findUnique({
-      where: { userId },
-      select: { enabled: true },
-    }),
+  const [state, recoveryRemaining] = await Promise.all([
+    loadTwoFactor(userId),
     prisma.recoveryCode.count({ where: { userId, usedAt: null } }),
   ]);
 
   return NextResponse.json({
-    enabled: user?.twoFactorEnabled ?? false,
-    method: user?.twoFactorMethod ?? null,
-    totpConfigured: totp?.enabled ?? false,
+    enabled: state.enabled,
+    totpEnabled: state.totpEnabled,
+    emailEnabled: state.emailEnabled,
+    preferred: state.preferred,
     recoveryRemaining,
   });
 }

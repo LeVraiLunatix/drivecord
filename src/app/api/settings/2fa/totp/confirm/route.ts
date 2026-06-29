@@ -39,6 +39,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Code incorrect." }, { status: 400 });
   }
 
+  // Garde l'email s'il est déjà activé ; préférée = TOTP seulement si aucune
+  // n'est encore définie.
+  const [current, recoveryCount] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { twoFactorMethod: true },
+    }),
+    prisma.recoveryCode.count({ where: { userId } }),
+  ]);
+
   await prisma.$transaction([
     prisma.totpSecret.update({
       where: { userId },
@@ -46,10 +56,15 @@ export async function POST(req: NextRequest) {
     }),
     prisma.user.update({
       where: { id: userId },
-      data: { twoFactorEnabled: true, twoFactorMethod: "totp" },
+      data: {
+        twoFactorEnabled: true,
+        twoFactorMethod: current?.twoFactorMethod ?? "totp",
+      },
     }),
   ]);
 
-  const recoveryCodes = await replaceRecoveryCodes(userId);
+  // Codes de récupération générés une seule fois (au premier facteur activé).
+  const recoveryCodes =
+    recoveryCount > 0 ? null : await replaceRecoveryCodes(userId);
   return NextResponse.json({ ok: true, recoveryCodes });
 }

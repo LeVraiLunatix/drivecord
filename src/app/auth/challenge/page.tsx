@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { DEVICE_COOKIE } from "@/lib/auth/device";
+import { loadTwoFactor } from "@/lib/auth/two-factor";
 import { ChallengeForm } from "@/components/auth/challenge-form";
 import { TwoFactorChallenge } from "@/components/auth/two-factor-challenge";
 
@@ -20,12 +21,14 @@ export default async function ChallengePage() {
   const reason = session.pendingReason ?? "login_24h";
 
   if (reason === "2fa") {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { twoFactorMethod: true },
-    });
+    const tf = await loadTwoFactor(session.user.id);
     return (
-      <TwoFactorChallenge email={email} method={user?.twoFactorMethod ?? "totp"} />
+      <TwoFactorChallenge
+        email={email}
+        preferred={tf.preferred ?? "totp"}
+        totpEnabled={tf.totpEnabled}
+        emailEnabled={tf.emailEnabled}
+      />
     );
   }
 

@@ -1,8 +1,9 @@
 /**
- * POST /api/settings/2fa/email — enable email-based 2FA.
+ * POST /api/settings/2fa/email — activer la 2FA par email.
  *
- * Switches the account to email 2FA (removing any TOTP secret so a single
- * method is active) and issues fresh recovery codes.
+ * N'écrase PAS le TOTP : les deux méthodes peuvent coexister. La méthode
+ * préférée reste inchangée si elle existe déjà, sinon email devient préférée.
+ * Les codes de récupération ne sont générés qu'au tout premier facteur activé.
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
@@ -16,14 +17,24 @@ export async function POST() {
   }
   const userId = session.user.id;
 
-  await prisma.$transaction([
-    prisma.totpSecret.deleteMany({ where: { userId } }),
-    prisma.user.update({
+  const [current, recoveryCount] = await Promise.all([
+    prisma.user.findUnique({
       where: { id: userId },
-      data: { twoFactorEnabled: true, twoFactorMethod: "email" },
+      select: { twoFactorMethod: true },
     }),
+    prisma.recoveryCode.count({ where: { userId } }),
   ]);
 
-  const recoveryCodes = await replaceRecoveryCodes(userId);
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      twoFactorEnabled: true,
+      emailOtpEnabled: true,
+      twoFactorMethod: current?.twoFactorMethod ?? "email",
+    },
+  });
+
+  const recoveryCodes =
+    recoveryCount > 0 ? null : await replaceRecoveryCodes(userId);
   return NextResponse.json({ ok: true, recoveryCodes });
 }

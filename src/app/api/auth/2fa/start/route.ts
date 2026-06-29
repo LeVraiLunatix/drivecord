@@ -6,9 +6,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { createEmailCode } from "@/lib/auth/email-code";
 import { sendVerificationEmail } from "@/lib/email";
+import { loadTwoFactor } from "@/lib/auth/two-factor";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
@@ -22,14 +22,11 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
   const email = session.user.email;
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { twoFactorMethod: true },
-  });
-  const method = user?.twoFactorMethod ?? "totp";
-
-  if (method !== "email") {
-    return NextResponse.json({ ok: true, method: "totp" });
+  // Envoie un code email seulement si la méthode email est activée (peut
+  // coexister avec le TOTP). Sinon il n'y a rien à envoyer.
+  const state = await loadTwoFactor(userId);
+  if (!state.emailEnabled) {
+    return NextResponse.json({ ok: true, emailSent: false });
   }
 
   const ip = getClientIp(req);
@@ -57,5 +54,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Échec de l'envoi de l'email." }, { status: 502 });
   }
 
-  return NextResponse.json({ ok: true, method: "email", cooldownSec: 60 });
+  return NextResponse.json({ ok: true, emailSent: true, cooldownSec: 60 });
 }
