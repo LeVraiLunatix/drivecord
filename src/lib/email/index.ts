@@ -63,7 +63,6 @@ function renderHtml(
   secureUrl?: string,
 ): string {
   const c = COPY[purpose];
-  const spaced = code.split("").join("&#8202;"); // hair-space for readability
   return `<!doctype html>
 <html lang="fr">
   <body style="margin:0;padding:0;background:#0b0b12;color:#e7e7ee;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
@@ -79,7 +78,7 @@ function renderHtml(
             <p style="font-size:14px;line-height:1.6;color:#a7a7b8;margin:0 0 20px;">${c.intro}</p>
           </td></tr>
           <tr><td style="padding:0 32px;">
-            <div style="background:#0b0b12;border:1px solid #2a2a3d;border-radius:12px;padding:18px;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#fff;">${spaced}</div>
+            <div style="background:#0b0b12;border:1px solid #2a2a3d;border-radius:12px;padding:16px 12px;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:30px;font-weight:700;letter-spacing:8px;white-space:nowrap;color:#fff;">${code}</div>
           </td></tr>
           <tr><td style="padding:18px 32px 28px;">
             <p style="font-size:13px;line-height:1.6;color:#7a7a8c;margin:0;">Ce code expire dans <strong style="color:#a7a7b8;">${expiresMinutes} minutes</strong>.</p>

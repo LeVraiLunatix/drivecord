@@ -437,7 +437,16 @@ export function DriveExplorer({
   // ── Grid view ────────────────────────────────────────────────────────────────
   if (viewMode === "grid") {
     return (
-      <div ref={explorerRef} className="min-h-full">
+      <div
+      ref={explorerRef}
+      className={cn(
+        "min-h-full",
+        // Quand la barre de sélection (fixed, en bas) est visible, on réserve de
+        // la place dessous pour que les derniers items ne soient pas masqués et
+        // restent cliquables (surtout sur mobile, au-dessus de la tab bar).
+        selectedIds.size > 0 && "pb-24",
+      )}
+    >
         {rubberBand}
         {selectBar}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -452,7 +461,16 @@ export function DriveExplorer({
 
   // ── List view ─────────────────────────────────────────────────────────────────
   return (
-    <div ref={explorerRef} className="min-h-full">
+    <div
+      ref={explorerRef}
+      className={cn(
+        "min-h-full",
+        // Quand la barre de sélection (fixed, en bas) est visible, on réserve de
+        // la place dessous pour que les derniers items ne soient pas masqués et
+        // restent cliquables (surtout sur mobile, au-dessus de la tab bar).
+        selectedIds.size > 0 && "pb-24",
+      )}
+    >
       {rubberBand}
       {selectBar}
       <div className="overflow-hidden rounded-xl border border-border/40 bg-card/20">
