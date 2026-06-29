@@ -14,8 +14,6 @@ import { NativeTabsBridge } from "@/components/native-tabs-bridge";
 import { AnnouncementPopup } from "@/components/announcement-popup";
 import "./globals.css";
 
-// Inter = substitut libre le plus proche de "gg sans" (la police de Discord).
-// style:"normal" évite de charger les variantes italiques non utilisées.
 const interSans = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -24,8 +22,6 @@ const interSans = Inter({
   preload: false,
 });
 
-// JetBrains Mono n'est utilisé que dans les zones de code — pas besoin de
-// précharger dès le premier paint, d'où preload: false.
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
@@ -35,25 +31,107 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Drivecord", template: "%s · Drivecord" },
+  metadataBase: new URL("https://drivecord.app"),
+
+  title: {
+    default: "DriveCord",
+    template: "%s · DriveCord",
+  },
+
   description:
-    "Un clone moderne et amélioré de Disbox : stockage illimité via webhooks Discord, chiffrement E2EE, partage par lien, PWA.",
-  applicationName: "Drivecord",
-  authors: [{ name: "Lunatix" }],
+    "DriveCord est un service de stockage cloud sécurisé avec chiffrement de bout en bout, partage de fichiers, synchronisation et accès multiplateforme.",
+
+  applicationName: "DriveCord",
+
+  authors: [
+    {
+      name: "Lunatix",
+    },
+  ],
+
+  creator: "Lunatix",
+
+  publisher: "DriveCord",
+
+  keywords: [
+    "DriveCord",
+    "Cloud",
+    "Cloud Storage",
+    "Stockage",
+    "Stockage Cloud",
+    "Discord",
+    "Discord Webhooks",
+    "E2EE",
+    "End-to-End Encryption",
+    "Partage de fichiers",
+    "Synchronisation",
+    "PWA",
+    "Drive",
+    "Dropbox",
+    "Google Drive",
+    "OneDrive",
+  ],
+
+  verification: {
+    google: "m-FmMXAJv-wni4WFNbVp8wLdSMzpYdsnD92eo0SYs8k",
+  },
+
+  openGraph: {
+    title: "DriveCord",
+    description:
+      "Stockage cloud sécurisé avec chiffrement de bout en bout et partage de fichiers.",
+
+    url: "https://drivecord.app",
+
+    siteName: "DriveCord",
+
+    locale: "fr_FR",
+
+    type: "website",
+
+    images: [
+      {
+        url: "/banner.png",
+        width: 1200,
+        height: 630,
+        alt: "DriveCord",
+      },
+    ],
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "DriveCord",
+    description:
+      "Stockage cloud sécurisé avec chiffrement de bout en bout.",
+
+    images: ["/banner.png"],
+  },
+
   icons: {
     icon: "/icon.png",
+    shortcut: "/icon.png",
     apple: "/icon.png",
   },
+
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  viewportFit: "cover",   // fill iPhone notch + home bar area
+  viewportFit: "cover",
+
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    {
+      media: "(prefers-color-scheme: light)",
+      color: "#ffffff",
+    },
+    {
+      media: "(prefers-color-scheme: dark)",
+      color: "#0a0a0a",
+    },
   ],
 };
 
@@ -72,6 +150,7 @@ export default function RootLayout({
         <NativeDeepLink />
         <NativeClass />
         <NativeBackdrop />
+
         <AuthSessionProvider>
           <ThemeProvider
             attribute="class"
@@ -81,11 +160,17 @@ export default function RootLayout({
           >
             <TooltipProvider delayDuration={200}>
               {children}
+
               <AppTabBar />
+
               <NativeTabsBridge />
+
               <LoginApprovalWatcher />
+
               <BfcacheAuthGuard />
+
               <AnnouncementPopup />
+
               <Toaster richColors position="bottom-right" />
             </TooltipProvider>
           </ThemeProvider>

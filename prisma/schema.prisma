@@ -29,10 +29,12 @@ model User {
 
   /// Dernière connexion réussie (sert à la règle de re-vérification email 24 h).
   lastLoginAt      DateTime?
-  /// 2FA activée (TOTP ou email).
+  /// 2FA activée (au moins une méthode active : TOTP et/ou email).
   twoFactorEnabled Boolean   @default(false)
-  /// Méthode de 2FA active : "totp" | "email" | null.
+  /// Méthode 2FA PRÉFÉRÉE (présentée en premier au login) : "totp" | "email" | null.
   twoFactorMethod  String?
+  /// 2FA par email activée (le statut TOTP est porté par TotpSecret.enabled).
+  emailOtpEnabled  Boolean   @default(false)
 
   accounts       Account[]
   sessions       Session[]
