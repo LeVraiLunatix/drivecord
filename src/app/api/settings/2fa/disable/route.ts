@@ -54,11 +54,13 @@ export async function POST(req: NextRequest) {
 
   const dropTotp = target === "totp" || !target;
   const dropEmail = target === "email" || !target;
+  const dropDevice = target === "device" || !target;
   const totpEnabled = state.totpEnabled && !dropTotp;
   const emailEnabled = state.emailEnabled && !dropEmail;
-  const stillEnabled = totpEnabled || emailEnabled;
+  const deviceEnabled = state.deviceEnabled && !dropDevice;
+  const stillEnabled = totpEnabled || emailEnabled || deviceEnabled;
   const preferred = stillEnabled
-    ? resolvePreferred(state.preferred, totpEnabled, emailEnabled)
+    ? resolvePreferred(state.preferred, totpEnabled, emailEnabled, deviceEnabled)
     : null;
 
   await prisma.$transaction(async (tx) => {
@@ -68,6 +70,7 @@ export async function POST(req: NextRequest) {
       data: {
         twoFactorEnabled: stillEnabled,
         emailOtpEnabled: emailEnabled,
+        deviceApprovalEnabled: deviceEnabled,
         twoFactorMethod: preferred,
       },
     });

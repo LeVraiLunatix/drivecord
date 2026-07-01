@@ -35,6 +35,8 @@ model User {
   twoFactorMethod  String?
   /// 2FA par email activée (le statut TOTP est porté par TotpSecret.enabled).
   emailOtpEnabled  Boolean   @default(false)
+  /// 2FA par approbation depuis un autre appareil de confiance.
+  deviceApprovalEnabled Boolean @default(false)
 
   accounts       Account[]
   sessions       Session[]

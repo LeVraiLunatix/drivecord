@@ -20,12 +20,17 @@ export async function POST(req: NextRequest) {
     method?: TwoFactorMethod;
   };
   const method = body.method;
-  if (method !== "totp" && method !== "email") {
+  if (method !== "totp" && method !== "email" && method !== "device") {
     return NextResponse.json({ error: "Méthode invalide." }, { status: 400 });
   }
 
   const state = await loadTwoFactor(userId);
-  const isEnabled = method === "totp" ? state.totpEnabled : state.emailEnabled;
+  const isEnabled =
+    method === "totp"
+      ? state.totpEnabled
+      : method === "email"
+        ? state.emailEnabled
+        : state.deviceEnabled;
   if (!isEnabled) {
     return NextResponse.json(
       { error: "Cette méthode n'est pas activée." },

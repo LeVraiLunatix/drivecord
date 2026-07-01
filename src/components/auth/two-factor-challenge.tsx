@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import { signOut } from "next-auth/react";
-import { Loader2, ShieldCheck, Smartphone, Mail } from "lucide-react";
+import {
+  Loader2,
+  ShieldCheck,
+  Smartphone,
+  Mail,
+  MonitorSmartphone,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,27 +20,49 @@ import {
 } from "@/components/ui/card";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { OtpInput } from "@/components/auth/otp-input";
+import { CrossDeviceWait } from "@/components/auth/cross-device-wait";
 
-type Method = "totp" | "email";
+type Method = "totp" | "email" | "device";
+
+const METHOD_LABEL: Record<Method, string> = {
+  totp: "Utiliser l'application d'authentification",
+  email: "Recevoir un code par email",
+  device: "Approuver depuis un autre appareil",
+};
+
+function MethodIcon({ method }: { method: Method }) {
+  if (method === "email") return <Mail className="size-3.5" />;
+  if (method === "device") return <MonitorSmartphone className="size-3.5" />;
+  return <Smartphone className="size-3.5" />;
+}
 
 export function TwoFactorChallenge({
   email,
   preferred,
   totpEnabled,
   emailEnabled,
+  deviceEnabled,
 }: {
   email: string;
   preferred: Method;
   totpEnabled: boolean;
   emailEnabled: boolean;
+  deviceEnabled: boolean;
 }) {
-  // Méthode affichée, contrainte à une méthode activée.
-  const initial: Method =
-    preferred === "email" && emailEnabled
-      ? "email"
-      : totpEnabled
-        ? "totp"
-        : "email";
+  const enabledMethods = React.useMemo<Method[]>(
+    () =>
+      [
+        totpEnabled ? "totp" : null,
+        emailEnabled ? "email" : null,
+        deviceEnabled ? "device" : null,
+      ].filter(Boolean) as Method[],
+    [totpEnabled, emailEnabled, deviceEnabled],
+  );
+
+  const initial: Method = enabledMethods.includes(preferred)
+    ? preferred
+    : (enabledMethods[0] ?? "totp");
+
   const [active, setActive] = React.useState<Method>(initial);
   const [recoveryMode, setRecoveryMode] = React.useState(false);
   const [code, setCode] = React.useState("");
@@ -43,8 +71,8 @@ export function TwoFactorChallenge({
   const [error, setError] = React.useState<string | null>(null);
   const [cooldown, setCooldown] = React.useState(0);
 
-  const hasBoth = totpEnabled && emailEnabled;
   const isEmail = active === "email" && !recoveryMode;
+  const isDevice = active === "device" && !recoveryMode;
 
   const sendEmailCode = React.useCallback(async (notify: boolean) => {
     try {
@@ -62,8 +90,7 @@ export function TwoFactorChallenge({
     }
   }, []);
 
-  // Envoie un code email à l'entrée en mode email ; remet à zéro sinon (pour
-  // qu'un retour vers l'email renvoie un nouveau code).
+  // Envoie un code email à l'entrée en mode email (une fois par entrée).
   const sentRef = React.useRef(false);
   React.useEffect(() => {
     if (active === "email" && !recoveryMode) {
@@ -117,18 +144,24 @@ export function TwoFactorChallenge({
     setError(null);
   };
 
-  const otherMethod: Method = active === "totp" ? "email" : "totp";
+  const otherMethods = enabledMethods.filter((m) => m !== active);
 
   const title = recoveryMode
     ? "Code de récupération"
     : isEmail
       ? "Vérification par email"
-      : "Double authentification";
+      : isDevice
+        ? "Approbation par appareil"
+        : "Double authentification";
   const desc = recoveryMode
     ? "Entre l'un de tes codes de récupération."
     : isEmail
       ? `Entre le code à 6 chiffres envoyé à ${email}.`
-      : "Entre le code affiché dans ton application d'authentification.";
+      : isDevice
+        ? "Approuve cette connexion depuis un autre appareil déjà connecté (onglet « Approuver »), ou saisis-y le code ci-dessous."
+        : "Entre le code affiché dans ton application d'authentification.";
+
+  const showValidate = recoveryMode || (!isDevice && !recoveryMode);
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col">
@@ -162,6 +195,8 @@ export function TwoFactorChallenge({
                   if (e.key === "Enter") submit();
                 }}
               />
+            ) : isDevice ? (
+              <CrossDeviceWait onBack={() => setRecoveryMode(true)} />
             ) : (
               <OtpInput
                 key={active}
@@ -179,14 +214,18 @@ export function TwoFactorChallenge({
               </p>
             )}
 
-            <Button
-              onClick={() => submit()}
-              disabled={busy || (recoveryMode ? !recoveryCode.trim() : code.length !== 6)}
-              className="w-full"
-            >
-              {busy && <Loader2 className="size-4 animate-spin" />}
-              Valider
-            </Button>
+            {showValidate && (
+              <Button
+                onClick={() => submit()}
+                disabled={
+                  busy || (recoveryMode ? !recoveryCode.trim() : code.length !== 6)
+                }
+                className="w-full"
+              >
+                {busy && <Loader2 className="size-4 animate-spin" />}
+                Valider
+              </Button>
+            )}
 
             {/* Renvoyer le code (email) */}
             {isEmail && (
@@ -204,22 +243,18 @@ export function TwoFactorChallenge({
 
             {/* Autres méthodes */}
             <div className="space-y-2 border-t border-border/50 pt-3">
-              {hasBoth && !recoveryMode && (
-                <button
-                  type="button"
-                  onClick={() => switchTo(otherMethod)}
-                  className="flex w-full items-center justify-center gap-2 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                >
-                  {otherMethod === "email" ? (
-                    <Mail className="size-3.5" />
-                  ) : (
-                    <Smartphone className="size-3.5" />
-                  )}
-                  {otherMethod === "email"
-                    ? "Recevoir un code par email"
-                    : "Utiliser l'application d'authentification"}
-                </button>
-              )}
+              {!recoveryMode &&
+                otherMethods.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => switchTo(m)}
+                    className="flex w-full items-center justify-center gap-2 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  >
+                    <MethodIcon method={m} />
+                    {METHOD_LABEL[m]}
+                  </button>
+                ))}
 
               <button
                 type="button"
@@ -230,7 +265,7 @@ export function TwoFactorChallenge({
                 className="block w-full text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
               >
                 {recoveryMode
-                  ? "Revenir au code"
+                  ? "Revenir au second facteur"
                   : "Utiliser un code de récupération"}
               </button>
 

@@ -28,6 +28,7 @@ export default async function ChallengePage() {
         preferred={tf.preferred ?? "totp"}
         totpEnabled={tf.totpEnabled}
         emailEnabled={tf.emailEnabled}
+        deviceEnabled={tf.deviceEnabled}
       />
     );
   }

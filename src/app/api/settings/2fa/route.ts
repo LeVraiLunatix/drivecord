@@ -22,6 +22,7 @@ export async function GET() {
     enabled: state.enabled,
     totpEnabled: state.totpEnabled,
     emailEnabled: state.emailEnabled,
+    deviceEnabled: state.deviceEnabled,
     preferred: state.preferred,
     recoveryRemaining,
   });

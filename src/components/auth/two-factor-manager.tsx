@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   Smartphone,
   Mail,
+  MonitorSmartphone,
   Loader2,
   Copy,
   Download,
@@ -17,12 +18,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OtpInput } from "@/components/auth/otp-input";
 
-type Method = "totp" | "email";
+type Method = "totp" | "email" | "device";
 
 type Status = {
   enabled: boolean;
   totpEnabled: boolean;
   emailEnabled: boolean;
+  deviceEnabled: boolean;
   preferred: Method | null;
   recoveryRemaining: number;
 };
@@ -37,6 +39,8 @@ const T = {
   recoveryTitle: "Conserve tes codes de récupération",
   appDesc: "Google Authenticator, Authy, 1Password… Scanne le QR code.",
   emailDesc: "Reçois un code à 6 chiffres par email à chaque connexion.",
+  deviceDesc:
+    "Approuve la connexion depuis un autre appareil de confiance (onglet « Approuver »).",
 };
 
 function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
@@ -127,6 +131,20 @@ export function TwoFactorManager() {
     if (res.ok) {
       if (d.recoveryCodes) setCodes(d.recoveryCodes);
       else toast.success("Code par email activé.");
+      mutate();
+    } else {
+      toast.error(d.error ?? "Erreur.");
+    }
+  };
+
+  const enableDevice = async () => {
+    setBusy(true);
+    const res = await fetch("/api/settings/2fa/device", { method: "POST" });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (res.ok) {
+      if (d.recoveryCodes) setCodes(d.recoveryCodes);
+      else toast.success("Approbation par appareil activée.");
       mutate();
     } else {
       toast.error(d.error ?? "Erreur.");
@@ -302,8 +320,11 @@ export function TwoFactorManager() {
           )}
         </div>
 
-        {/* Bouton « définir préférée » (si activée, pas déjà préférée, et l'autre méthode est aussi active) */}
-        {enabled && !isPreferred && data.totpEnabled && data.emailEnabled && (
+        {/* Bouton « définir préférée » (si activée, pas déjà préférée, et au moins une autre méthode est active) */}
+        {enabled &&
+          !isPreferred &&
+          [data.totpEnabled, data.emailEnabled, data.deviceEnabled].filter(Boolean)
+            .length > 1 && (
           <button
             type="button"
             onClick={() => setPreferred(method)}
@@ -372,6 +393,15 @@ export function TwoFactorManager() {
           T.emailDesc,
           data.emailEnabled,
           enableEmail,
+          "Activer",
+        )}
+        {methodCard(
+          "device",
+          <MonitorSmartphone className="size-5" />,
+          "Approbation par appareil",
+          T.deviceDesc,
+          data.deviceEnabled,
+          enableDevice,
           "Activer",
         )}
       </div>
