@@ -27,7 +27,7 @@ function getResend(): Resend {
 const FROM = process.env.EMAIL_FROM ?? "Drivecord <no-reply@drivecord.app>";
 
 /** Base URL of the app, used to host the logo embedded in emails. */
-const APP_URL = process.env.WEBAUTHN_ORIGIN ?? "https://drivecord.vercel.app";
+const APP_URL = process.env.WEBAUTHN_ORIGIN ?? "https://drivecord.app";
 
 const COPY: Record<
   EmailPurpose,

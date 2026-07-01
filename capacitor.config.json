@@ -3,9 +3,10 @@
   "appName": "Drivecord",
   "webDir": "capacitor-web",
   "server": {
-    "url": "https://drivecord.vercel.app",
+    "url": "https://drivecord.app",
     "cleartext": false,
     "allowNavigation": [
+      "drivecord.app",
       "drivecord.vercel.app",
       "discord.com",
       "*.discord.com",

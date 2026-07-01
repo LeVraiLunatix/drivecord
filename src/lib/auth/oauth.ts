@@ -17,7 +17,10 @@ export type OAuthProvider = "google" | "discord";
  */
 export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive") {
   if (isNativeApp()) {
-    const url = `https://drivecord.vercel.app/native-login?provider=${provider}`;
+    // Domaine courant du WebView (drivecord.app sur les builds récents) : le
+    // navigateur système reste sur le même domaine que l'app → cookies et
+    // redirect URIs OAuth cohérents.
+    const url = `${window.location.origin}/native-login?provider=${provider}`;
     // Capacitor routes target "_system" to the external browser.
     window.open(url, "_system");
   } else {

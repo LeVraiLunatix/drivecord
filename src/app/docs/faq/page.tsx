@@ -174,11 +174,11 @@ const FAQ: Group[] = [
             <li>
               🔗 Site :{" "}
               <a
-                href="https://drivecord.vercel.app"
+                href="https://drivecord.app"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                drivecord.vercel.app
+                drivecord.app
               </a>
             </li>
             <li>

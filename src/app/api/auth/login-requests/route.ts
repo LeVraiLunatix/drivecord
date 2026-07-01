@@ -16,6 +16,7 @@ import {
   requestLocation,
   LOGIN_REQUEST_TTL_MS,
 } from "@/lib/auth/login-request";
+import { sendLoginRequestPush } from "@/lib/push/apns";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -51,12 +52,14 @@ export async function POST(req: NextRequest) {
     where: { userId, status: "pending" },
   });
 
+  const label = deviceLabel(req.headers.get("user-agent"));
+  const location = requestLocation(req);
   const request = await prisma.loginRequest.create({
     data: {
       userId,
-      requestingDeviceLabel: deviceLabel(req.headers.get("user-agent")),
+      requestingDeviceLabel: label,
       requestingIp: getClientIp(req),
-      requestingLocation: requestLocation(req),
+      requestingLocation: location,
       shortCode: generateShortCode(),
       pollToken: generatePollToken(),
       status: "pending",
@@ -64,6 +67,18 @@ export async function POST(req: NextRequest) {
     },
     select: { id: true, shortCode: true, pollToken: true, expiresAt: true },
   });
+
+  // Push native (style Epic Games) vers les appareils de confiance — best-effort,
+  // n'échoue jamais la requête ; le polling web reste le fallback.
+  try {
+    await sendLoginRequestPush(userId, {
+      shortCode: request.shortCode,
+      deviceLabel: label,
+      location,
+    });
+  } catch (err) {
+    console.error("[login-requests] push", err);
+  }
 
   return NextResponse.json(request);
 }

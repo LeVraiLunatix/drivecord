@@ -12,7 +12,7 @@ import { createSecureAccountToken } from "@/lib/auth/secure-account";
 import { sendVerificationEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-const APP_URL = process.env.WEBAUTHN_ORIGIN ?? "https://drivecord.vercel.app";
+const APP_URL = process.env.WEBAUTHN_ORIGIN ?? "https://drivecord.app";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
