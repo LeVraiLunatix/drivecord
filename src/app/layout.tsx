@@ -35,12 +35,12 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://drivecord.app"),
 
   title: {
-    default: "Drivecord",
+    default: "Drivecord — Stockage cloud sécurisé, chiffré et illimité",
     template: "%s · Drivecord",
   },
 
   description:
-    "Drivecord est un service de stockage cloud sécurisé avec chiffrement de bout en bout, partage de fichiers, synchronisation et accès multiplateforme.",
+    "Drivecord est un stockage cloud sécurisé et illimité : chiffrement de bout en bout, partage de fichiers par lien, synchronisation multi-appareils et app iPhone.",
 
   applicationName: "Drivecord",
 
@@ -136,6 +136,33 @@ export const viewport: Viewport = {
   ],
 };
 
+// Données structurées Schema.org — aident Google à afficher un beau résultat
+// (nom, logo, catégorie d'app, gratuité, éditeur).
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Drivecord",
+    url: "https://drivecord.app",
+    inLanguage: "fr",
+    description:
+      "Stockage cloud sécurisé et illimité : chiffrement de bout en bout, partage par lien, synchronisation multi-appareils.",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Drivecord",
+    url: "https://drivecord.app",
+    image: "https://drivecord.app/icon.png",
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "iOS, Web",
+    description:
+      "Stockage cloud sécurisé et illimité propulsé par Discord : chiffrement de bout en bout, partage de fichiers, synchronisation et app iPhone.",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+    publisher: { "@type": "Organization", name: "Lunatix" },
+  },
+];
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -148,6 +175,10 @@ export default function RootLayout({
       className={`${interSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <NativeDeepLink />
         <NativeClass />
         <NativeBackdrop />
