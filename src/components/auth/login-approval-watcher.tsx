@@ -4,6 +4,7 @@ import * as React from "react";
 import { useSession } from "next-auth/react";
 import { MonitorSmartphone, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { notifyLoginRequest } from "@/lib/push/local-notif";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,6 +33,8 @@ export function LoginApprovalWatcher() {
   const isFull = session?.level === "full";
   const [pending, setPending] = React.useState<Req | null>(null);
   const [busy, setBusy] = React.useState(false);
+  // Dernière demande déjà notifiée localement (évite de re-notifier à chaque poll).
+  const notifiedRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!isFull) return;
@@ -43,6 +46,17 @@ export function LoginApprovalWatcher() {
         const d = await res.json();
         if (stop) return;
         const next = (d.requests?.[0] as Req | undefined) ?? null;
+        if (!next) {
+          notifiedRef.current = null;
+        } else if (notifiedRef.current !== next.id) {
+          // Nouvelle demande → notification locale (app native, 1re fois).
+          notifiedRef.current = next.id;
+          void notifyLoginRequest({
+            deviceLabel: next.requestingDeviceLabel,
+            location: next.requestingLocation,
+            shortCode: next.shortCode,
+          });
+        }
         setPending((prev) => {
           if (!next) return null;
           return !prev || prev.id !== next.id ? next : prev;
