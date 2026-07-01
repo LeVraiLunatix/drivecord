@@ -7,6 +7,23 @@
   à chaque changement notable.
 -->
 
+## Notifs de connexion, 2FA multi-méthodes & sécurité
+
+🔔 **Approbation de connexion améliorée**
+- Quand une connexion est demandée depuis un autre appareil, ton iPhone reçoit une **notification** (quand l'app est ouverte) en plus de la fenêtre d'approbation.
+
+🔐 **Double authentification (2FA) repensée**
+- Active **plusieurs méthodes en même temps** (application d'authentification **et** code par email) et choisis ta **méthode préférée**.
+- Au login, tu peux **basculer** entre tes méthodes ou utiliser un code de récupération.
+
+🛡️ **Sécurité du compte**
+- Les emails de connexion incluent un lien **« ce n'était pas moi »** pour changer ton mot de passe et déconnecter les appareils.
+- Déconnexion corrigée (marche au premier clic) + vraie page de déconnexion et page 404 soignée.
+
+📢 **Annonces** — l'admin peut afficher un message à l'ouverture du site.
+
+📱 **Divers** : l'app pointe désormais sur **drivecord.app**, code de vérification lisible sur petit écran, et la barre de sélection ne masque plus les derniers fichiers.
+
 ## Menu drive en pull-down natif (Liquid Glass ancré)
 
 🫧 Le menu **drive/sections** et le menu **tri** ne s'ouvrent plus en bas : ils s'ouvrent **ancrés sous leur bouton** (en haut), façon menu déroulant natif iOS, avec le vrai Liquid Glass du système.

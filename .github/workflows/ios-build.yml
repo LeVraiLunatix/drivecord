@@ -9,6 +9,8 @@ on:
       - 'ios/**'
       - 'resources/**'
       - 'CHANGELOG.md'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/ios-build.yml'
 
 permissions:
