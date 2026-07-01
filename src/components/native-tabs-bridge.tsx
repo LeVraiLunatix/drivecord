@@ -11,8 +11,14 @@ const HIDDEN_PREFIXES = ["/login", "/register", "/setup", "/s/", "/install", "/c
 function activeIndex(pathname: string, section: string | null): number {
   if (pathname.startsWith("/drive")) return section === "vault" ? 1 : 0;
   if (pathname.startsWith("/backup")) return 2;
-  if (pathname.startsWith("/shares")) return 3;
-  if (pathname.startsWith("/settings") || pathname.startsWith("/stats")) return 4;
+  if (pathname.startsWith("/approve")) return 3;
+  // Partagés est désormais accessible depuis les Réglages → même onglet.
+  if (
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/stats") ||
+    pathname.startsWith("/shares")
+  )
+    return 4;
   return -1;
 }
 

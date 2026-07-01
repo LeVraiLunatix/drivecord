@@ -20,12 +20,12 @@ import Capacitor
 class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMessageHandler {
 
     private let nativeTabBar = UITabBar()
-    private let routes = ["/drive", "/drive?section=vault", "/backup", "/shares", "/settings"]
+    private let routes = ["/drive", "/drive?section=vault", "/backup", "/approve", "/settings"]
     private let tabDefs: [(title: String, symbol: String)] = [
         ("Fichiers", "folder.fill"),
         ("Coffre", "lock.fill"),
         ("Pellicule", "photo.on.rectangle"),
-        ("Partagés", "link"),
+        ("Approuver", "checkmark.shield.fill"),
         ("Réglages", "gearshape.fill"),
     ]
     private var lastBarHeight: CGFloat = 0

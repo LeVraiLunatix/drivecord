@@ -7,6 +7,15 @@
   à chaque changement notable.
 -->
 
+## Onglet « Approuver » + réglages
+
+🔐 **Nouvel onglet « Approuver »** (à la place de « Partagés » dans la barre du bas)
+- Pour te connecter sur un nouvel appareil : ouvre cet onglet sur ton iPhone déjà connecté et **saisis le code à 4 chiffres** affiché sur l'appareil qui veut se connecter → connexion approuvée à distance.
+
+⚙️ **Réglages**
+- **« Partagés »** est déplacé dans les Réglages.
+- Nouveau bouton **« Se déconnecter »** dans les Réglages.
+
 ## Notifs de connexion, 2FA multi-méthodes & sécurité
 
 🔔 **Approbation de connexion améliorée**

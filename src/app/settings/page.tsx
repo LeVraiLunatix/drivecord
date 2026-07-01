@@ -25,6 +25,9 @@ import {
   Sun,
   CalendarDays,
   ShieldCheck,
+  LogOut,
+  Share2,
+  ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -130,9 +133,46 @@ export default function SettingsPage() {
       </motion.div>
 
       <motion.div variants={v ?? item}>
+        <AccountLinksSection />
+      </motion.div>
+
+      <motion.div variants={v ?? item}>
         <DangerSection />
       </motion.div>
     </motion.div>
+  );
+}
+
+// ── Liens & session ─────────────────────────────────────────────────────────
+
+function AccountLinksSection() {
+  const router = useRouter();
+  return (
+    <Card>
+      <CardContent className="p-2">
+        <button
+          type="button"
+          onClick={() => router.push("/shares")}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition hover:bg-accent/60"
+        >
+          <Share2 className="size-5 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Partagés</p>
+            <p className="text-xs text-muted-foreground">Tes liens de partage</p>
+          </div>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => fullSignOut()}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-destructive transition hover:bg-destructive/10"
+        >
+          <LogOut className="size-5 shrink-0" />
+          <span className="text-sm font-medium">Se déconnecter</span>
+        </button>
+      </CardContent>
+    </Card>
   );
 }
 
