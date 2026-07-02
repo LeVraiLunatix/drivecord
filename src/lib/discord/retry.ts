@@ -46,8 +46,10 @@ export async function withRetry<T>(
 
 function computeDelay(err: unknown, attempt: number): number {
   if (err instanceof DiscordApiError && err.retryAfterMs) {
-    // Respect server-provided retry-after, add tiny jitter
-    return err.retryAfterMs + Math.floor(Math.random() * 200);
+    // Respecte le retry-after du serveur + une marge (retenter pile au reset
+    // re-déclenche souvent un 429) + un jitter large pour désynchroniser les
+    // chunks parallèles qui se sont fait rate-limiter en même temps.
+    return err.retryAfterMs + 350 + Math.floor(Math.random() * 900);
   }
   const exp = Math.min(
     RETRY_MAX_DELAY_MS,

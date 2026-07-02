@@ -16,16 +16,19 @@ export const DISCORD_FREE_UPLOAD_LIMIT = 10 * 1024 * 1024;
  *  account for multipart form encoding overhead. */
 export const DEFAULT_CHUNK_SIZE = 9.5 * 1024 * 1024; // 9.5 MiB
 
-/** Max number of chunks uploaded concurrently. Kept modest : envoyer trop de
- *  chunks en parallèle sur un même webhook déclenche le throttle Cloudflare
- *  (403) de Discord, surtout sur les gros fichiers. */
-export const DEFAULT_PARALLEL_UPLOADS = 3;
+/** Max number of chunks uploaded concurrently. Kept low : envoyer trop de chunks
+ *  en parallèle sur un même webhook déclenche le rate-limit (429) et le throttle
+ *  Cloudflare (403) de Discord, surtout sur les gros fichiers. */
+export const DEFAULT_PARALLEL_UPLOADS = 2;
 
 /** Max number of chunks downloaded concurrently. */
 export const DEFAULT_PARALLEL_DOWNLOADS = 4;
 
 /** Retry policy. */
-export const RETRY_MAX_ATTEMPTS = 5;
+// Élevé exprès : sur un gros fichier, le webhook Discord finit rate-limité (429)
+// et chaque chunk peut avoir besoin de nombreux essais (en respectant le
+// retry-after) avant de passer.
+export const RETRY_MAX_ATTEMPTS = 12;
 export const RETRY_BASE_DELAY_MS = 500;
 export const RETRY_MAX_DELAY_MS = 30_000;
 
