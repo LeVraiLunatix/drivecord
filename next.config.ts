@@ -1,6 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        // Lien d'invitation « vanity » : on communique drivecord.app/discord
+        // partout, et il redirige vers l'invitation Discord réelle. Non
+        // permanent (307) exprès : si l'invitation change un jour, il suffit
+        // de modifier l'URL ci-dessous — aucun cache navigateur à purger.
+        source: "/discord",
+        destination: "https://discord.gg/VjgHeN45Jb",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
