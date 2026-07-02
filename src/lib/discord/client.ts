@@ -5,6 +5,7 @@ import {
   DISCORD_API_BASE,
 } from "./constants";
 import { parseDiscordError } from "./errors";
+import { getWebhookLimiter } from "./rate-limit";
 import { withRetry } from "./retry";
 import { planChunks, parseCdnExpiry } from "./chunking";
 import { proxyUrl } from "./proxy";
@@ -74,6 +75,38 @@ export class DiscordClient {
   }
 
   /**
+   * Perform a request against this webhook, paced through the shared per-webhook
+   * rate limiter. The gate serializes writes and reads Discord's rate-limit
+   * headers off every response so we stay under the limit proactively (see
+   * `rate-limit.ts`). Maps network failures to a `network` DiscordApiError; the
+   * caller is responsible for parsing non-OK responses.
+   */
+  private async webhookFetch(
+    url: string,
+    init: RequestInit,
+    signal?: AbortSignal,
+  ): Promise<Response> {
+    const limiter = getWebhookLimiter(this.ref.id);
+    const release = await limiter.acquire(signal);
+    try {
+      let res: Response;
+      try {
+        res = await fetch(url, init);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") throw err;
+        throw new DiscordApiError(
+          `Network error during webhook request: ${(err as Error).message}`,
+          { category: "network" },
+        );
+      }
+      limiter.noteResponse(res);
+      return res;
+    } finally {
+      release();
+    }
+  }
+
+  /**
    * Upload one chunk as a single webhook message.
    * Returns the created message (with attachment info).
    */
@@ -87,20 +120,11 @@ export class DiscordClient {
       // The `?wait=true` query is mandatory to get the message back synchronously.
       form.append("files[0]", blob, filename);
 
-      let res: Response;
-      try {
-        res = await fetch(`${this.baseUrl}?wait=true`, {
-          method: "POST",
-          body: form,
-          signal,
-        });
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") throw err;
-        throw new DiscordApiError(
-          `Network error during chunk upload: ${(err as Error).message}`,
-          { category: "network" },
-        );
-      }
+      const res = await this.webhookFetch(
+        `${this.baseUrl}?wait=true`,
+        { method: "POST", body: form, signal },
+        signal,
+      );
 
       if (!res.ok) throw await parseDiscordError(res);
       return (await res.json()) as DiscordMessage;
@@ -286,17 +310,10 @@ export class DiscordClient {
    */
   async refreshChunkUrl(chunk: ChunkRef): Promise<ChunkRef> {
     return withRetry(async () => {
-      let res: Response;
-      try {
-        res = await fetch(`${this.baseUrl}/messages/${chunk.messageId}`, {
-          method: "GET",
-        });
-      } catch (err) {
-        throw new DiscordApiError(
-          `Network error refreshing chunk URL: ${(err as Error).message}`,
-          { category: "network" },
-        );
-      }
+      const res = await this.webhookFetch(
+        `${this.baseUrl}/messages/${chunk.messageId}`,
+        { method: "GET" },
+      );
       if (!res.ok) throw await parseDiscordError(res);
       const msg = (await res.json()) as DiscordMessage;
       const att = msg.attachments.find((a) => a.id === chunk.attachmentId);
@@ -401,17 +418,10 @@ export class DiscordClient {
   /** Delete a chunk's message from Discord. */
   async deleteChunk(chunk: ChunkRef): Promise<void> {
     return withRetry(async () => {
-      let res: Response;
-      try {
-        res = await fetch(`${this.baseUrl}/messages/${chunk.messageId}`, {
-          method: "DELETE",
-        });
-      } catch (err) {
-        throw new DiscordApiError(
-          `Network error deleting chunk: ${(err as Error).message}`,
-          { category: "network" },
-        );
-      }
+      const res = await this.webhookFetch(
+        `${this.baseUrl}/messages/${chunk.messageId}`,
+        { method: "DELETE" },
+      );
       // 404 = already gone; treat as success.
       if (res.status === 404) return;
       if (!res.ok) throw await parseDiscordError(res);
