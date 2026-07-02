@@ -5,8 +5,10 @@ import { DiscordApiError } from "./types";
  *
  * Categories:
  *  - rate_limited: HTTP 429, may include retry-after header or body
- *  - transient:    HTTP 5xx, or 408/425 (request timeout / too early)
- *  - permanent:    HTTP 4xx other than 429 (bad token, invalid payload, etc.)
+ *  - transient:    HTTP 5xx, 408/425, or 403 (Cloudflare often returns 403 when
+ *                  too many chunks are pushed too fast to one webhook — it's a
+ *                  transient throttle, worth retrying with backoff).
+ *  - permanent:    other HTTP 4xx (bad token, invalid payload, etc.)
  */
 export async function parseDiscordError(res: Response): Promise<DiscordApiError> {
   let body: unknown = undefined;
@@ -46,7 +48,12 @@ export async function parseDiscordError(res: Response): Promise<DiscordApiError>
     });
   }
 
-  if (res.status >= 500 || res.status === 408 || res.status === 425) {
+  if (
+    res.status >= 500 ||
+    res.status === 408 ||
+    res.status === 425 ||
+    res.status === 403
+  ) {
     return new DiscordApiError(`Discord transient error (HTTP ${res.status})`, {
       category: "transient",
       status: res.status,

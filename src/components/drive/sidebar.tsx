@@ -17,6 +17,7 @@ import {
   Star,
   Trash2,
   User,
+  Infinity as InfinityIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,7 +33,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
@@ -110,14 +110,7 @@ function SidebarContent({
   const usage = useDriveUsage(activeDrive?.id ?? null);
   const allTags = useAllTags(activeDrive?.id ?? null);
 
-  const cap = React.useMemo(() => {
-    const ten = 10 * 1024 ** 3;
-    if (!usage) return ten;
-    return Math.max(ten, usage.totalBytes * 1.5);
-  }, [usage]);
-
   const used = usage?.totalBytes ?? 0;
-  const pct = (used / cap) * 100;
 
   const close = () => onClose?.();
 
@@ -227,15 +220,17 @@ function SidebarContent({
         )}
       </nav>
 
-      <div className="space-y-2 rounded-lg border border-border/50 bg-background/40 p-3">
+      <div className="space-y-1.5 rounded-lg border border-border/50 bg-background/40 p-3">
         <div className="flex items-center justify-between text-xs">
           <span className="font-medium">Espace utilisé</span>
           <span className="font-mono text-muted-foreground">{usage?.fileCount ?? 0} fichier(s)</span>
         </div>
-        <Progress value={pct} />
-        <p className="text-xs text-muted-foreground">
-          {formatBytes(used)} <span className="opacity-50">/ ~{formatBytes(cap)}</span>
-        </p>
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-sm">{formatBytes(used)}</span>
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+            <InfinityIcon className="size-3" /> Illimité
+          </span>
+        </div>
       </div>
 
       {/* Camera-roll backup + install — just above the account */}
