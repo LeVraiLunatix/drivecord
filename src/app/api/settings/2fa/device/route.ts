@@ -5,16 +5,26 @@
  * confiance (onglet « Approuver »). Nécessite donc d'avoir DÉJÀ au moins un
  * appareil de confiance, sinon on ne pourrait plus se connecter.
  * N'écrase pas les autres méthodes ; codes de récupération générés au 1er facteur.
+ *
+ * Activation réservée à l'app native (UA « DrivecordNative ») — c'est là que se
+ * fait l'approbation.
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { replaceRecoveryCodes } from "@/lib/auth/recovery-codes";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id || session.level !== "full") {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+  }
+
+  if (!(req.headers.get("user-agent") ?? "").includes("DrivecordNative")) {
+    return NextResponse.json(
+      { error: "Cette méthode s'active depuis l'app Drivecord." },
+      { status: 403 },
+    );
   }
   const userId = session.user.id;
 

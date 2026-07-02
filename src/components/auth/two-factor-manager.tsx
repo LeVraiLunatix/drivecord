@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OtpInput } from "@/components/auth/otp-input";
+import { useIsNativeApp } from "@/lib/use-platform";
 
 type Method = "totp" | "email" | "device";
 
@@ -86,6 +87,7 @@ function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void 
 }
 
 export function TwoFactorManager() {
+  const isNative = useIsNativeApp();
   const { data, mutate, isLoading } = useSWR<Status>("/api/settings/2fa", fetcher);
   const [qr, setQr] = React.useState<string | null>(null);
   const [token, setToken] = React.useState("");
@@ -278,6 +280,7 @@ export function TwoFactorManager() {
     enabled: boolean,
     onEnable: () => void,
     enableLabel: string,
+    lockedReason?: string,
   ) => {
     const isPreferred = data.preferred === method;
     return (
@@ -301,9 +304,15 @@ export function TwoFactorManager() {
             <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
           </div>
           {!enabled ? (
-            <Button size="sm" onClick={onEnable} disabled={busy} className="shrink-0">
-              {enableLabel}
-            </Button>
+            lockedReason ? (
+              <span className="shrink-0 text-right text-[11px] text-muted-foreground">
+                {lockedReason}
+              </span>
+            ) : (
+              <Button size="sm" onClick={onEnable} disabled={busy} className="shrink-0">
+                {enableLabel}
+              </Button>
+            )
           ) : (
             <Button
               size="sm"
@@ -403,6 +412,8 @@ export function TwoFactorManager() {
           data.deviceEnabled,
           enableDevice,
           "Activer",
+          // Activable uniquement depuis l'app native (là où se fait l'approbation).
+          isNative ? undefined : "À activer depuis l'app",
         )}
       </div>
 
