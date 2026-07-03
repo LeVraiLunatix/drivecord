@@ -28,7 +28,10 @@ export function SelectionToolbar({
   return (
     <div
       className={cn(
-        "selection-toolbar fixed bottom-6 left-1/2 z-50 -translate-x-1/2",
+        // Ancrée en bas à droite (hors du centre) pour dégager la liste ; le
+        // décalage vertical (bottom) est ajusté par globals.css au-dessus de la
+        // tab bar native. Voir aussi la marge de scroll pb-36 dans explorer.tsx.
+        "selection-toolbar fixed bottom-6 right-4 z-50",
         "flex items-center gap-0.5 rounded-xl border border-border/60 bg-card/95 px-2 py-1.5 shadow-2xl backdrop-blur-sm sm:gap-1 sm:px-3 sm:py-2",
         className,
       )}
