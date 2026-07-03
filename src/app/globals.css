@@ -464,7 +464,7 @@ html.is-native .tabbar-pad { padding-bottom: calc(80px + env(safe-area-inset-bot
    height, so we floor the clearance at 83px (bar + home-indicator safe area).
    Without this floor the last rows slip under the bar and the floating
    selection toolbar overlaps them. */
-html.native-tabs { --tabbar-clear: max(var(--native-tabbar-h, 83px), 83px); }
+html.native-tabs { --tabbar-clear: max(var(--native-tabbar-h, 0px), calc(60px + env(safe-area-inset-bottom))); }
 html.native-tabs .tabbar-pad { padding-bottom: var(--tabbar-clear) !important; }
 
 /* Floating bottom overlays must sit ABOVE the bottom bar, not behind it:
