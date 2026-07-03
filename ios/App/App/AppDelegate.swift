@@ -68,8 +68,12 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         view.bringSubviewToFront(nativeTabBar)
-        // Tell the web the bar's pixel height so content can clear it.
-        let h = nativeTabBar.frame.height
+        // Tell the web how much room to reserve at the bottom. On iOS 26 the
+        // floating "Liquid Glass" tab bar reports a short frame height while
+        // sitting above the home indicator, so measure from the bar's top edge
+        // down to the very bottom of the view (covers the bar + any gap + safe
+        // area) instead of trusting frame.height alone.
+        let h = max(nativeTabBar.frame.height, view.bounds.maxY - nativeTabBar.frame.minY)
         if h > 0 && abs(h - lastBarHeight) > 0.5 {
             lastBarHeight = h
             webView?.evaluateJavaScript(
