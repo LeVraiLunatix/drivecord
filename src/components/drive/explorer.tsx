@@ -444,7 +444,10 @@ export function DriveExplorer({
         // Quand la barre de sélection (fixed, en bas) est visible, on réserve de
         // la place dessous pour que les derniers items ne soient pas masqués et
         // restent cliquables (surtout sur mobile, au-dessus de la tab bar).
-        selectedIds.size > 0 && "pb-24",
+        // Marge généreuse : la barre flotte à ~70px du bas sur le web et bien plus
+        // haut sur l'app (au-dessus de la tab bar), donc on laisse de quoi scroller
+        // les derniers items nettement au-dessus d'elle.
+        selectedIds.size > 0 && "pb-36",
       )}
     >
         {rubberBand}
@@ -468,7 +471,10 @@ export function DriveExplorer({
         // Quand la barre de sélection (fixed, en bas) est visible, on réserve de
         // la place dessous pour que les derniers items ne soient pas masqués et
         // restent cliquables (surtout sur mobile, au-dessus de la tab bar).
-        selectedIds.size > 0 && "pb-24",
+        // Marge généreuse : la barre flotte à ~70px du bas sur le web et bien plus
+        // haut sur l'app (au-dessus de la tab bar), donc on laisse de quoi scroller
+        // les derniers items nettement au-dessus d'elle.
+        selectedIds.size > 0 && "pb-36",
       )}
     >
       {rubberBand}
