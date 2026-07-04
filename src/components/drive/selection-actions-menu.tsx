@@ -53,6 +53,7 @@ export function SelectionActionsMenu({ count, onAction, className }: Props) {
     return (
       <Button
         size="sm"
+        variant="outline"
         className={cn("h-8 gap-1.5", className)}
         onClick={async () => {
           const action = await presentItemMenuNative(MENU, title);
@@ -68,7 +69,7 @@ export function SelectionActionsMenu({ count, onAction, className }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" className={cn("h-8 gap-1.5", className)}>
+        <Button size="sm" variant="outline" className={cn("h-8 gap-1.5", className)}>
           Actions
           <ChevronDown className="size-3.5" />
         </Button>

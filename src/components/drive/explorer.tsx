@@ -401,12 +401,12 @@ export function DriveExplorer({
   const allSelected = processed.length > 0 && selectedIds.size === processed.length;
   const hasSelection = selectedIds.size > 0;
   const selectBar = !onBulkAction ? null : selectMode || hasSelection ? (
-    <div className="sticky top-0 z-20 mb-3 flex items-center gap-1.5 rounded-lg border border-border/40 bg-background/85 px-1.5 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/65">
+    <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
       <span className="mr-auto text-xs font-medium tabular-nums text-muted-foreground">
         {selectedIds.size} sél.
       </span>
       <Button
-        variant="ghost" size="sm" className="h-7 px-2 text-xs"
+        variant="outline" size="sm" className="h-7 px-2.5 text-xs"
         onClick={() => setSelectedIds(allSelected ? new Set() : new Set(processed.map((i) => i.id)))}
       >
         {allSelected ? "Aucun" : "Tout"}
@@ -416,13 +416,13 @@ export function DriveExplorer({
         onAction={(action) => onBulkAction(action, selectedItems)}
         className="h-7 px-2.5 text-xs"
       />
-      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={clearSelection}>
+      <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs" onClick={clearSelection}>
         Terminé
       </Button>
     </div>
   ) : (
     <div className="mb-3 flex items-center justify-end gap-2">
-      <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={() => setSelectMode(true)}>
+      <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2.5 text-xs" onClick={() => setSelectMode(true)}>
         <ListChecks className="size-3.5" />
         Sélectionner
       </Button>
