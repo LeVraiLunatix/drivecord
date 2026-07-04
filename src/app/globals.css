@@ -461,18 +461,15 @@ html.is-native .tabbar-pad { padding-bottom: calc(80px + env(safe-area-inset-bot
    measured height (pushed from Swift as --native-tabbar-h) so content clears it,
    and drop the CSS-bar padding above.
    NOTE: the iOS 26 "Liquid Glass" tab bar floats and reports a short frame
-   height, so we floor the clearance at 83px (bar + home-indicator safe area).
-   Without this floor the last rows slip under the bar and the floating
-   selection toolbar overlaps them. */
+   height, so we floor the clearance at 60px + safe-area. Without this floor
+   the last rows slip under the bar. */
 html.native-tabs { --tabbar-clear: max(var(--native-tabbar-h, 0px), calc(60px + env(safe-area-inset-bottom))); }
 html.native-tabs .tabbar-pad { padding-bottom: var(--tabbar-clear) !important; }
 
 /* Floating bottom overlays must sit ABOVE the bottom bar, not behind it:
-   the multi-select toolbar, the upload-queue panel, and the toasts
-   (confirmations / errors). */
-html.native-tabs .selection-toolbar { bottom: calc(var(--tabbar-clear) + 0.75rem) !important; }
-html.is-native:not(.native-tabs) .selection-toolbar { bottom: calc(80px + env(safe-area-inset-bottom) + 0.75rem) !important; }
-
+   the upload-queue panel and the toasts (confirmations / errors).
+   (The multi-select actions now live in a top-right dropdown, not a floating
+   bottom bar.) */
 html.native-tabs .upload-panel { bottom: calc(var(--tabbar-clear) + 0.5rem) !important; }
 html.is-native:not(.native-tabs) .upload-panel { bottom: calc(80px + env(safe-area-inset-bottom) + 0.5rem) !important; }
 

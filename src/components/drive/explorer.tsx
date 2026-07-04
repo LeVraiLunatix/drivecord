@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { DriveItemCard } from "./item-card";
 import { DriveItemRow } from "./item-row";
 import { EmptyState } from "./empty-state";
-import { SelectionToolbar } from "./selection-toolbar";
+import { SelectionActionsMenu } from "./selection-actions-menu";
 import { cn } from "@/lib/utils";
 import { kindOf } from "@/lib/utils/file-icons";
 import type { ItemAction } from "./item-menu";
@@ -394,44 +394,38 @@ export function DriveExplorer({
     />
   );
 
-  // ── Select-mode bar (mainly for touch — multi-select without Ctrl/Shift) ─────
+  // ── Selection bar (sticky, top-right) ────────────────────────────────────────
+  // Les actions groupées sont dans un menu déroulant « Actions » ancré en haut à
+  // droite (sticky) plutôt qu'une barre flottante en bas, qui recouvrait les
+  // derniers fichiers / la tab bar native et bloquait le scroll.
   const allSelected = processed.length > 0 && selectedIds.size === processed.length;
-  const selectBar = onBulkAction && (
-    <div className="mb-3 flex items-center justify-end gap-2">
-      {selectMode ? (
-        <>
-          <span className="mr-auto text-sm font-medium tabular-nums">
-            {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
-          </span>
-          <Button
-            variant="outline" size="sm" className="h-8"
-            onClick={() => setSelectedIds(allSelected ? new Set() : new Set(processed.map((i) => i.id)))}
-          >
-            {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8" onClick={clearSelection}>
-            Terminé
-          </Button>
-        </>
-      ) : (
-        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setSelectMode(true)}>
-          <ListChecks className="size-3.5" />
-          Sélectionner
-        </Button>
-      )}
+  const hasSelection = selectedIds.size > 0;
+  const selectBar = !onBulkAction ? null : selectMode || hasSelection ? (
+    <div className="sticky top-0 z-20 mb-3 flex items-center gap-2 rounded-lg border border-border/40 bg-background/85 px-2 py-1.5 backdrop-blur supports-[backdrop-filter]:bg-background/65">
+      <span className="mr-auto text-sm font-medium tabular-nums">
+        {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
+      </span>
+      <Button
+        variant="outline" size="sm" className="h-8"
+        onClick={() => setSelectedIds(allSelected ? new Set() : new Set(processed.map((i) => i.id)))}
+      >
+        {allSelected ? "Tout désél." : "Tout sél."}
+      </Button>
+      <SelectionActionsMenu
+        count={selectedIds.size}
+        onAction={(action) => onBulkAction(action, selectedItems)}
+      />
+      <Button variant="ghost" size="sm" className="h-8" onClick={clearSelection}>
+        Terminé
+      </Button>
     </div>
-  );
-
-  // ── Shared toolbar ────────────────────────────────────────────────────────────
-  const toolbar = onBulkAction && (
-    <SelectionToolbar
-      count={selectedIds.size}
-      onDownload={() => onBulkAction("download", selectedItems)}
-      onDelete={() => onBulkAction("delete", selectedItems)}
-      onMove={() => onBulkAction("move", selectedItems)}
-      onTag={() => onBulkAction("tag", selectedItems)}
-      onClear={clearSelection}
-    />
+  ) : (
+    <div className="mb-3 flex items-center justify-end gap-2">
+      <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setSelectMode(true)}>
+        <ListChecks className="size-3.5" />
+        Sélectionner
+      </Button>
+    </div>
   );
 
   // ── Grid view ────────────────────────────────────────────────────────────────
@@ -439,16 +433,7 @@ export function DriveExplorer({
     return (
       <div
       ref={explorerRef}
-      className={cn(
-        "min-h-full",
-        // Quand la barre de sélection (fixed, en bas) est visible, on réserve de
-        // la place dessous pour que les derniers items ne soient pas masqués et
-        // restent cliquables (surtout sur mobile, au-dessus de la tab bar).
-        // Marge généreuse : la barre flotte à ~70px du bas sur le web et bien plus
-        // haut sur l'app (au-dessus de la tab bar), donc on laisse de quoi scroller
-        // les derniers items nettement au-dessus d'elle.
-        selectedIds.size > 0 && "pb-36",
-      )}
+      className="min-h-full"
     >
         {rubberBand}
         {selectBar}
@@ -457,7 +442,6 @@ export function DriveExplorer({
             <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />
           ))}
         </div>
-        {toolbar}
       </div>
     );
   }
@@ -466,16 +450,7 @@ export function DriveExplorer({
   return (
     <div
       ref={explorerRef}
-      className={cn(
-        "min-h-full",
-        // Quand la barre de sélection (fixed, en bas) est visible, on réserve de
-        // la place dessous pour que les derniers items ne soient pas masqués et
-        // restent cliquables (surtout sur mobile, au-dessus de la tab bar).
-        // Marge généreuse : la barre flotte à ~70px du bas sur le web et bien plus
-        // haut sur l'app (au-dessus de la tab bar), donc on laisse de quoi scroller
-        // les derniers items nettement au-dessus d'elle.
-        selectedIds.size > 0 && "pb-36",
-      )}
+      className="min-h-full"
     >
       {rubberBand}
       {selectBar}
@@ -490,7 +465,6 @@ export function DriveExplorer({
           <DriveItemRow key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />
         ))}
       </div>
-      {toolbar}
     </div>
   );
 }
