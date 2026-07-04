@@ -571,7 +571,7 @@ function DriveContent() {
           onFilterChange={setFilterKind}
         />
 
-        <main className="tabbar-pad flex flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <main className="tabbar-pad flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3 sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           {section === "vault" && !vaultUnlocked && (
             <VaultGate onUnlock={() => setVaultUnlocked(true)} />
           )}
