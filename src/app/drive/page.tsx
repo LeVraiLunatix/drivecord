@@ -525,7 +525,7 @@ function DriveContent() {
   if (!activeDrive) return null;
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden">
+    <div className="flex min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden">
       <DriveSidebar
         section={section}
         onSectionChange={setSection}
@@ -536,7 +536,7 @@ function DriveContent() {
         onMobileClose={() => setSidebarOpen(false)}
       />
 
-      <UploadDropzone onEntries={(entries) => handleUploadEntries(entries)} className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <UploadDropzone onEntries={(entries) => handleUploadEntries(entries)} className="flex min-w-0 flex-1 flex-col lg:overflow-hidden">
         <DriveTopbar
           onMenuOpen={() => setSidebarOpen(true)}
           nativeMenu={
@@ -571,7 +571,7 @@ function DriveContent() {
           onFilterChange={setFilterKind}
         />
 
-        <main className="tabbar-pad flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto overscroll-contain px-3 py-3 [-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <main className="tabbar-pad flex flex-1 flex-col px-3 py-3 lg:min-h-0 lg:touch-pan-y lg:overflow-y-auto lg:overscroll-contain lg:[-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           {section === "vault" && !vaultUnlocked && (
             <VaultGate onUnlock={() => setVaultUnlocked(true)} />
           )}

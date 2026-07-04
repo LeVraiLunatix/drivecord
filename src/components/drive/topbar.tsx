@@ -74,7 +74,7 @@ export function DriveTopbar({
   const [searchOpen, setSearchOpen] = React.useState(false);
 
   return (
-    <div className="glass-bar shrink-0 border-b border-border/50" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <div className="glass-bar sticky top-0 z-30 shrink-0 border-b border-border/50" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {/* ── Main row ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-1.5 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">
 
