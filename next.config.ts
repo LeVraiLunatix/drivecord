@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
         destination: "https://discord.gg/VjgHeN45Jb",
         permanent: false,
       },
+      {
+        // Lien vanity vers le dashboard DriveBot (hébergé séparément). Non
+        // permanent (307) exprès pour pouvoir changer l'URL sans purge cache.
+        source: "/drivebot",
+        destination: "https://drivebot-dashboard.vercel.app/",
+        permanent: false,
+      },
     ];
   },
   async headers() {
