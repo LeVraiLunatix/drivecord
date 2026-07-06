@@ -38,6 +38,13 @@ model User {
   /// 2FA par approbation depuis un autre appareil de confiance.
   deviceApprovalEnabled Boolean @default(false)
 
+  /// Palier Patreon débloqué : 0 = aucun, 1 = Gold, 2 = Premium, 3 = VIP.
+  /// Calculé depuis l'API Patreon (montant engagé) ; les features premium se
+  /// gatent avec `patreonTier >= niveau_requis` (héritage automatique).
+  patreonTier     Int       @default(0)
+  /// Dernière synchro du palier avec Patreon (null tant que Patreon non lié).
+  patreonSyncedAt DateTime?
+
   accounts       Account[]
   sessions       Session[]
   webhooks       Webhook[]

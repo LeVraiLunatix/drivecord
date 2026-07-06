@@ -31,3 +31,19 @@ export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive") {
       .finally(() => signIn(provider, { callbackUrl }));
   }
 }
+
+/**
+ * Lier un compte Patreon à la session COURANTE (déblocage des paliers).
+ * Contrairement à `oauthSignIn`, on ne se déconnecte PAS avant : on veut
+ * rattacher Patreon à l'utilisateur déjà connecté, pas changer de compte.
+ * Au retour, l'événement `linkAccount` (auth.ts) synchronise le palier.
+ */
+export function linkPatreon(callbackUrl = "/settings") {
+  if (isNativeApp()) {
+    // Dans l'app native, on ouvre les réglages dans le navigateur système où
+    // la session web est active, pour y faire le linking.
+    window.open(`${window.location.origin}${callbackUrl}`, "_system");
+    return;
+  }
+  signIn("patreon", { callbackUrl });
+}

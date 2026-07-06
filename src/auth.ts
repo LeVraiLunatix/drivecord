@@ -7,10 +7,12 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Discord from "next-auth/providers/discord";
+import Patreon from "next-auth/providers/patreon";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { evaluateUserLevel } from "@/lib/auth/auth-level";
+import { syncUserPatreonTier } from "@/lib/patreon";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -47,6 +49,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
   },
+  events: {
+    // Dès qu'un compte Patreon est lié à l'utilisateur courant, on récupère son
+    // palier depuis l'API et on le stocke. Non bloquant : un échec réseau ne
+    // doit pas casser le linking (le palier sera resynchronisé au refresh manuel
+    // ou par le webhook).
+    async linkAccount({ user, account }) {
+      if (account.provider === "patreon" && user.id) {
+        await syncUserPatreonTier(user.id).catch(() => {});
+      }
+    },
+  },
   providers: [
     // Force Google to always show the account chooser. Without this, the
     // in-app WebView silently re-signs in the last Google account, so trying
@@ -64,6 +77,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Discord({
       authorization: {
         params: { scope: "identify email", prompt: "consent" },
+      },
+      allowDangerousEmailAccountLinking: true,
+    }),
+
+    // Patreon — sert au LINKING d'un compte déjà connecté (déblocage des
+    // paliers), pas au login principal. Lit AUTH_PATREON_ID / AUTH_PATREON_SECRET.
+    // Le scope `identity.memberships` est requis pour lire le palier engagé.
+    Patreon({
+      authorization: {
+        params: { scope: "identity identity[email] identity.memberships" },
       },
       allowDangerousEmailAccountLinking: true,
     }),

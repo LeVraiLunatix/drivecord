@@ -28,6 +28,10 @@ import {
   LogOut,
   Share2,
   ChevronRight,
+  Crown,
+  RefreshCw,
+  ExternalLink,
+  Unlink,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -52,6 +56,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BackButton } from "@/components/back-button";
 import { fullSignOut } from "@/lib/auth/logout";
+import { linkPatreon } from "@/lib/auth/oauth";
+import { TierBadge, type PatreonTier } from "@/components/patreon/tier";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
 import { useViewPrefs, type ViewMode } from "@/lib/view-prefs";
@@ -73,6 +79,8 @@ type Account = {
   webhookCount: number;
   createdAt: number;
   isAdmin: boolean;
+  patreonTier: PatreonTier;
+  patreonTierLabel: string;
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -127,6 +135,10 @@ export default function SettingsPage() {
           <AdminSection />
         </motion.div>
       )}
+
+      <motion.div variants={v ?? item}>
+        <PatreonSection />
+      </motion.div>
 
       <motion.div variants={v ?? item}>
         <PreferencesSection />
@@ -261,6 +273,9 @@ function ProfileSection({ account, onUpdate }: { account?: Account; onUpdate: ()
 
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
+          {account && account.patreonTier > 0 && (
+            <TierBadge tier={account.patreonTier} />
+          )}
           {account?.providers.includes("google") && (
             <Badge variant="secondary" className="gap-1">Google</Badge>
           )}
@@ -583,6 +598,168 @@ function PreferencesSection() {
             ))}
           </div>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Patreon ───────────────────────────────────────────────────────────────────
+
+type PatreonStatus = {
+  linked: boolean;
+  tier: 0 | 1 | 2 | 3;
+  tierLabel: string;
+  syncedAt: number | null;
+};
+
+// URL publique de la page Patreon (avantages + abonnement). À ajuster avec ton
+// vrai slug quand ta page est publiée.
+const PATREON_URL = "https://www.patreon.com/drivecord";
+
+function PatreonSection() {
+  const { data, mutate } = useSWR<PatreonStatus>("/api/account/patreon", fetcher, {
+    revalidateOnFocus: false,
+  });
+  const [busy, setBusy] = React.useState<null | "refresh" | "unlink">(null);
+
+  const refresh = async () => {
+    setBusy("refresh");
+    try {
+      const res = await fetch("/api/account/patreon", { method: "POST" });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Échec de la synchro");
+      mutate(d, { revalidate: false });
+      toast.success(
+        d.tier > 0 ? `Palier ${d.tierLabel} confirmé ✨` : "Aucun abonnement actif détecté",
+      );
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const unlink = async () => {
+    setBusy("unlink");
+    try {
+      const res = await fetch("/api/account/patreon", { method: "DELETE" });
+      const d = await res.json();
+      if (!res.ok) throw new Error();
+      mutate(d, { revalidate: false });
+      toast.success("Patreon délié");
+    } catch {
+      toast.error("Échec de la dissociation");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const linked = data?.linked;
+  const tier = data?.tier ?? 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Crown className="size-4 text-muted-foreground" />
+          Abonnement Patreon
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!linked ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Lie ton compte Patreon pour débloquer automatiquement les avantages
+              de ton palier (Gold, Premium ou VIP).
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button onClick={() => linkPatreon()} className="gap-2">
+                <Crown className="size-4" />
+                Lier mon Patreon
+              </Button>
+              <Button asChild variant="outline" className="gap-2">
+                <a href={PATREON_URL} target="_blank" rel="noopener noreferrer">
+                  Voir les paliers
+                  <ExternalLink className="size-4" />
+                </a>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background/40 px-3 py-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  Palier actuel
+                  {tier > 0 ? (
+                    <TierBadge tier={tier} />
+                  ) : (
+                    <Badge variant="secondary">Aucun abonnement actif</Badge>
+                  )}
+                </div>
+                {data?.syncedAt && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Synchronisé le {new Date(data.syncedAt).toLocaleString("fr")}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {tier === 0 && (
+              <p className="rounded-md bg-primary/10 px-3 py-2 text-xs text-muted-foreground">
+                Compte lié mais aucun abonnement actif détecté. Si tu viens de
+                t'abonner, clique sur « Rafraîchir ».
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button onClick={refresh} disabled={busy !== null} variant="outline" className="gap-2">
+                {busy === "refresh" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Rafraîchir
+              </Button>
+              <Button asChild variant="ghost" className="gap-2">
+                <a href={PATREON_URL} target="_blank" rel="noopener noreferrer">
+                  Gérer sur Patreon
+                  <ExternalLink className="size-4" />
+                </a>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    disabled={busy !== null}
+                    className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive sm:ml-auto"
+                  >
+                    <Unlink className="size-4" />
+                    Délier
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Délier Patreon ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Ton palier reviendra à « Gratuit » et les avantages premium
+                      seront désactivés jusqu'à ce que tu relies ton compte.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={unlink}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Délier
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

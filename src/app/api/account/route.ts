@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth/admin";
+import { TIER_LABEL, type PatreonTier } from "@/lib/patreon";
 
 export async function GET() {
   const session = await auth();
@@ -24,6 +25,7 @@ export async function GET() {
       image: true,
       password: true,
       createdAt: true,
+      patreonTier: true,
       accounts: { select: { provider: true } },
       _count: { select: { webhooks: true } },
     },
@@ -32,6 +34,8 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Introuvable." }, { status: 404 });
   }
+
+  const patreonTier = (user.patreonTier ?? 0) as PatreonTier;
 
   return NextResponse.json({
     name: user.name,
@@ -42,6 +46,8 @@ export async function GET() {
     webhookCount: user._count.webhooks,
     createdAt: user.createdAt.getTime(),
     isAdmin: isAdminEmail(user.email),
+    patreonTier,
+    patreonTierLabel: TIER_LABEL[patreonTier],
   });
 }
 
