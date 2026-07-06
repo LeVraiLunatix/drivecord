@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import {
   syncUserPatreonTier,
   unlinkPatreon,
+  isExpired,
   TIER_LABEL,
   type PatreonTier,
 } from "@/lib/patreon";
@@ -23,15 +24,23 @@ async function status(userId: string) {
     }),
     prisma.user.findUnique({
       where: { id: userId },
-      select: { patreonTier: true, patreonSyncedAt: true },
+      select: {
+        patreonTier: true,
+        patreonSyncedAt: true,
+        patreonManual: true,
+        patreonExpiresAt: true,
+      },
     }),
   ]);
-  const tier = (user?.patreonTier ?? 0) as PatreonTier;
+  const expired = isExpired(user?.patreonExpiresAt ?? null);
+  const tier = (expired ? 0 : user?.patreonTier ?? 0) as PatreonTier;
   return {
     linked: Boolean(acct),
+    manual: Boolean(user?.patreonManual) && !expired,
     tier,
     tierLabel: TIER_LABEL[tier],
     syncedAt: user?.patreonSyncedAt?.getTime() ?? null,
+    expiresAt: expired ? null : user?.patreonExpiresAt?.getTime() ?? null,
   };
 }
 
@@ -50,7 +59,8 @@ export async function POST() {
   }
   try {
     const result = await syncUserPatreonTier(session.user.id);
-    if (!result.linked) {
+    // Rien à rafraîchir seulement si aucun compte lié ET pas de palier manuel.
+    if (!result.linked && !result.manual) {
       return NextResponse.json(
         { error: "Aucun compte Patreon lié." },
         { status: 400 },

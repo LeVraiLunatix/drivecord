@@ -20,6 +20,7 @@ export async function GET() {
       password: true,
       createdAt: true,
       patreonTier: true,
+      patreonExpiresAt: true,
       accounts: { select: { provider: true } },
       _count: { select: { webhooks: true } },
     },
@@ -38,6 +39,7 @@ export async function GET() {
       webhookCount: u._count.webhooks,
       createdAt: u.createdAt.getTime(),
       patreonTier: (u.patreonTier ?? 0) as 0 | 1 | 2 | 3,
+      patreonExpiresAt: u.patreonExpiresAt?.getTime() ?? null,
     })),
   });
 }

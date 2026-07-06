@@ -31,7 +31,7 @@ export const TIER_META: Record<
   },
   3: {
     label: "VIP",
-    emoji: "👑",
+    emoji: "⭐",
     className:
       "border-transparent bg-gradient-to-r from-amber-400/25 to-fuchsia-500/25 text-fuchsia-600 dark:text-fuchsia-300",
   },

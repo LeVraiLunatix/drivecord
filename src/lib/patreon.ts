@@ -132,21 +132,51 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenResponse> 
 /** Marge (s) avant expiration à partir de laquelle on rafraîchit le token. */
 const TOKEN_REFRESH_MARGIN_S = 60;
 
-export type SyncResult =
-  | { linked: false }
-  | { linked: true; tier: PatreonTier };
+export type SyncResult = {
+  linked: boolean;
+  /** true si le palier est un octroi manuel protégé (non touché par la synchro). */
+  manual: boolean;
+  tier: PatreonTier;
+};
+
+/** true si une date d'expiration est définie et déjà passée. */
+export function isExpired(expiresAt: Date | null): boolean {
+  return !!expiresAt && expiresAt.getTime() <= Date.now();
+}
 
 /**
  * Relit le compte Patreon lié de l'utilisateur, rafraîchit le token si besoin,
  * interroge l'API et met à jour `User.patreonTier`. Idempotent : sûr à appeler
  * au linking, au login, ou depuis le webhook.
+ *
+ * ⚠️ Un palier MANUEL (posé par l'admin) non expiré est intouchable : on ne le
+ * ré-écrase jamais depuis Patreon. S'il est expiré, on le nettoie puis on
+ * reprend la synchro normale.
  */
 export async function syncUserPatreonTier(userId: string): Promise<SyncResult> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { patreonTier: true, patreonManual: true, patreonExpiresAt: true },
+  });
+  if (!user) return { linked: false, manual: false, tier: 0 };
+
+  // Palier manuel encore valide → intouchable.
+  if (user.patreonManual && !isExpired(user.patreonExpiresAt)) {
+    return { linked: false, manual: true, tier: user.patreonTier as PatreonTier };
+  }
+  // Palier manuel expiré → on nettoie avant de reprendre la synchro Patreon.
+  if (user.patreonManual && isExpired(user.patreonExpiresAt)) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { patreonTier: 0, patreonManual: false, patreonExpiresAt: null },
+    });
+  }
+
   const account = await prisma.account.findFirst({
     where: { userId, provider: "patreon" },
     select: { access_token: true, refresh_token: true, expires_at: true },
   });
-  if (!account?.access_token) return { linked: false };
+  if (!account?.access_token) return { linked: false, manual: false, tier: 0 };
 
   let accessToken = account.access_token;
 
@@ -177,7 +207,7 @@ export async function syncUserPatreonTier(userId: string): Promise<SyncResult> {
     data: { patreonTier: tier, patreonSyncedAt: new Date() },
   });
 
-  return { linked: true, tier };
+  return { linked: true, manual: false, tier };
 }
 
 /** Délie Patreon : supprime le compte OAuth et remet le palier à 0. */
@@ -185,19 +215,37 @@ export async function unlinkPatreon(userId: string): Promise<void> {
   await prisma.account.deleteMany({ where: { userId, provider: "patreon" } });
   await prisma.user.update({
     where: { id: userId },
-    data: { patreonTier: PATREON_TIER.NONE, patreonSyncedAt: null },
+    data: {
+      patreonTier: PATREON_TIER.NONE,
+      patreonSyncedAt: null,
+      patreonManual: false,
+      patreonExpiresAt: null,
+    },
   });
 }
 
 // ── Gating (à utiliser côté serveur) ─────────────────────────────────────────
 
-/** Palier courant stocké (0 si non lié). */
+/**
+ * Palier EFFECTIF courant (0 si non lié ou expiré). Si un palier est expiré, on
+ * le nettoie au passage (auto-réparation, une seule écriture).
+ */
 export async function getUserTier(userId: string): Promise<PatreonTier> {
   const u = await prisma.user.findUnique({
     where: { id: userId },
-    select: { patreonTier: true },
+    select: { patreonTier: true, patreonExpiresAt: true },
   });
-  return ((u?.patreonTier ?? 0) as PatreonTier);
+  if (!u) return 0;
+  if (isExpired(u.patreonExpiresAt)) {
+    await prisma.user
+      .update({
+        where: { id: userId },
+        data: { patreonTier: 0, patreonManual: false, patreonExpiresAt: null },
+      })
+      .catch(() => {});
+    return 0;
+  }
+  return (u.patreonTier ?? 0) as PatreonTier;
 }
 
 /** `true` si l'utilisateur a AU MOINS le palier `min` (héritage inclus). */
@@ -250,6 +298,13 @@ export async function applyMembershipUpdate(
     select: { userId: true },
   });
   if (!account) return false;
+
+  // Palier manuel valide → protégé, on ignore l'event Patreon.
+  const u = await prisma.user.findUnique({
+    where: { id: account.userId },
+    select: { patreonManual: true, patreonExpiresAt: true },
+  });
+  if (u?.patreonManual && !isExpired(u.patreonExpiresAt)) return false;
 
   const cents = deleted
     ? 0

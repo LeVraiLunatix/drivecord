@@ -44,6 +44,11 @@ model User {
   patreonTier     Int       @default(0)
   /// Dernière synchro du palier avec Patreon (null tant que Patreon non lié).
   patreonSyncedAt DateTime?
+  /// true = palier octroyé À LA MAIN par l'admin. Protégé : la synchro/webhook
+  /// Patreon ne l'écrase JAMAIS (seul l'admin ou l'expiration peut le retirer).
+  patreonManual   Boolean   @default(false)
+  /// Expiration du palier : null = à vie ; sinon le palier retombe à 0 passée cette date.
+  patreonExpiresAt DateTime?
 
   accounts       Account[]
   sessions       Session[]

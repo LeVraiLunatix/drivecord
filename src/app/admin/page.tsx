@@ -23,6 +23,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { TierBadge, type PatreonTier } from "@/components/patreon/tier";
 import {
   AlertDialog,
@@ -48,6 +59,7 @@ type AdminUser = {
   webhookCount: number;
   createdAt: number;
   patreonTier: PatreonTier;
+  patreonExpiresAt: number | null;
 };
 
 const TIER_NAMES = ["Gratuit", "Gold", "Premium", "VIP"];
@@ -85,16 +97,26 @@ export default function AdminPage() {
     }
   }, [error, router]);
 
-  const setTier = async (u: AdminUser, tier: number) => {
+  const setTier = async (
+    u: AdminUser,
+    tier: number,
+    expiresAt: string | null,
+  ) => {
     try {
       const res = await fetch(`/api/admin/users/${u.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patreonTier: tier }),
+        body: JSON.stringify({ patreonTier: tier, expiresAt }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Échec");
-      toast.success(`${u.email} → ${TIER_NAMES[tier]}`);
+      const suffix =
+        tier > 0
+          ? expiresAt
+            ? ` jusqu'au ${new Date(expiresAt).toLocaleDateString("fr")}`
+            : " (à vie)"
+          : "";
+      toast.success(`${u.email} → ${TIER_NAMES[tier]}${suffix}`);
       mutate();
     } catch (err) {
       toast.error((err as Error).message);
@@ -229,20 +251,17 @@ export default function AdminPage() {
                   <span className="text-xs text-muted-foreground">Palier Patreon</span>
                   <div className="ml-auto flex items-center gap-2">
                     {u.patreonTier > 0 && <TierBadge tier={u.patreonTier} />}
-                    <Select
-                      value={String(u.patreonTier)}
-                      onValueChange={(val) => setTier(u, Number(val))}
-                    >
-                      <SelectTrigger className="h-8 w-[140px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Gratuit</SelectItem>
-                        <SelectItem value="1">🥇 Gold</SelectItem>
-                        <SelectItem value="2">💎 Premium</SelectItem>
-                        <SelectItem value="3">👑 VIP</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {u.patreonTier > 0 && (
+                      <span className="text-[11px] text-muted-foreground/70">
+                        {u.patreonExpiresAt
+                          ? `jusqu'au ${new Date(u.patreonExpiresAt).toLocaleDateString("fr")}`
+                          : "à vie"}
+                      </span>
+                    )}
+                    <TierManager
+                      user={u}
+                      onSave={(tier, expiresAt) => setTier(u, tier, expiresAt)}
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -258,5 +277,129 @@ export default function AdminPage() {
         </div>
       )}
     </motion.div>
+  );
+}
+
+// ── Dialog de modification du palier (palier + durée) ────────────────────────
+
+function TierManager({
+  user,
+  onSave,
+}: {
+  user: AdminUser;
+  onSave: (tier: number, expiresAt: string | null) => Promise<void> | void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [tier, setTier] = React.useState<number>(user.patreonTier);
+  const [mode, setMode] = React.useState<"lifetime" | "date">(
+    user.patreonExpiresAt ? "date" : "lifetime",
+  );
+  const [date, setDate] = React.useState<string>(
+    user.patreonExpiresAt
+      ? new Date(user.patreonExpiresAt).toISOString().slice(0, 10)
+      : "",
+  );
+  const [busy, setBusy] = React.useState(false);
+
+  // Resynchronise l'état local à l'ouverture.
+  React.useEffect(() => {
+    if (!open) return;
+    setTier(user.patreonTier);
+    setMode(user.patreonExpiresAt ? "date" : "lifetime");
+    setDate(
+      user.patreonExpiresAt
+        ? new Date(user.patreonExpiresAt).toISOString().slice(0, 10)
+        : "",
+    );
+  }, [open, user.patreonTier, user.patreonExpiresAt]);
+
+  const save = async () => {
+    let expiresAt: string | null = null;
+    if (tier > 0 && mode === "date") {
+      if (!date) {
+        toast.error("Choisis une date d'expiration");
+        return;
+      }
+      // Fin de la journée choisie (heure locale).
+      expiresAt = new Date(`${date}T23:59:59`).toISOString();
+    }
+    setBusy(true);
+    try {
+      await onSave(tier, expiresAt);
+      setOpen(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8 gap-1.5">
+          <Crown className="size-3.5" />
+          Palier
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Palier de {user.name ?? user.email}</DialogTitle>
+          <DialogDescription>{user.email}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Palier</Label>
+            <Select value={String(tier)} onValueChange={(v) => setTier(Number(v))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Gratuit (retirer)</SelectItem>
+                <SelectItem value="1">🥇 Gold</SelectItem>
+                <SelectItem value="2">💎 Premium</SelectItem>
+                <SelectItem value="3">⭐ VIP</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {tier > 0 && (
+            <div className="space-y-1.5">
+              <Label>Durée</Label>
+              <Select
+                value={mode}
+                onValueChange={(v) => setMode(v as "lifetime" | "date")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lifetime">À vie</SelectItem>
+                  <SelectItem value="date">Jusqu&apos;à une date</SelectItem>
+                </SelectContent>
+              </Select>
+              {mode === "date" && (
+                <Input
+                  type="date"
+                  value={date}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="mt-2"
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Annuler
+          </Button>
+          <Button onClick={save} disabled={busy}>
+            {busy && <Loader2 className="size-4 animate-spin" />}
+            Enregistrer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

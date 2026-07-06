@@ -3,8 +3,10 @@
  * Cascades to the user's accounts, sessions, webhooks, files and folders.
  *
  * PATCH  /api/admin/users/[id] — set a user's Patreon tier by hand (admin only).
- * Body: { patreonTier: 0 | 1 | 2 | 3 }. Override manuel : n'est pas écrasé par la
- * synchro Patreon tant qu'aucun compte Patreon réel n'est lié.
+ * Body: { patreonTier: 0|1|2|3, expiresAt?: string|null }.
+ *   - expiresAt null/absent = à vie ; sinon date ISO à laquelle le palier expire.
+ *   - tier 0 = retire tout (palier + manuel + expiration).
+ * Marque le palier comme MANUEL : protégé de la synchro/webhook Patreon.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -43,7 +45,10 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = (await req.json().catch(() => ({}))) as { patreonTier?: unknown };
+  const body = (await req.json().catch(() => ({}))) as {
+    patreonTier?: unknown;
+    expiresAt?: unknown;
+  };
   const tier = body.patreonTier;
 
   if (
@@ -58,10 +63,43 @@ export async function PATCH(
     );
   }
 
+  // expiresAt : null/absent = à vie ; une string ISO valide = date d'expiration.
+  let expiresAt: Date | null = null;
+  if (body.expiresAt != null) {
+    const d = new Date(body.expiresAt as string);
+    if (Number.isNaN(d.getTime())) {
+      return NextResponse.json(
+        { error: "Date d'expiration invalide." },
+        { status: 400 },
+      );
+    }
+    expiresAt = d;
+  }
+
   const updated = await prisma.user.update({
     where: { id },
-    data: { patreonTier: tier, patreonSyncedAt: new Date() },
-    select: { id: true, email: true, patreonTier: true },
+    data:
+      tier === 0
+        ? {
+            // Palier retiré → on nettoie tout.
+            patreonTier: 0,
+            patreonManual: false,
+            patreonExpiresAt: null,
+            patreonSyncedAt: new Date(),
+          }
+        : {
+            // Octroi manuel protégé de la synchro Patreon.
+            patreonTier: tier,
+            patreonManual: true,
+            patreonExpiresAt: expiresAt,
+            patreonSyncedAt: new Date(),
+          },
+    select: {
+      id: true,
+      email: true,
+      patreonTier: true,
+      patreonExpiresAt: true,
+    },
   });
   return NextResponse.json(updated);
 }
