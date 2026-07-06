@@ -11,10 +11,19 @@ import {
   User as UserIcon,
   Loader2,
   HardDrive,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TierBadge, type PatreonTier } from "@/components/patreon/tier";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +47,10 @@ type AdminUser = {
   providers: string[];
   webhookCount: number;
   createdAt: number;
+  patreonTier: PatreonTier;
 };
+
+const TIER_NAMES = ["Gratuit", "Gold", "Premium", "VIP"];
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
@@ -72,6 +84,22 @@ export default function AdminPage() {
       router.replace("/drive");
     }
   }, [error, router]);
+
+  const setTier = async (u: AdminUser, tier: number) => {
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patreonTier: tier }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Échec");
+      toast.success(`${u.email} → ${TIER_NAMES[tier]}`);
+      mutate();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
 
   const deleteUser = async (u: AdminUser) => {
     try {
@@ -128,7 +156,8 @@ export default function AdminPage() {
         {data?.users.map((u) => (
           <motion.div key={u.id} variants={v ?? item}>
             <Card>
-              <CardContent className="flex items-center gap-3 p-4">
+              <CardContent className="flex flex-col gap-3 p-4">
+                <div className="flex items-center gap-3">
                 {u.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={u.image} alt="" className="size-10 shrink-0 rounded-full object-cover" />
@@ -192,6 +221,30 @@ export default function AdminPage() {
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
+                </div>
+
+                {/* Palier Patreon — override manuel par l'admin */}
+                <div className="flex items-center gap-2 border-t border-border/40 pt-3">
+                  <Crown className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Palier Patreon</span>
+                  <div className="ml-auto flex items-center gap-2">
+                    {u.patreonTier > 0 && <TierBadge tier={u.patreonTier} />}
+                    <Select
+                      value={String(u.patreonTier)}
+                      onValueChange={(val) => setTier(u, Number(val))}
+                    >
+                      <SelectTrigger className="h-8 w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Gratuit</SelectItem>
+                        <SelectItem value="1">🥇 Gold</SelectItem>
+                        <SelectItem value="2">💎 Premium</SelectItem>
+                        <SelectItem value="3">👑 VIP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

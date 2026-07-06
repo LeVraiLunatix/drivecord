@@ -19,6 +19,7 @@ export async function GET() {
       image: true,
       password: true,
       createdAt: true,
+      patreonTier: true,
       accounts: { select: { provider: true } },
       _count: { select: { webhooks: true } },
     },
@@ -36,6 +37,7 @@ export async function GET() {
       providers: u.accounts.map((a) => a.provider),
       webhookCount: u._count.webhooks,
       createdAt: u.createdAt.getTime(),
+      patreonTier: (u.patreonTier ?? 0) as 0 | 1 | 2 | 3,
     })),
   });
 }
