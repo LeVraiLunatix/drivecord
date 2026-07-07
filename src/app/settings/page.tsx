@@ -32,6 +32,9 @@ import {
   RefreshCw,
   ExternalLink,
   Unlink,
+  Sparkles,
+  Star,
+  Lock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -57,7 +60,7 @@ import {
 import { BackButton } from "@/components/back-button";
 import { fullSignOut } from "@/lib/auth/logout";
 import { linkPatreon } from "@/lib/auth/oauth";
-import { TierBadge, type PatreonTier } from "@/components/patreon/tier";
+import { TierBadge, useTier, type PatreonTier } from "@/components/patreon/tier";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
 import { useViewPrefs, type ViewMode } from "@/lib/view-prefs";
@@ -535,8 +538,27 @@ function AdminSection() {
 function PreferencesSection() {
   const { theme, setTheme } = useTheme();
   const { viewMode, setViewMode } = useViewPrefs();
+  const { tier } = useTier();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+
+  // Thèmes exclusifs réservés à un palier. Si le palier ne suffit plus (ex.
+  // abonnement terminé), on rebascule proprement sur le thème sombre.
+  const exclusiveThemes: {
+    value: string;
+    label: string;
+    minTier: PatreonTier;
+    Icon: typeof Sun;
+  }[] = [
+    { value: "aurora", label: "Aurora", minTier: 2, Icon: Sparkles },
+    { value: "or-nocturne", label: "Or nocturne", minTier: 3, Icon: Star },
+  ];
+  React.useEffect(() => {
+    if (!mounted) return;
+    const active = exclusiveThemes.find((t) => t.value === theme);
+    if (active && tier < active.minTier) setTheme("dark");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, theme, tier]);
 
   const themes: { value: string; label: string; Icon: typeof Sun }[] = [
     { value: "light", label: "Clair", Icon: Sun },
@@ -575,6 +597,41 @@ function PreferencesSection() {
                 {label}
               </button>
             ))}
+          </div>
+
+          {/* Thèmes exclusifs — contreparties Patreon (cosmétique) */}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {exclusiveThemes.map(({ value, label, minTier, Icon }) => {
+              const unlocked = tier >= minTier;
+              const active = mounted && theme === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => {
+                    if (unlocked) setTheme(value);
+                    else
+                      toast(
+                        `Thème « ${label} » réservé au palier ${["", "Gold", "Premium", "VIP"][minTier]}`,
+                        { description: "Deviens mécène pour le débloquer." },
+                      );
+                  }}
+                  className={cn(
+                    "relative flex flex-col items-center gap-1.5 rounded-lg border px-3 py-3 text-xs font-medium transition-colors",
+                    active
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : unlocked
+                        ? "border-border/50 text-muted-foreground hover:bg-accent/60"
+                        : "cursor-not-allowed border-border/40 text-muted-foreground/60",
+                  )}
+                >
+                  {!unlocked && (
+                    <Lock className="absolute right-1.5 top-1.5 size-3" />
+                  )}
+                  <Icon className="size-4" />
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
