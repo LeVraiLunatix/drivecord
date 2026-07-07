@@ -29,6 +29,7 @@ async function status(userId: string) {
         patreonSyncedAt: true,
         patreonManual: true,
         patreonExpiresAt: true,
+        hideFromSupporters: true,
       },
     }),
   ]);
@@ -41,6 +42,7 @@ async function status(userId: string) {
     tierLabel: TIER_LABEL[tier],
     syncedAt: user?.patreonSyncedAt?.getTime() ?? null,
     expiresAt: expired ? null : user?.patreonExpiresAt?.getTime() ?? null,
+    hideFromSupporters: Boolean(user?.hideFromSupporters),
   };
 }
 

@@ -667,6 +667,7 @@ type PatreonStatus = {
   tier: 0 | 1 | 2 | 3;
   tierLabel: string;
   syncedAt: number | null;
+  hideFromSupporters: boolean;
 };
 
 // Lien vanity /patreon (redirige vers patreon.com/drivecord via next.config.ts).
@@ -708,6 +709,27 @@ function PatreonSection() {
       toast.error("Échec de la dissociation");
     } finally {
       setBusy(null);
+    }
+  };
+
+  const toggleSupporters = async () => {
+    if (!data) return;
+    const next = !data.hideFromSupporters;
+    try {
+      const res = await fetch("/api/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hideFromSupporters: next }),
+      });
+      if (!res.ok) throw new Error();
+      mutate({ ...data, hideFromSupporters: next }, { revalidate: false });
+      toast.success(
+        next
+          ? "Tu es masqué de la page des mécènes"
+          : "Tu apparais sur la page des mécènes",
+      );
+    } catch {
+      toast.error("Échec de la mise à jour");
     }
   };
 
@@ -767,6 +789,39 @@ function PatreonSection() {
                 Compte lié mais aucun abonnement actif détecté. Si tu viens de
                 t'abonner, clique sur « Rafraîchir ».
               </p>
+            )}
+
+            {tier > 0 && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background/40 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    Apparaître sur la page des mécènes
+                  </p>
+                  <a
+                    href="/supporters"
+                    className="text-xs text-muted-foreground underline hover:text-foreground"
+                  >
+                    Voir la page
+                  </a>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!data?.hideFromSupporters}
+                  onClick={toggleSupporters}
+                  className={cn(
+                    "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+                    data?.hideFromSupporters ? "bg-muted" : "bg-primary",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 size-5 rounded-full bg-white transition-transform",
+                      data?.hideFromSupporters ? "left-0.5" : "left-0.5 translate-x-5",
+                    )}
+                  />
+                </button>
+              </div>
             )}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

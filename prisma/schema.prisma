@@ -49,6 +49,8 @@ model User {
   patreonManual   Boolean   @default(false)
   /// Expiration du palier : null = à vie ; sinon le palier retombe à 0 passée cette date.
   patreonExpiresAt DateTime?
+  /// Opt-out de la page publique « Nos mécènes » (visible par défaut).
+  hideFromSupporters Boolean @default(false)
 
   accounts       Account[]
   sessions       Session[]

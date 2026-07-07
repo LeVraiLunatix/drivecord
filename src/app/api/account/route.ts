@@ -26,6 +26,7 @@ export async function GET() {
       password: true,
       createdAt: true,
       patreonTier: true,
+      hideFromSupporters: true,
       accounts: { select: { provider: true } },
       _count: { select: { webhooks: true } },
     },
@@ -48,6 +49,7 @@ export async function GET() {
     isAdmin: isAdminEmail(user.email),
     patreonTier,
     patreonTierLabel: TIER_LABEL[patreonTier],
+    hideFromSupporters: user.hideFromSupporters,
   });
 }
 
@@ -57,11 +59,17 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const body = (await req.json()) as { name?: string };
+  const body = (await req.json()) as {
+    name?: string;
+    hideFromSupporters?: boolean;
+  };
   const data: Record<string, unknown> = {};
   if (body.name !== undefined) {
     const name = body.name.trim();
     data.name = name.length > 0 ? name.slice(0, 60) : null;
+  }
+  if (typeof body.hideFromSupporters === "boolean") {
+    data.hideFromSupporters = body.hideFromSupporters;
   }
 
   const user = await prisma.user.update({
