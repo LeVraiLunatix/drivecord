@@ -19,6 +19,14 @@ const nextConfig: NextConfig = {
         destination: "https://drivebot-dashboard.vercel.app/",
         permanent: false,
       },
+      {
+        // Lien vanity vers la page Patreon : on communique drivecord.app/patreon
+        // et il redirige vers la vraie page. Non permanent (307) pour pouvoir
+        // changer le slug sans purge cache.
+        source: "/patreon",
+        destination: "https://www.patreon.com/drivecord",
+        permanent: false,
+      },
     ];
   },
   async headers() {

@@ -612,9 +612,9 @@ type PatreonStatus = {
   syncedAt: number | null;
 };
 
-// URL publique de la page Patreon (avantages + abonnement). À ajuster avec ton
-// vrai slug quand ta page est publiée.
-const PATREON_URL = "https://www.patreon.com/drivecord";
+// Lien vanity /patreon (redirige vers patreon.com/drivecord via next.config.ts).
+// Source de vérité unique : pour changer le slug, éditer le redirect, pas ici.
+const PATREON_URL = "/patreon";
 
 function PatreonSection() {
   const { data, mutate } = useSWR<PatreonStatus>("/api/account/patreon", fetcher, {
