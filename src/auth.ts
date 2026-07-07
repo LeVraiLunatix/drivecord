@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { evaluateUserLevel } from "@/lib/auth/auth-level";
 import { syncUserPatreonTier } from "@/lib/patreon";
+import { syncDiscordRoles } from "@/lib/discord-roles";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -57,6 +58,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async linkAccount({ user, account }) {
       if (account.provider === "patreon" && user.id) {
         await syncUserPatreonTier(user.id).catch(() => {});
+      }
+      // Quelqu'un (re)lie Discord : s'il est déjà abonné, on lui pose son rôle.
+      if (account.provider === "discord" && user.id) {
+        await syncDiscordRoles(user.id).catch(() => {});
       }
     },
   },

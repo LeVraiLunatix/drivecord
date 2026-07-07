@@ -17,6 +17,7 @@
  */
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { syncDiscordRoles } from "@/lib/discord-roles";
 
 // ── Paliers ───────────────────────────────────────────────────────────────
 
@@ -206,6 +207,7 @@ export async function syncUserPatreonTier(userId: string): Promise<SyncResult> {
     where: { id: userId },
     data: { patreonTier: tier, patreonSyncedAt: new Date() },
   });
+  await syncDiscordRoles(userId, tier).catch(() => {});
 
   return { linked: true, manual: false, tier };
 }
@@ -243,6 +245,7 @@ export async function getUserTier(userId: string): Promise<PatreonTier> {
         data: { patreonTier: 0, patreonManual: false, patreonExpiresAt: null },
       })
       .catch(() => {});
+    await syncDiscordRoles(userId, 0).catch(() => {});
     return 0;
   }
   return (u.patreonTier ?? 0) as PatreonTier;
@@ -309,10 +312,12 @@ export async function applyMembershipUpdate(
   const cents = deleted
     ? 0
     : payload?.data?.attributes?.currently_entitled_amount_cents ?? 0;
+  const tier = centsToTier(cents);
 
   await prisma.user.update({
     where: { id: account.userId },
-    data: { patreonTier: centsToTier(cents), patreonSyncedAt: new Date() },
+    data: { patreonTier: tier, patreonSyncedAt: new Date() },
   });
+  await syncDiscordRoles(account.userId, tier).catch(() => {});
   return true;
 }

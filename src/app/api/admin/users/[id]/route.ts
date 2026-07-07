@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/admin";
+import { syncDiscordRoles } from "@/lib/discord-roles";
 
 export async function DELETE(
   _req: NextRequest,
@@ -101,5 +102,7 @@ export async function PATCH(
       patreonExpiresAt: true,
     },
   });
+  // Aligne le rôle Discord sur le nouveau palier (no-op si Discord non lié/config).
+  await syncDiscordRoles(id, updated.patreonTier).catch(() => {});
   return NextResponse.json(updated);
 }
