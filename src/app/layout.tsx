@@ -190,13 +190,6 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
             themes={["light", "dark", "system", "aurora", "or-nocturne"]}
-            value={{
-              light: "light",
-              dark: "dark",
-              // Thèmes exclusifs : appliqués par-dessus dark (voir globals.css).
-              aurora: "dark aurora",
-              "or-nocturne": "dark or-nocturne",
-            }}
           >
             <TooltipProvider delayDuration={200}>
               {children}

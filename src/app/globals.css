@@ -2,7 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Les thèmes exclusifs sont des thèmes SOMBRES à part entière : le variant
+   Tailwind `dark:` doit s'y appliquer aussi (une seule classe sur <html>). */
+@custom-variant dark (&:is(.dark *, .aurora *, .or-nocturne *));
 
 @theme inline {
   --color-background: var(--background);
@@ -498,13 +500,16 @@ html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.5) !importan
 .dark { --docs-link: oklch(0.78 0.14 295); }
 
 /* ── Thèmes exclusifs Patreon ─────────────────────────────────────────────────
-   Appliqués PAR-DESSUS .dark (html = "dark aurora" / "dark or-nocturne"), donc
-   ils héritent du dark et n'écrasent que les accents. Réservés Premium/VIP —
-   gating cosmétique côté client (settings), le thème normal reste pour tous. */
+   UNE seule classe sur <html> (next-themes n'accepte pas de classe composée).
+   Ce sont des thèmes SOMBRES autonomes : palette complète (pas de dépendance à
+   .dark), + le variant `dark:` les cible (voir @custom-variant plus haut).
+   Réservés Premium/VIP — gating cosmétique côté client, le thème normal reste
+   pour tous. */
 
 /* Premium — « Aurora » : bleu / violet froids */
 .aurora {
   --background: oklch(0.17 0.03 275);
+  --foreground: oklch(0.985 0 0);
   --card: oklch(0.225 0.035 275);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.225 0.035 275);
@@ -517,13 +522,21 @@ html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.5) !importan
   --muted-foreground: oklch(0.74 0.04 280);
   --accent: oklch(0.32 0.07 285);
   --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(0.8 0.08 285 / 16%);
   --input: oklch(0.8 0.08 285 / 20%);
   --ring: oklch(0.62 0.16 280);
+  --chart-1: oklch(0.72 0.15 280);
+  --chart-2: oklch(0.62 0.13 250);
+  --chart-3: oklch(0.7 0.12 200);
+  --chart-4: oklch(0.65 0.16 310);
+  --chart-5: oklch(0.55 0.14 265);
   --sidebar: oklch(0.19 0.03 275);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.62 0.19 280);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.3 0.05 280);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.8 0.08 285 / 16%);
   --sidebar-ring: oklch(0.62 0.16 280);
   --docs-link: oklch(0.8 0.14 280);
@@ -532,6 +545,7 @@ html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.5) !importan
 /* VIP — « Or nocturne » : fond très sombre + accents dorés */
 .or-nocturne {
   --background: oklch(0.15 0.012 90);
+  --foreground: oklch(0.97 0.01 90);
   --card: oklch(0.195 0.015 90);
   --card-foreground: oklch(0.97 0.01 90);
   --popover: oklch(0.195 0.015 90);
@@ -544,13 +558,21 @@ html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.5) !importan
   --muted-foreground: oklch(0.75 0.04 88);
   --accent: oklch(0.33 0.05 85);
   --accent-foreground: oklch(0.98 0.02 90);
+  --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(0.82 0.12 85 / 16%);
   --input: oklch(0.82 0.1 85 / 20%);
   --ring: oklch(0.75 0.13 85);
+  --chart-1: oklch(0.8 0.13 85);
+  --chart-2: oklch(0.7 0.12 70);
+  --chart-3: oklch(0.62 0.1 55);
+  --chart-4: oklch(0.75 0.11 100);
+  --chart-5: oklch(0.55 0.09 75);
   --sidebar: oklch(0.17 0.015 90);
   --sidebar-foreground: oklch(0.97 0.01 90);
   --sidebar-primary: oklch(0.8 0.13 85);
+  --sidebar-primary-foreground: oklch(0.2 0.03 85);
   --sidebar-accent: oklch(0.31 0.04 85);
+  --sidebar-accent-foreground: oklch(0.98 0.02 90);
   --sidebar-border: oklch(0.82 0.12 85 / 16%);
   --sidebar-ring: oklch(0.75 0.13 85);
   --docs-link: oklch(0.82 0.13 88);
