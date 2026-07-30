@@ -381,5 +381,10 @@ model Announcement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// URL du bouton d'action optionnel (ex. lien vers une page de doc). Null = pas de bouton.
+  linkUrl   String?
+  /// Libellé du bouton d'action optionnel. Requis si `linkUrl` est renseigné.
+  linkLabel String?
+
   @@index([expiresAt])
 }

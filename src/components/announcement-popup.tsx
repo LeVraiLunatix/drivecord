@@ -11,6 +11,8 @@ type Announcement = {
   title: string;
   body: string;
   important: boolean;
+  linkUrl: string | null;
+  linkLabel: string | null;
 };
 
 /** Clé sessionStorage : « vu » est propre à l'onglet/session courant. */
@@ -125,7 +127,18 @@ export function AnnouncementPopup() {
               {ann.body}
             </p>
 
-            <div className="mt-5 flex justify-end">
+            <div className="mt-5 flex justify-end gap-2">
+              {ann.linkUrl && ann.linkLabel && (
+                <Button asChild variant="outline" onClick={dismiss}>
+                  <a
+                    href={ann.linkUrl}
+                    target={ann.linkUrl.startsWith("http") ? "_blank" : undefined}
+                    rel={ann.linkUrl.startsWith("http") ? "noopener noreferrer" : undefined}
+                  >
+                    {ann.linkLabel}
+                  </a>
+                </Button>
+              )}
               <Button onClick={dismiss}>Compris</Button>
             </div>
           </motion.div>

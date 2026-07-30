@@ -11,7 +11,7 @@ export async function GET() {
   const announcement = await prisma.announcement.findFirst({
     where: { expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
-    select: { id: true, title: true, body: true, important: true },
+    select: { id: true, title: true, body: true, important: true, linkUrl: true, linkLabel: true },
   });
 
   return NextResponse.json(
