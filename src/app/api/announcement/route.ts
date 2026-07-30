@@ -8,14 +8,22 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const announcement = await prisma.announcement.findFirst({
-    where: { expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, title: true, body: true, important: true, linkUrl: true, linkLabel: true },
-  });
+  try {
+    const announcement = await prisma.announcement.findFirst({
+      where: { expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, title: true, body: true, important: true, linkUrl: true, linkLabel: true },
+    });
 
-  return NextResponse.json(
-    { announcement },
-    { headers: { "Cache-Control": "no-store" } },
-  );
+    return NextResponse.json(
+      { announcement },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (err) {
+    console.error("[announcement:GET]", err);
+    return NextResponse.json(
+      { error: "Erreur interne du serveur." },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 }
