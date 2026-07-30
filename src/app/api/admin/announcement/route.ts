@@ -57,18 +57,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const announcement = await prisma.announcement.create({
-    data: {
-      title: title.trim().slice(0, 120),
-      body: body.trim().slice(0, 2000),
-      important: Boolean(important),
-      expiresAt: new Date(Date.now() + ms),
-      linkUrl: trimmedLinkUrl?.slice(0, 500),
-      linkLabel: trimmedLinkLabel?.slice(0, 60),
-    },
-  });
-
-  return NextResponse.json({ announcement }, { status: 201 });
+  try {
+    const announcement = await prisma.announcement.create({
+      data: {
+        title: title.trim().slice(0, 120),
+        body: body.trim().slice(0, 2000),
+        important: Boolean(important),
+        expiresAt: new Date(Date.now() + ms),
+        linkUrl: trimmedLinkUrl?.slice(0, 500),
+        linkLabel: trimmedLinkLabel?.slice(0, 60),
+      },
+    });
+    return NextResponse.json({ announcement }, { status: 201 });
+  } catch (err) {
+    console.error("[admin/announcement:POST]", err);
+    return NextResponse.json(
+      { error: "Erreur interne du serveur." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function DELETE() {
