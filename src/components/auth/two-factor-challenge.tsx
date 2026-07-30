@@ -146,6 +146,23 @@ export function TwoFactorChallenge({
 
   const otherMethods = enabledMethods.filter((m) => m !== active);
 
+  // Fallback offered from the device-approval screen: another enabled method
+  // if there is one, recovery code otherwise. Must stay in sync with the
+  // button's label below (was previously hardcoded to "email", which sent
+  // the user to the recovery screen even when email 2FA was enabled).
+  const deviceFallback: Method | "recovery" =
+    otherMethods.find((m) => m === "email") ??
+    otherMethods.find((m) => m === "totp") ??
+    "recovery";
+  const deviceFallbackLabel =
+    deviceFallback === "recovery"
+      ? "Utiliser un code de récupération"
+      : METHOD_LABEL[deviceFallback];
+  const handleDeviceFallback = () => {
+    if (deviceFallback === "recovery") setRecoveryMode(true);
+    else switchTo(deviceFallback);
+  };
+
   const title = recoveryMode
     ? "Code de récupération"
     : isEmail
@@ -196,7 +213,10 @@ export function TwoFactorChallenge({
                 }}
               />
             ) : isDevice ? (
-              <CrossDeviceWait onBack={() => setRecoveryMode(true)} />
+              <CrossDeviceWait
+                onBack={handleDeviceFallback}
+                backLabel={deviceFallbackLabel}
+              />
             ) : (
               <OtpInput
                 key={active}
