@@ -17,10 +17,18 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
   }
-  const announcement = await prisma.announcement.findFirst({
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json({ announcement });
+  try {
+    const announcement = await prisma.announcement.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json({ announcement });
+  } catch (err) {
+    console.error("[admin/announcement:GET]", err);
+    return NextResponse.json(
+      { error: "Erreur interne du serveur." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -83,9 +91,17 @@ export async function DELETE() {
   if (!session) {
     return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
   }
-  await prisma.announcement.updateMany({
-    where: { expiresAt: { gt: new Date() } },
-    data: { expiresAt: new Date() },
-  });
-  return NextResponse.json({ ok: true });
+  try {
+    await prisma.announcement.updateMany({
+      where: { expiresAt: { gt: new Date() } },
+      data: { expiresAt: new Date() },
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[admin/announcement:DELETE]", err);
+    return NextResponse.json(
+      { error: "Erreur interne du serveur." },
+      { status: 500 },
+    );
+  }
 }
