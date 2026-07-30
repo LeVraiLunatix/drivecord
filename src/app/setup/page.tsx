@@ -37,8 +37,10 @@ export default function SetupPage() {
     setBusy(true);
     try {
       const drive = await addDriveFromWebhook(url);
-      // Silently sync to server (non-blocking, non-fatal)
-      pushWebhookToServer(drive).catch(() => {});
+      // Awaited (but non-fatal on failure) so the server has the webhook
+      // committed before we navigate — otherwise a concurrent reconciliation
+      // sync can see it as "not on the server yet" and delete it locally.
+      await pushWebhookToServer(drive).catch(() => {});
       toast.success("Drive prêt !");
       router.push("/drive");
     } catch (err) {

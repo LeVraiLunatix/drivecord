@@ -58,11 +58,15 @@ export async function syncWebhooksFromServer(): Promise<number> {
     await db().drives.put(row);
   }
 
-  // 2) Delete any local drive that the current account does NOT own.
+  // 2) Delete any local drive that the current account does NOT own. Never
+  // touch the currently active drive: it may have just been added locally
+  // and not landed on the server yet (pushWebhookToServer races this sync) —
+  // deleting it would silently kick the user back to /setup mid-flow.
+  const activeId = getActiveDriveId();
   const localDrives = await db().drives.toArray();
   const staleIds = localDrives
     .map((d) => d.id)
-    .filter((id) => !serverIds.has(id));
+    .filter((id) => !serverIds.has(id) && id !== activeId);
   if (staleIds.length > 0) {
     await db().transaction("rw", [db().drives, db().shares], async () => {
       await db().shares.where("driveId").anyOf(staleIds).delete();
