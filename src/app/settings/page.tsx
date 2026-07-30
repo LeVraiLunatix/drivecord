@@ -110,7 +110,7 @@ export default function SettingsPage() {
       variants={v ?? container}
       initial="hidden"
       animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 tabbar-pad px-5 pb-20 sm:px-6"
+      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 tabbar-pad px-5 pb-20 sm:max-w-4xl sm:px-6 xl:max-w-6xl"
       style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
     >
       <motion.div variants={v ?? item}>
@@ -122,43 +122,45 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground">Gère ton compte, tes drives et tes préférences.</p>
       </motion.header>
 
-      <motion.div variants={v ?? item}>
-        <ProfileSection account={account} onUpdate={mutate} />
-      </motion.div>
-
-      <motion.div variants={v ?? item}>
-        <SecuritySection account={account} onUpdate={mutate} />
-      </motion.div>
-
-      <motion.div variants={v ?? item}>
-        <DrivesSection />
-      </motion.div>
-
-      <motion.div variants={v ?? item}>
-        <ApiKeysSection />
-      </motion.div>
-
-      {account?.isAdmin && (
-        <motion.div variants={v ?? item}>
-          <AdminSection />
+      <div className="columns-1 gap-6 sm:columns-2 xl:columns-3">
+        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+          <ProfileSection account={account} onUpdate={mutate} />
         </motion.div>
-      )}
 
-      <motion.div variants={v ?? item}>
-        <PatreonSection />
-      </motion.div>
+        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+          <SecuritySection account={account} onUpdate={mutate} />
+        </motion.div>
 
-      <motion.div variants={v ?? item}>
-        <PreferencesSection />
-      </motion.div>
+        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+          <DrivesSection />
+        </motion.div>
 
-      <motion.div variants={v ?? item}>
-        <AccountLinksSection />
-      </motion.div>
+        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+          <ApiKeysSection />
+        </motion.div>
 
-      <motion.div variants={v ?? item}>
-        <DangerSection />
-      </motion.div>
+        {account?.isAdmin && (
+          <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+            <AdminSection />
+          </motion.div>
+        )}
+
+        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+          <PatreonSection />
+        </motion.div>
+
+        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+          <PreferencesSection />
+        </motion.div>
+
+        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+          <AccountLinksSection />
+        </motion.div>
+
+        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
+          <DangerSection />
+        </motion.div>
+      </div>
     </motion.div>
   );
 }
