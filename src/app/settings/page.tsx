@@ -73,6 +73,7 @@ import {
   type Drive,
 } from "@/lib/storage";
 import { removeWebhookFromServer } from "@/lib/auth/sync";
+import { Masonry, useResponsiveColumns } from "@/components/masonry";
 
 type Account = {
   name: string | null;
@@ -104,6 +105,41 @@ export default function SettingsPage() {
   const { data: account, mutate } = useSWR<Account>("/api/account", fetcher, {
     revalidateOnFocus: false,
   });
+  const columns = useResponsiveColumns();
+
+  const sections = [
+    <motion.div key="profile" variants={v ?? item}>
+      <ProfileSection account={account} onUpdate={mutate} />
+    </motion.div>,
+    <motion.div key="security" variants={v ?? item}>
+      <SecuritySection account={account} onUpdate={mutate} />
+    </motion.div>,
+    <motion.div key="drives" variants={v ?? item}>
+      <DrivesSection />
+    </motion.div>,
+    <motion.div key="api-keys" variants={v ?? item}>
+      <ApiKeysSection />
+    </motion.div>,
+    ...(account?.isAdmin
+      ? [
+          <motion.div key="admin" variants={v ?? item}>
+            <AdminSection />
+          </motion.div>,
+        ]
+      : []),
+    <motion.div key="patreon" variants={v ?? item}>
+      <PatreonSection />
+    </motion.div>,
+    <motion.div key="preferences" variants={v ?? item}>
+      <PreferencesSection />
+    </motion.div>,
+    <motion.div key="account-links" variants={v ?? item}>
+      <AccountLinksSection />
+    </motion.div>,
+    <motion.div key="danger" variants={v ?? item}>
+      <DangerSection />
+    </motion.div>,
+  ];
 
   return (
     <motion.div
@@ -122,45 +158,9 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground">Gère ton compte, tes drives et tes préférences.</p>
       </motion.header>
 
-      <div className="columns-1 gap-6 sm:columns-2 xl:columns-3">
-        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-          <ProfileSection account={account} onUpdate={mutate} />
-        </motion.div>
-
-        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-          <SecuritySection account={account} onUpdate={mutate} />
-        </motion.div>
-
-        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-          <DrivesSection />
-        </motion.div>
-
-        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-          <ApiKeysSection />
-        </motion.div>
-
-        {account?.isAdmin && (
-          <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-            <AdminSection />
-          </motion.div>
-        )}
-
-        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-          <PatreonSection />
-        </motion.div>
-
-        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-          <PreferencesSection />
-        </motion.div>
-
-        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-          <AccountLinksSection />
-        </motion.div>
-
-        <motion.div variants={v ?? item} className="mb-6 break-inside-avoid">
-          <DangerSection />
-        </motion.div>
-      </div>
+      <Masonry columns={columns} gap={24}>
+        {sections}
+      </Masonry>
     </motion.div>
   );
 }
