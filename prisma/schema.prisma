@@ -62,6 +62,7 @@ model User {
   trustedDevices TrustedDevice[]
   loginRequests  LoginRequest[]
   pushTokens     PushToken[]
+  apiKeys        ApiKey[]
 }
 
 model Account {
@@ -127,6 +128,7 @@ model Webhook {
   files   DriveFile[]
   folders DriveFolder[]
   shares  Share[]
+  apiKeys ApiKey[]
 
   @@unique([userId, driveId])
 }
@@ -145,6 +147,32 @@ model Share {
   webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
   @@index([fileId])
+}
+
+/// Personal access token for the public REST API (`/api/v1/*`), letting a
+/// third-party site upload/read/delete files in one specific drive without a
+/// browser session. Only the SHA-256 hash of the raw key is stored — the
+/// plaintext is shown once, at creation time.
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  webhookId  String
+  name       String
+  /// First few chars of the raw key (e.g. "dvc_ab12cd34"), shown in the UI so
+  /// the user can tell keys apart without ever re-displaying the secret.
+  keyPrefix  String
+  /// SHA-256 hex digest of the raw key.
+  keyHash    String    @unique
+  /// Granted capabilities: "read" and/or "write" (write also allows delete).
+  scopes     String[]
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([webhookId])
 }
 
 // ── Drive content (files + folders) ──────────────────────────────────────────

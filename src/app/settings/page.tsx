@@ -46,6 +46,7 @@ import { Separator } from "@/components/ui/separator";
 import { PasskeyManager } from "@/components/auth/passkey-manager";
 import { TwoFactorManager } from "@/components/auth/two-factor-manager";
 import { TrustedDevicesManager } from "@/components/auth/trusted-devices-manager";
+import { ApiKeysManager } from "@/components/settings/api-keys-manager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -131,6 +132,10 @@ export default function SettingsPage() {
 
       <motion.div variants={v ?? item}>
         <DrivesSection />
+      </motion.div>
+
+      <motion.div variants={v ?? item}>
+        <ApiKeysSection />
       </motion.div>
 
       {account?.isAdmin && (
@@ -412,6 +417,16 @@ function DrivesSection() {
           <Plus className="size-4" />
           Ajouter un drive
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ApiKeysSection() {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <ApiKeysManager />
       </CardContent>
     </Card>
   );

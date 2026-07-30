@@ -598,6 +598,8 @@ html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.5) !importan
 .docs-prose :not(pre) > code { font-family: var(--font-mono); font-size: 0.85em; background: var(--muted); color: var(--foreground); padding: 0.15em 0.4em; border-radius: 0.3rem; }
 .docs-prose blockquote { margin: 1.25rem 0; border-left: 3px solid var(--border); padding-left: 1rem; color: var(--muted-foreground); }
 .docs-prose hr { margin: 2rem 0; border: 0; border-top: 1px solid var(--border); }
+.docs-prose pre { margin: 1.25rem 0; padding: 1rem 1.1rem; border-radius: 0.9rem; background: var(--muted); overflow-x: auto; }
+.docs-prose pre code { font-family: var(--font-mono); font-size: 0.85em; line-height: 1.6; color: var(--foreground); background: none; padding: 0; border-radius: 0; }
 
 /* FAQ — rotation du chevron quand l'item est ouvert. */
 .faq-chevron { transition: transform 0.2s ease; }
