@@ -75,18 +75,50 @@ export default function Page() {
         <code>mimeType</code>…).
       </p>
 
-      <DocH3>Limite de taille</DocH3>
+      <DocH3>Limite de taille (upload simple)</DocH3>
       <p>
-        Contrairement à l&apos;app web (upload direct navigateur → Discord),
-        un envoi via l&apos;API transite par notre serveur : la taille est
-        donc bornée par la limite de requête de l&apos;hébergeur (45 Mio ici).
-        Pour des fichiers plus gros, héberge ton propre webhook et utilise le
-        client JS <code>DiscordClient</code> décrit dans{" "}
-        <a href="/docs/technique/fonctionnement">
-          Comment marche le stockage
-        </a>
-        .
+        Ce chemin transite par notre serveur en une seule requête : la taille
+        est donc bornée par la limite de requête de l&apos;hébergeur (45 Mio
+        ici). Pour des fichiers plus gros, utilise l&apos;upload par morceaux
+        ci-dessous.
       </p>
+
+      <DocH2>Upload par morceaux (taille illimitée)</DocH2>
+      <p>
+        Pour dépasser la limite de requête, découpe ton fichier en morceaux
+        d&apos;environ 9 Mio et envoie-les un par un à{" "}
+        <code>POST /api/v1/files/chunks</code> (champ{" "}
+        <code>chunk</code>, plus <code>index</code> pour l&apos;ordre), puis
+        finalise avec un appel JSON à <code>POST /api/v1/files</code>{" "}
+        contenant la liste des morceaux renvoyés. Aucune limite de taille sur
+        ce dernier appel : il ne transporte que des références, jamais les
+        octets du fichier.
+      </p>
+      <pre>
+        <code>{`# 1. un POST par morceau (~9 Mio chacun)
+curl -X POST https://ton-domaine.tld/api/v1/files/chunks \\
+  -H "Authorization: Bearer dvc_xxx" \\
+  -F "index=0" -F "chunk=@part-000"
+# → { "index": 0, "size": ..., "messageId": "...", "attachmentId": "...", "url": "...", "expiresAt": ... }
+
+# … répète pour chaque morceau (index=1, 2, 3…) …
+
+# 2. finalise avec la liste des morceaux (JSON, pas de fichier)
+curl -X POST https://ton-domaine.tld/api/v1/files \\
+  -H "Authorization: Bearer dvc_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+        "filename": "video.mp4",
+        "mimeType": "video/mp4",
+        "chunks": [ { "index": 0, "size": 9500000, "messageId": "...", "attachmentId": "...", "url": "..." }, ... ]
+      }'`}</code>
+      </pre>
+      <Callout variant="tip" title="Chaque morceau reste sous la limite de requête">
+        Chaque appel à <code>/api/v1/files/chunks</code> ne transporte qu&apos;un
+        seul morceau (max ~10 Mio), donc il ne rencontre jamais la limite de
+        requête de l&apos;hébergeur — seul le nombre d&apos;appels change avec
+        la taille du fichier.
+      </Callout>
 
       <DocH2>Lister les fichiers</DocH2>
       <pre>
@@ -115,9 +147,11 @@ export default function Page() {
 
       <DocH2>Limites de débit</DocH2>
       <p>
-        Chaque clé est limitée à <strong>60 requêtes/minute</strong>. Au-delà,
-        l&apos;API répond <code>429</code> avec un en-tête{" "}
-        <code>Retry-After</code>.
+        Chaque clé est limitée à <strong>60 requêtes/minute</strong> sur les
+        routes générales, et <strong>300/minute</strong> sur{" "}
+        <code>/api/v1/files/chunks</code> (une grosse vidéo peut demander
+        beaucoup de petits appels). Au-delà, l&apos;API répond{" "}
+        <code>429</code> avec un en-tête <code>Retry-After</code>.
       </p>
 
       <DocH2>Et ensuite</DocH2>

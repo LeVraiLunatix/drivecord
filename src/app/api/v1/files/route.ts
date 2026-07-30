@@ -1,6 +1,11 @@
 /**
- * GET  /api/v1/files            — list files in the drive (optionally by folder)
- * POST /api/v1/files             — upload a file (multipart/form-data: `file`, optional `parentId`)
+ * GET  /api/v1/files  — list files in the drive (optionally by folder)
+ * POST /api/v1/files  — create a file, two ways:
+ *   1. multipart/form-data (`file`, optional `parentId`/`filename`) — simple
+ *      one-shot upload, bound by the platform's request body size limit.
+ *   2. application/json ({ filename, size?, mimeType?, chunkSize?, parentId?,
+ *      chunks }) — finalize a file whose chunks were uploaded one by one via
+ *      `POST /api/v1/files/chunks`. Use this path for files of unlimited size.
  *
  * Auth: `Authorization: Bearer dvc_...`. Files uploaded here are stored as
  * plaintext (no client-side E2EE key exists for a server-to-server caller) —
@@ -12,7 +17,8 @@ import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
 import { toFileEntry } from "@/app/api/drive/_helpers";
 import { DiscordClient, DiscordApiError, DEFAULT_CHUNK_SIZE } from "@/lib/discord";
-import { authenticateApiKey, checkRateLimit, corsJson, hasScope, preflight } from "../_helpers";
+import type { ChunkRef } from "@/lib/discord";
+import { authenticateApiKey, checkRateLimit, corsJson, hasScope, preflight, type ApiAuth } from "../_helpers";
 
 export const runtime = "nodejs";
 
@@ -55,6 +61,10 @@ export async function POST(req: NextRequest) {
   }
   const limited = await checkRateLimit(auth.apiKey);
   if (limited) return limited;
+
+  if ((req.headers.get("content-type") ?? "").includes("application/json")) {
+    return finalizeChunkedUpload(req, auth);
+  }
 
   let form: FormData;
   try {
@@ -107,4 +117,55 @@ export async function POST(req: NextRequest) {
     }
     throw err;
   }
+}
+
+/**
+ * Finalize a file uploaded chunk-by-chunk via `POST /api/v1/files/chunks`.
+ * The body only carries chunk *references* (message/attachment ids), never
+ * file bytes, so there's no size limit to enforce here.
+ */
+async function finalizeChunkedUpload(req: NextRequest, auth: ApiAuth) {
+  const body = (await req.json().catch(() => null)) as {
+    filename?: string;
+    mimeType?: string;
+    chunkSize?: number;
+    parentId?: string;
+    chunks?: ChunkRef[];
+  } | null;
+
+  if (!body?.filename || !Array.isArray(body.chunks) || body.chunks.length === 0) {
+    return corsJson(
+      { error: "Corps invalide : `filename` et `chunks` (liste non vide) requis." },
+      { status: 400 },
+    );
+  }
+  const chunks = [...body.chunks].sort((a, b) => a.index - b.index);
+  const invalid = chunks.some(
+    (c) =>
+      typeof c.index !== "number" ||
+      typeof c.size !== "number" ||
+      typeof c.messageId !== "string" ||
+      typeof c.attachmentId !== "string" ||
+      typeof c.url !== "string",
+  );
+  if (invalid) {
+    return corsJson({ error: "Un ou plusieurs chunks sont mal formés." }, { status: 400 });
+  }
+
+  const row = await prisma.driveFile.create({
+    data: {
+      id: nanoid(12),
+      webhookId: auth.webhook.id,
+      driveId: auth.webhook.driveId,
+      parentId: body.parentId ?? "",
+      filename: body.filename,
+      size: chunks.reduce((sum, c) => sum + c.size, 0),
+      mimeType: body.mimeType ?? "",
+      chunkSize: body.chunkSize ?? DEFAULT_CHUNK_SIZE,
+      chunks,
+      tags: [],
+    },
+  });
+
+  return corsJson(toFileEntry(row), { status: 201 });
 }

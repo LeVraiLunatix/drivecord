@@ -60,9 +60,19 @@ export function hasScope(apiKey: ApiKey, scope: ApiScope): boolean {
   return apiKey.scopes.includes(scope);
 }
 
-/** 60 requests/minute per key — generous for a small site integration, cheap to enforce. */
-export async function checkRateLimit(apiKey: ApiKey): Promise<NextResponse | null> {
-  const result = await rateLimit(`apikey:${apiKey.id}`, 60, 60);
+/**
+ * 60 requests/minute per key by default — generous for a small site
+ * integration, cheap to enforce. The chunk-upload route uses a separate,
+ * higher-budget bucket since a single large file needs many small requests
+ * (Discord's own per-webhook pacing is the real ceiling there, see
+ * `getWebhookLimiter`).
+ */
+export async function checkRateLimit(
+  apiKey: ApiKey,
+  opts: { limit?: number; windowSec?: number; bucket?: string } = {},
+): Promise<NextResponse | null> {
+  const { limit = 60, windowSec = 60, bucket = "default" } = opts;
+  const result = await rateLimit(`apikey:${bucket}:${apiKey.id}`, limit, windowSec);
   if (result.ok) return null;
   return corsJson(
     { error: "Trop de requêtes. Réessaie plus tard." },

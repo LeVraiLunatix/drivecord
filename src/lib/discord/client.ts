@@ -109,8 +109,13 @@ export class DiscordClient {
   /**
    * Upload one chunk as a single webhook message.
    * Returns the created message (with attachment info).
+   *
+   * Public: also used directly by the `/api/v1/files/chunks` relay, which lets
+   * a server-to-server API caller upload arbitrarily large files as a series
+   * of small requests instead of one request bound by the host's body-size
+   * limit (see `uploadFile` for the equivalent all-in-one path).
    */
-  private async uploadChunk(
+  async uploadChunk(
     blob: Blob,
     filename: string,
     signal?: AbortSignal,
