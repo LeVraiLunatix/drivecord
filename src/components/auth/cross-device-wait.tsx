@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 
 type State = "creating" | "waiting" | "denied" | "expired" | "error";
 
-export function CrossDeviceWait({ onBack }: { onBack: () => void }) {
+export function CrossDeviceWait({
+  onBack,
+  backLabel,
+}: {
+  onBack: () => void;
+  /** Label of the fallback action — must match what `onBack` actually does. */
+  backLabel: string;
+}) {
   const [state, setState] = React.useState<State>("creating");
   const [shortCode, setShortCode] = React.useState("");
   const tokenRef = React.useRef<string | null>(null);
@@ -108,7 +115,7 @@ export function CrossDeviceWait({ onBack }: { onBack: () => void }) {
 
       <Button variant="ghost" className="w-full" onClick={onBack}>
         <ArrowLeft className="size-4" />
-        Utiliser un code par email
+        {backLabel}
       </Button>
     </div>
   );

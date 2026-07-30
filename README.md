@@ -34,6 +34,7 @@ Un clone moderne et amélioré de [Disbox](https://github.com/DisboxApp/disbox) 
 - 📱 **App native iOS** — vraie app installable (Capacitor) avec Face ID et sauvegarde dans la pellicule.
 - 🔐 **Authentification** — email / mot de passe, **Google** et **Discord** (Auth.js v5 + Prisma/PostgreSQL).
 - 🛡️ **Espace admin** — gestion des utilisateurs.
+- 🧩 **API publique** — clés API (`/api/v1`) pour uploader, lister, télécharger et supprimer des fichiers d'un drive depuis un autre site. Voir [`/docs/technique/api`](https://drivecord.vercel.app/docs/technique/api).
 
 ## 🧠 Comment ça marche
 
