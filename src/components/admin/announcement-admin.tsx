@@ -17,6 +17,8 @@ type Announcement = {
   important: boolean;
   expiresAt: string;
   createdAt: string;
+  linkUrl: string | null;
+  linkLabel: string | null;
 };
 
 const fetcher = async (url: string) => {
@@ -46,6 +48,8 @@ export function AnnouncementAdmin() {
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
   const [important, setImportant] = React.useState(false);
+  const [linkUrl, setLinkUrl] = React.useState("");
+  const [linkLabel, setLinkLabel] = React.useState("");
   const [amount, setAmount] = React.useState(7);
   const [unitIdx, setUnitIdx] = React.useState(1); // jours
   const [busy, setBusy] = React.useState(false);
@@ -55,13 +59,24 @@ export function AnnouncementAdmin() {
       toast.error("Titre et description requis.");
       return;
     }
+    if (linkUrl.trim() && !linkLabel.trim()) {
+      toast.error("Le libellé du bouton est requis si un lien est renseigné.");
+      return;
+    }
     const durationMs = Math.round(amount * UNITS[unitIdx].ms);
     setBusy(true);
     try {
       const res = await fetch("/api/admin/announcement", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, important, durationMs }),
+        body: JSON.stringify({
+          title,
+          body,
+          important,
+          durationMs,
+          linkUrl: linkUrl.trim() || undefined,
+          linkLabel: linkLabel.trim() || undefined,
+        }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error ?? "Échec");
@@ -69,6 +84,8 @@ export function AnnouncementAdmin() {
       setTitle("");
       setBody("");
       setImportant(false);
+      setLinkUrl("");
+      setLinkLabel("");
       mutate();
     } catch (e) {
       toast.error((e as Error).message);
@@ -148,6 +165,29 @@ export function AnnouncementAdmin() {
             placeholder="Détaille l'annonce…"
             className="w-full resize-y rounded-md border border-border/50 bg-background/40 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="ann-link-label">Bouton (optionnel)</Label>
+            <Input
+              id="ann-link-label"
+              value={linkLabel}
+              onChange={(e) => setLinkLabel(e.target.value)}
+              placeholder="Ex : Voir la documentation"
+              maxLength={60}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ann-link-url">Lien du bouton</Label>
+            <Input
+              id="ann-link-url"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="/docs/technique/api"
+              maxLength={500}
+            />
+          </div>
         </div>
 
         <button
