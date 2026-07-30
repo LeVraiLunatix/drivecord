@@ -139,6 +139,35 @@ curl -X POST https://ton-domaine.tld/api/v1/files \\
   -o fichier.pdf`}</code>
       </pre>
 
+      <DocH2>Lien public permanent (hotlink)</DocH2>
+      <p>
+        <code>POST /api/v1/files/:id/public</code> crée un lien{" "}
+        <strong>public, sans mot de passe, qui n&apos;expire pas</strong> —
+        utilisable directement dans un <code>{`<img src>`}</code>, une balise{" "}
+        <code>{`<a>`}</code> ou un <code>fetch()</code>, sans en-tête{" "}
+        <code>Authorization</code>. Un seul lien public actif par fichier :
+        recréer un lien remplace le précédent (et remplace aussi un lien créé
+        depuis l&apos;interface Drivecord pour ce même fichier, le cas
+        échéant). <code>DELETE /api/v1/files/:id/public</code> le révoque.
+      </p>
+      <pre>
+        <code>{`curl -X POST https://ton-domaine.tld/api/v1/files/abc123/public \\
+  -H "Authorization: Bearer dvc_xxx"
+
+# → { "token": "...", "url": "https://ton-domaine.tld/api/v1/public/..." }`}</code>
+      </pre>
+      <p>
+        Colle directement l&apos;<code>url</code> renvoyée dans ton site :
+      </p>
+      <pre>
+        <code>{`<img src="https://ton-domaine.tld/api/v1/public/xxxxxxxxxx" alt="…" />`}</code>
+      </pre>
+      <Callout variant="warning" title="Public veut dire public">
+        N&apos;importe qui possédant l&apos;URL peut voir ce fichier, sans
+        limite de temps tant que le lien n&apos;est pas révoqué. Ne l&apos;utilise
+        pas pour du contenu sensible.
+      </Callout>
+
       <DocH2>Supprimer un fichier</DocH2>
       <pre>
         <code>{`curl -X DELETE https://ton-domaine.tld/api/v1/files/abc123 \\
@@ -150,8 +179,11 @@ curl -X POST https://ton-domaine.tld/api/v1/files \\
         Chaque clé est limitée à <strong>60 requêtes/minute</strong> sur les
         routes générales, et <strong>300/minute</strong> sur{" "}
         <code>/api/v1/files/chunks</code> (une grosse vidéo peut demander
-        beaucoup de petits appels). Au-delà, l&apos;API répond{" "}
-        <code>429</code> avec un en-tête <code>Retry-After</code>.
+        beaucoup de petits appels). Les liens publics (
+        <code>/api/v1/public/:token</code>, pas d&apos;authentification) sont
+        limités à <strong>300 requêtes/minute par IP</strong>. Au-delà,
+        l&apos;API répond <code>429</code> avec un en-tête{" "}
+        <code>Retry-After</code>.
       </p>
 
       <DocH2>Et ensuite</DocH2>
