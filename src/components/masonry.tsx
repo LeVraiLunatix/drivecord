@@ -18,16 +18,19 @@ export function useResponsiveColumns(): number {
 }
 
 /**
- * True masonry layout: each item is placed into whichever column is
- * currently shortest (greedy bin-packing), unlike CSS multi-column which
- * fills one column completely before starting the next and can leave
- * columns wildly unbalanced.
+ * Masonry layout: items are assigned to a column once — greedy shortest-
+ * column placement, balanced like a real masonry — then each column stacks
+ * its own items independently.
+ *
+ * Column *assignment* only changes when the column count or item count
+ * changes. Per-column *offsets* are recomputed live via ResizeObserver
+ * whenever any item's height changes, but only within that item's own
+ * column — so a card growing (e.g. adding an API key) pushes down whatever
+ * is below it in its column without reshuffling unrelated columns.
  *
  * Renders items in normal single-column flow until the first layout pass
  * measures real heights (SSR/hydration-safe — no flash of absolutely
- * positioned content), then switches to absolute positioning. A
- * ResizeObserver re-packs whenever an item's height changes (e.g. a card
- * expanding into an "editing" state).
+ * positioned content).
  */
 export function Masonry({
   columns,
@@ -39,46 +42,58 @@ export function Masonry({
   gap?: number;
   children: React.ReactNode[];
 }) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const itemRefs = React.useRef<HTMLDivElement[]>([]);
+  const columnOfRef = React.useRef<number[] | null>(null);
   const [layout, setLayout] = React.useState<
     { top: number; left: string; width: string }[] | null
   >(null);
   const [containerHeight, setContainerHeight] = React.useState(0);
 
-  const relayout = React.useCallback(() => {
-    const items = itemRefs.current;
-    if (items.length === 0) return;
+  const colWidth = 100 / columns;
+  const itemWidth = `calc(${colWidth}% - ${(gap * (columns - 1)) / columns}px)`;
+
+  /** Cheap: keep the existing column assignment, just re-sum heights within each column. */
+  const restack = React.useCallback(() => {
+    const columnOf = columnOfRef.current;
+    if (!columnOf) return;
     const colHeights = new Array(columns).fill(0);
-    const colWidth = 100 / columns;
-    const next = items.map((el) => {
-      const col = colHeights.indexOf(Math.min(...colHeights));
+    const next = itemRefs.current.map((el, i) => {
+      const col = columnOf[i] ?? 0;
       const top = colHeights[col];
-      colHeights[col] += el.getBoundingClientRect().height + gap;
-      return { top, left: `${col * colWidth}%`, width: `calc(${colWidth}% - ${(gap * (columns - 1)) / columns}px)` };
+      colHeights[col] += (el?.getBoundingClientRect().height ?? 0) + gap;
+      return { top, left: `${col * colWidth}%`, width: itemWidth };
     });
     setLayout(next);
     setContainerHeight(Math.max(0, ...colHeights) - gap);
-  }, [columns, gap]);
+  }, [columns, gap, colWidth, itemWidth]);
+
+  /** Expensive: recompute which column each item belongs to (greedy shortest-column). */
+  const reassignColumns = React.useCallback(() => {
+    const items = itemRefs.current;
+    if (items.length === 0) return;
+    const colHeights = new Array(columns).fill(0);
+    columnOfRef.current = items.map((el) => {
+      const col = colHeights.indexOf(Math.min(...colHeights));
+      colHeights[col] += (el?.getBoundingClientRect().height ?? 0) + gap;
+      return col;
+    });
+    restack();
+  }, [columns, gap, restack]);
 
   React.useLayoutEffect(() => {
-    relayout();
-    const ro = new ResizeObserver(() => relayout());
+    reassignColumns();
+    const ro = new ResizeObserver(() => restack());
     itemRefs.current.forEach((el) => el && ro.observe(el));
-    window.addEventListener("resize", relayout);
+    window.addEventListener("resize", reassignColumns);
     return () => {
       ro.disconnect();
-      window.removeEventListener("resize", relayout);
+      window.removeEventListener("resize", reassignColumns);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relayout, React.Children.count(children)]);
+  }, [reassignColumns, React.Children.count(children)]);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative"
-      style={layout ? { height: containerHeight } : undefined}
-    >
+    <div className="relative" style={layout ? { height: containerHeight } : undefined}>
       {React.Children.map(children, (child, i) => (
         <div
           ref={(el) => {

@@ -768,7 +768,7 @@ function PatreonSection() {
               Lie ton compte Patreon pour débloquer automatiquement les avantages
               de ton palier (Gold, Premium ou VIP).
             </p>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={() => linkPatreon()} className="gap-2">
                 <Crown className="size-4" />
                 Lier mon Patreon
@@ -841,7 +841,7 @@ function PatreonSection() {
               </div>
             )}
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex flex-wrap items-center gap-2">
               <Button onClick={refresh} disabled={busy !== null} variant="outline" className="gap-2">
                 {busy === "refresh" ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -861,7 +861,7 @@ function PatreonSection() {
                   <Button
                     variant="ghost"
                     disabled={busy !== null}
-                    className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive sm:ml-auto"
+                    className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive ml-auto"
                   >
                     <Unlink className="size-4" />
                     Délier
