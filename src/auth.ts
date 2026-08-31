@@ -27,9 +27,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * sign-in (and update), and slides the 24h window by stamping lastLoginAt
      * whenever the session opens fully.
      */
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, account, profile }) {
       if (user?.id) token.id = user.id;
       const uid = (token.id as string | undefined) ?? token.sub;
+
+      // Discord avatars change (and Nitro users have animated `a_…` ones). The
+      // Prisma adapter only sets `user.image` at first link, so refresh it — and
+      // the JWT `picture` — from the fresh profile on every Discord sign-in.
+      if (trigger === "signIn" && account?.provider === "discord" && profile) {
+        const p = profile as { id?: string; avatar?: string | null };
+        if (p.id && p.avatar) {
+          const ext = p.avatar.startsWith("a_") ? "gif" : "png";
+          const image = `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.${ext}?size=128`;
+          token.picture = image;
+          if (uid) {
+            await prisma.user
+              .update({ where: { id: uid }, data: { image } })
+              .catch(() => {});
+          }
+        }
+      }
+
       if (
         uid &&
         (trigger === "signIn" || trigger === "signUp" || trigger === "update")

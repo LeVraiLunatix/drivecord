@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
+import { isDesktopApp } from "@/lib/use-platform";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { oauthSignIn } from "@/lib/auth/oauth";
 import { loginWithPasskey } from "@/lib/auth/passkey-client";
@@ -127,7 +128,7 @@ function LoginContent() {
     <div className="relative flex min-h-[100dvh] flex-col">
       <AuthBackground />
       <div className="absolute left-3 z-10" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
-        <BackButton fallback="/" />
+        <BackButton fallback={isDesktopApp() ? "/desktop-welcome" : "/"} />
       </div>
       <motion.div
         variants={v ?? container}
