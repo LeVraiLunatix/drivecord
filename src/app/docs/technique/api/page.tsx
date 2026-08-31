@@ -125,6 +125,84 @@ curl -X POST https://ton-domaine.tld/api/v1/files \\
         <code>{`curl "https://ton-domaine.tld/api/v1/files?parentId=&limit=50" \\
   -H "Authorization: Bearer dvc_xxx"`}</code>
       </pre>
+      <p>
+        Sans paramètre, la route renvoie les fichiers <strong>à la racine</strong>{" "}
+        du drive. <code>parentId=&lt;id&gt;</code> cible un dossier (voir{" "}
+        <a href="#dossiers">Dossiers</a> plus bas), <code>limit</code> va de 1 à
+        200 (100 par défaut).
+      </p>
+
+      <DocH3>Listing incrémental (synchronisation)</DocH3>
+      <p>
+        Pour un client de synchronisation, trois paramètres activent un mode{" "}
+        <em>sync</em>, trié par date de modification croissante :
+      </p>
+      <ul>
+        <li>
+          <code>recursive=1</code> — tout le drive d&apos;un coup, pas seulement
+          un dossier.
+        </li>
+        <li>
+          <code>updatedSince=&lt;ms&gt;</code> — uniquement les fichiers modifiés
+          après cet horodatage Unix en millisecondes (comparaison stricte).
+        </li>
+        <li>
+          <code>cursor=&lt;valeur&gt;</code> — pagination : réutilise le{" "}
+          <code>nextCursor</code> renvoyé par la page précédente jusqu&apos;à ce
+          qu&apos;il soit <code>null</code>. <code>limit</code> monte à 500 dans
+          ce mode (200 par défaut).
+        </li>
+      </ul>
+      <pre>
+        <code>{`# première synchro complète, page par page
+curl "https://ton-domaine.tld/api/v1/files?recursive=1&limit=500" \\
+  -H "Authorization: Bearer dvc_xxx"
+# → { "files": [ … ], "nextCursor": "1717000000000_abc123" | null }
+
+# polls suivants : seulement ce qui a changé depuis le dernier passage
+curl "https://ton-domaine.tld/api/v1/files?recursive=1&updatedSince=1717000000000" \\
+  -H "Authorization: Bearer dvc_xxx"`}</code>
+      </pre>
+      <Callout variant="tip" title="Détecter les suppressions">
+        Le mode incrémental ne renvoie pas de « pierres tombales ». Pour repérer
+        un fichier supprimé côté drive, compare de temps en temps un listing{" "}
+        <code>recursive=1</code> complet à ton état local.
+      </Callout>
+
+      <DocH2>Dossiers</DocH2>
+      <p>
+        Les dossiers sont de simples métadonnées (Discord n&apos;a pas cette
+        notion) : les créer ou les supprimer ne touche au stockage Discord que
+        pour les fichiers réellement contenus.
+      </p>
+      <pre>
+        <code>{`# lister (racine par défaut, ?parentId=<id> pour un sous-dossier,
+#         ?recursive=1 pour tout l'arbre d'un coup)
+curl "https://ton-domaine.tld/api/v1/folders?recursive=1" \\
+  -H "Authorization: Bearer dvc_xxx"
+# → { "folders": [ { "id": "...", "name": "...", "parentId": "" }, … ] }
+
+# créer  (parentId optionnel — absent = racine)
+curl -X POST https://ton-domaine.tld/api/v1/folders \\
+  -H "Authorization: Bearer dvc_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "name": "Factures", "parentId": "" }'
+# → 201 { "id": "...", "name": "Factures", "parentId": "" }
+
+# métadonnées d'un dossier
+curl https://ton-domaine.tld/api/v1/folders/abc123 \\
+  -H "Authorization: Bearer dvc_xxx"
+
+# supprimer — récursif : le dossier, ses sous-dossiers et tous les fichiers
+# qu'ils contiennent (messages Discord compris)
+curl -X DELETE https://ton-domaine.tld/api/v1/folders/abc123 \\
+  -H "Authorization: Bearer dvc_xxx"`}</code>
+      </pre>
+      <p>
+        Pour ranger un fichier dans un dossier à l&apos;upload, passe son{" "}
+        <code>id</code> comme <code>parentId</code> (champ du formulaire pour
+        l&apos;upload simple/par morceaux, clé JSON pour la finalisation).
+      </p>
 
       <DocH2>Récupérer un fichier</DocH2>
       <p>

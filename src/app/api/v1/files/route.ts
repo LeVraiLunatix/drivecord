@@ -14,6 +14,7 @@
 import { NextRequest } from "next/server";
 import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 import { decryptUrl } from "@/lib/auth/encrypt";
 import { toFileEntry } from "@/app/api/drive/_helpers";
 import { DiscordClient, DiscordApiError, DEFAULT_CHUNK_SIZE } from "@/lib/discord";
@@ -41,6 +42,66 @@ export async function GET(req: NextRequest) {
   if (limited) return limited;
 
   const { searchParams } = new URL(req.url);
+  const recursive = searchParams.get("recursive") === "1";
+  const updatedSinceRaw = searchParams.get("updatedSince");
+  const cursor = searchParams.get("cursor");
+
+  // ── Sync mode ──────────────────────────────────────────────────────────────
+  // Triggered by `recursive`, `updatedSince` or `cursor`. Walks the whole drive
+  // (or one folder), ordered by `updatedAt` so a client can page through with
+  // `cursor` and, on later polls, ask only for what changed via `updatedSince`.
+  // There are no deletion tombstones: a client detects removals by diffing a
+  // full `recursive=1` listing against its local state.
+  if (recursive || updatedSinceRaw !== null || cursor !== null) {
+    const limit = Math.min(500, Math.max(1, Number(searchParams.get("limit")) || 200));
+
+    const and: Prisma.DriveFileWhereInput[] = [];
+
+    if (updatedSinceRaw !== null) {
+      const since = Number(updatedSinceRaw);
+      if (!Number.isFinite(since) || since < 0) {
+        return corsJson({ error: "Paramètre `updatedSince` invalide." }, { status: 400 });
+      }
+      and.push({ updatedAt: { gt: new Date(since) } });
+    }
+
+    if (cursor !== null) {
+      // Format: "<updatedAtMs>_<id>". Split on the FIRST underscore only —
+      // nanoid ids can themselves contain "_".
+      const sep = cursor.indexOf("_");
+      const at = Number(cursor.slice(0, sep));
+      const id = cursor.slice(sep + 1);
+      if (sep < 1 || !Number.isFinite(at) || !id) {
+        return corsJson({ error: "Paramètre `cursor` invalide." }, { status: 400 });
+      }
+      // Keyset pagination over the (updatedAt, id) order.
+      and.push({
+        OR: [
+          { updatedAt: { gt: new Date(at) } },
+          { AND: [{ updatedAt: new Date(at) }, { id: { gt: id } }] },
+        ],
+      });
+    }
+
+    const rows = await prisma.driveFile.findMany({
+      where: {
+        webhookId: auth.webhook.id,
+        trashed: false,
+        ...(recursive ? {} : { parentId: searchParams.get("parentId") ?? "" }),
+        ...(and.length > 0 ? { AND: and } : {}),
+      },
+      orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+      take: limit,
+    });
+
+    const last = rows[rows.length - 1];
+    const nextCursor =
+      rows.length === limit && last ? `${last.updatedAt.getTime()}_${last.id}` : null;
+
+    return corsJson({ files: rows.map(toFileEntry), nextCursor });
+  }
+
+  // ── Legacy mode ────────────────────────────────────────────────────────────
   const parentId = searchParams.get("parentId") ?? "";
   const limit = Math.min(200, Math.max(1, Number(searchParams.get("limit")) || 100));
 
