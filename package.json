@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "build:desktop": "node scripts/build-desktop.mjs",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"

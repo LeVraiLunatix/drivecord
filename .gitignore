@@ -46,3 +46,8 @@ next-env.d.ts
 .vercel
 .env*.local
 dc-rel/
+
+# desktop (Tauri) shell build
+/.desktop-build/
+/out/
+next.config.ts.bak
