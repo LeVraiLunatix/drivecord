@@ -40,3 +40,25 @@ export function isNativeApp(): boolean {
   }).Capacitor;
   return Boolean(cap?.isNativePlatform?.());
 }
+
+/**
+ * True inside the Tauri desktop shell (`drivecord-desktop`). Tauri 2 injects
+ * `window.__TAURI_INTERNALS__` into every webview it controls — including the
+ * embedded shell and any remote page loaded during the login handoff.
+ */
+export function isDesktopApp(): boolean {
+  if (typeof window === "undefined") return false;
+  return "__TAURI_INTERNALS__" in window;
+}
+
+/** Minimal access to Tauri's IPC without pulling in `@tauri-apps/api`. */
+export function tauriInvoke<T = unknown>(
+  cmd: string,
+  args?: Record<string, unknown>,
+): Promise<T> {
+  const internals = (window as unknown as {
+    __TAURI_INTERNALS__?: { invoke: (c: string, a?: unknown) => Promise<T> };
+  }).__TAURI_INTERNALS__;
+  if (!internals) return Promise.reject(new Error("Tauri IPC indisponible."));
+  return internals.invoke(cmd, args);
+}

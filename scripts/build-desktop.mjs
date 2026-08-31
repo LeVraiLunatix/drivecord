@@ -55,9 +55,51 @@ export default function DesktopEntry() {
 }
 `;
 
+/** Windows sometimes holds a transient lock on a dir (AV, indexer, a just-exited
+ *  `next` worker) — retry the rename a few times before giving up. */
+function renameWithRetry(from, to, tries = 8) {
+  for (let i = 0; ; i++) {
+    try {
+      fs.renameSync(from, to);
+      return;
+    } catch (e) {
+      if ((e.code !== "EPERM" && e.code !== "EBUSY" && e.code !== "EACCES") || i >= tries) {
+        throw e;
+      }
+      const until = Date.now() + 250;
+      while (Date.now() < until) {
+        /* tiny sync backoff */
+      }
+    }
+  }
+}
+
+function rmWithRetry(target, tries = 8) {
+  for (let i = 0; ; i++) {
+    try {
+      fs.rmSync(target, { recursive: true, force: true });
+      return;
+    } catch (e) {
+      if (
+        (e.code !== "EPERM" &&
+          e.code !== "EBUSY" &&
+          e.code !== "EACCES" &&
+          e.code !== "ENOTEMPTY") ||
+        i >= tries
+      ) {
+        throw e;
+      }
+      const until = Date.now() + 300;
+      while (Date.now() < until) {
+        /* sync backoff */
+      }
+    }
+  }
+}
+
 function moveEntry(from, to) {
   fs.mkdirSync(path.dirname(to), { recursive: true });
-  fs.renameSync(from, to);
+  renameWithRetry(from, to);
 }
 
 function restore() {
@@ -66,14 +108,14 @@ function restore() {
     for (const name of fs.readdirSync(STASH)) {
       const dest = path.join(APP, name);
       if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true, force: true });
-      fs.renameSync(path.join(STASH, name), dest);
+      renameWithRetry(path.join(STASH, name), dest);
     }
     fs.rmSync(STASH, { recursive: true, force: true });
   }
   // Restore next.config.ts.
   if (fs.existsSync(CONFIG_BAK)) {
     fs.rmSync(CONFIG, { force: true });
-    fs.renameSync(CONFIG_BAK, CONFIG);
+    renameWithRetry(CONFIG_BAK, CONFIG);
   }
 }
 
@@ -87,7 +129,7 @@ fs.mkdirSync(path.dirname(CONFIG_BAK), { recursive: true });
 
 try {
   // 1. swap config
-  fs.renameSync(CONFIG, CONFIG_BAK);
+  renameWithRetry(CONFIG, CONFIG_BAK);
   fs.copyFileSync(CONFIG_DESKTOP, CONFIG);
 
   // 2. stash non-shell routes
@@ -104,8 +146,8 @@ try {
 
   // 4. clean build artifacts (stale .next/dev route types from `next dev` clash
   //    with the pruned route set during type-check)
-  fs.rmSync(path.join(ROOT, ".next"), { recursive: true, force: true });
-  fs.rmSync(path.join(ROOT, "out"), { recursive: true, force: true });
+  rmWithRetry(path.join(ROOT, ".next"));
+  rmWithRetry(path.join(ROOT, "out"));
 
   // 5. build
   // Invoke Next's CLI directly with `node` — avoids `.cmd`/shell quirks

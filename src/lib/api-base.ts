@@ -31,6 +31,25 @@ export function setDesktopTokenGetter(fn: TokenGetter): void {
   getToken = fn;
 }
 
+// In the embedded shell build, wire the token source at module load — before
+// any `authFetch` can run — straight from Tauri's keychain-backed `get_token`.
+if (
+  IS_DESKTOP &&
+  typeof window !== "undefined" &&
+  "__TAURI_INTERNALS__" in window
+) {
+  const internals = (
+    window as unknown as {
+      __TAURI_INTERNALS__: { invoke: (c: string) => Promise<unknown> };
+    }
+  ).__TAURI_INTERNALS__;
+  getToken = () =>
+    internals
+      .invoke("get_token")
+      .then((t) => (typeof t === "string" ? t : null))
+      .catch(() => null);
+}
+
 /**
  * `fetch` for app API calls. On the web this is exactly `fetch(path, init)`.
  * On desktop it rebases the URL and attaches the bearer token.

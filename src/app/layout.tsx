@@ -13,6 +13,7 @@ import { AppTabBar } from "@/components/app-tab-bar";
 import { NativeTabsBridge } from "@/components/native-tabs-bridge";
 import { AnnouncementPopup } from "@/components/announcement-popup";
 import { NativePushRegister } from "@/components/native-push-register";
+import { DesktopTokenBridge } from "@/components/auth/desktop-token-bridge";
 import "./globals.css";
 
 const interSans = Inter({
@@ -203,6 +204,8 @@ export default function RootLayout({
               <BfcacheAuthGuard />
 
               <NativePushRegister />
+
+              <DesktopTokenBridge />
 
               <AnnouncementPopup />
 
