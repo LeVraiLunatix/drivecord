@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch } from "@/lib/api-base";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Megaphone, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export function AnnouncementPopup() {
 
   React.useEffect(() => {
     let cancelled = false;
-    fetch("/api/announcement")
+    authFetch("/api/announcement")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         const a: Announcement | null = data?.announcement ?? null;

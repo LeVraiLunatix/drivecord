@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
 import { Lock, ShieldCheck, Loader2, KeyRound, Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,6 @@ import { biometryAvailable, runBiometric } from "@/lib/biometric";
 import { deriveVaultKey } from "@/lib/crypto/vault-crypto";
 import { setVaultKey } from "@/lib/crypto/vault-key-store";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 /**
  * Locks the vault section behind a PIN. Shows a create-PIN form if none exists,
@@ -61,7 +61,7 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
     if (pin !== confirm) { toast.error("Les codes ne correspondent pas"); return; }
     setBusy(true);
     try {
-      const res = await fetch("/api/account/vault-pin", {
+      const res = await authFetch("/api/account/vault-pin", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newPin: pin }),
@@ -81,7 +81,7 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await fetch("/api/account/vault-pin", {
+      const res = await authFetch("/api/account/vault-pin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pin }),

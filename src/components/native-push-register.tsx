@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch } from "@/lib/api-base";
 import { useSession } from "next-auth/react";
 import { isNativeApp } from "@/lib/use-platform";
 
@@ -33,7 +34,7 @@ export function NativePushRegister() {
         const reg = await PushNotifications.addListener(
           "registration",
           (token) => {
-            void fetch("/api/push/register", {
+            void authFetch("/api/push/register", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ token: token.value, platform: "ios" }),

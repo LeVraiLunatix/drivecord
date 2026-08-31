@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import { toast } from "sonner";
 import { MonitorSmartphone, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ type Device = {
   current: boolean;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", {
@@ -32,7 +32,7 @@ export function TrustedDevicesManager() {
   );
 
   const revoke = async (id: string) => {
-    const res = await fetch(`/api/settings/devices/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/settings/devices/${id}`, { method: "DELETE" });
     if (res.ok || res.status === 204) {
       toast.success("Appareil révoqué.");
       mutate();

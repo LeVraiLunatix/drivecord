@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
 import { toast } from "sonner";
 import {
@@ -30,7 +31,6 @@ type Status = {
   recoveryRemaining: number;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const T = {
   intro:
@@ -98,7 +98,7 @@ export function TwoFactorManager() {
 
   const startTotp = async () => {
     setBusy(true);
-    const res = await fetch("/api/settings/2fa/totp/setup", { method: "POST" });
+    const res = await authFetch("/api/settings/2fa/totp/setup", { method: "POST" });
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (res.ok) setQr(d.qr);
@@ -107,7 +107,7 @@ export function TwoFactorManager() {
 
   const confirmTotp = async () => {
     setBusy(true);
-    const res = await fetch("/api/settings/2fa/totp/confirm", {
+    const res = await authFetch("/api/settings/2fa/totp/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: token.trim() }),
@@ -127,7 +127,7 @@ export function TwoFactorManager() {
 
   const enableEmail = async () => {
     setBusy(true);
-    const res = await fetch("/api/settings/2fa/email", { method: "POST" });
+    const res = await authFetch("/api/settings/2fa/email", { method: "POST" });
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (res.ok) {
@@ -141,7 +141,7 @@ export function TwoFactorManager() {
 
   const enableDevice = async () => {
     setBusy(true);
-    const res = await fetch("/api/settings/2fa/device", { method: "POST" });
+    const res = await authFetch("/api/settings/2fa/device", { method: "POST" });
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (res.ok) {
@@ -155,7 +155,7 @@ export function TwoFactorManager() {
 
   const regenerate = async () => {
     setBusy(true);
-    const res = await fetch("/api/settings/2fa/recovery", { method: "POST" });
+    const res = await authFetch("/api/settings/2fa/recovery", { method: "POST" });
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (res.ok) {
@@ -168,7 +168,7 @@ export function TwoFactorManager() {
 
   const setPreferred = async (method: Method) => {
     setBusy(true);
-    const res = await fetch("/api/settings/2fa/preferred", {
+    const res = await authFetch("/api/settings/2fa/preferred", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ method }),
@@ -186,7 +186,7 @@ export function TwoFactorManager() {
   const confirmDisable = async () => {
     if (!disableTarget) return;
     setBusy(true);
-    const res = await fetch("/api/settings/2fa/disable", {
+    const res = await authFetch("/api/settings/2fa/disable", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code: disableCode.trim(), method: disableTarget }),

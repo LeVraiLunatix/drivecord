@@ -4,6 +4,7 @@ import {
   startRegistration,
   startAuthentication,
 } from "@simplewebauthn/browser";
+import { authFetch } from "@/lib/api-base";
 
 export type PasskeyResult = { ok: boolean; error?: string };
 
@@ -17,7 +18,7 @@ function friendlyError(e: unknown): string {
 
 /** Register a new passkey for the current (fully-authenticated) account. */
 export async function registerPasskey(name?: string): Promise<PasskeyResult> {
-  const optRes = await fetch("/api/auth/passkey/register/options", {
+  const optRes = await authFetch("/api/auth/passkey/register/options", {
     method: "POST",
   });
   if (!optRes.ok) {
@@ -33,7 +34,7 @@ export async function registerPasskey(name?: string): Promise<PasskeyResult> {
     return { ok: false, error: friendlyError(e) };
   }
 
-  const verRes = await fetch("/api/auth/passkey/register/verify", {
+  const verRes = await authFetch("/api/auth/passkey/register/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ response: attResp, name }),
@@ -46,7 +47,7 @@ export async function registerPasskey(name?: string): Promise<PasskeyResult> {
 
 /** Sign in using a discoverable passkey (no email needed). */
 export async function loginWithPasskey(): Promise<PasskeyResult> {
-  const optRes = await fetch("/api/auth/passkey/login/options", {
+  const optRes = await authFetch("/api/auth/passkey/login/options", {
     method: "POST",
   });
   if (!optRes.ok) {
@@ -61,7 +62,7 @@ export async function loginWithPasskey(): Promise<PasskeyResult> {
     return { ok: false, error: friendlyError(e) };
   }
 
-  const verRes = await fetch("/api/auth/passkey/login/verify", {
+  const verRes = await authFetch("/api/auth/passkey/login/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(asseResp),

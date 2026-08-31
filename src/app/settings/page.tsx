@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
 import { useTheme } from "next-themes";
 import { motion, useReducedMotion, type Variants } from "motion/react";
@@ -88,7 +89,6 @@ type Account = {
   patreonTierLabel: string;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const container: Variants = {
   hidden: {},
@@ -212,7 +212,7 @@ function ProfileSection({ account, onUpdate }: { account?: Account; onUpdate: ()
   const save = async () => {
     setBusy(true);
     try {
-      const res = await fetch("/api/account", {
+      const res = await authFetch("/api/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -326,7 +326,7 @@ function SecuritySection({ account, onUpdate }: { account?: Account; onUpdate: (
     }
     setBusy(true);
     try {
-      const res = await fetch("/api/account/password", {
+      const res = await authFetch("/api/account/password", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword: current || undefined, newPassword: next }),
@@ -446,7 +446,7 @@ function DriveRow({ drive }: { drive: Drive }) {
     setBusy(true);
     try {
       await renameDrive(drive.id, trimmed);
-      await fetch(`/api/webhooks/${drive.id}`, {
+      await authFetch(`/api/webhooks/${drive.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmed }),
@@ -700,7 +700,7 @@ function PatreonSection() {
   const refresh = async () => {
     setBusy("refresh");
     try {
-      const res = await fetch("/api/account/patreon", { method: "POST" });
+      const res = await authFetch("/api/account/patreon", { method: "POST" });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Échec de la synchro");
       mutate(d, { revalidate: false });
@@ -717,7 +717,7 @@ function PatreonSection() {
   const unlink = async () => {
     setBusy("unlink");
     try {
-      const res = await fetch("/api/account/patreon", { method: "DELETE" });
+      const res = await authFetch("/api/account/patreon", { method: "DELETE" });
       const d = await res.json();
       if (!res.ok) throw new Error();
       mutate(d, { revalidate: false });
@@ -733,7 +733,7 @@ function PatreonSection() {
     if (!data) return;
     const next = !data.hideFromSupporters;
     try {
-      const res = await fetch("/api/account", {
+      const res = await authFetch("/api/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hideFromSupporters: next }),
@@ -903,7 +903,7 @@ function DangerSection() {
   const deleteAccount = async () => {
     setBusy(true);
     try {
-      const res = await fetch("/api/account", { method: "DELETE" });
+      const res = await authFetch("/api/account", { method: "DELETE" });
       if (!res.ok && res.status !== 204) throw new Error();
       toast.success("Compte supprimé");
       await fullSignOut();

@@ -9,6 +9,7 @@
  * (thème exclusif en plus, aperçu d'une feature en accès anticipé, etc.).
  */
 import * as React from "react";
+import { apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,6 @@ export const TIER_META: Record<
   },
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 /** Palier Patreon courant (live via /api/account/patreon). */
 export function useTier(): { tier: PatreonTier; linked: boolean; isLoading: boolean } {

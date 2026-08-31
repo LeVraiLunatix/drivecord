@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
 import { toast } from "sonner";
 import {
@@ -26,7 +27,6 @@ type Passkey = {
   lastUsedAt: string | null;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function formatDate(iso: string | null): string {
   if (!iso) return "jamais";
@@ -65,7 +65,7 @@ export function PasskeyManager() {
     const name = editName.trim();
     setEditingId(null);
     if (!name) return;
-    const res = await fetch(`/api/settings/passkeys/${id}`, {
+    const res = await authFetch(`/api/settings/passkeys/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
@@ -79,7 +79,7 @@ export function PasskeyManager() {
 
   const remove = async (id: string) => {
     setConfirmId(null);
-    const res = await fetch(`/api/settings/passkeys/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/settings/passkeys/${id}`, { method: "DELETE" });
     if (res.ok || res.status === 204) {
       toast.success("Passkey supprimé.");
       mutate();

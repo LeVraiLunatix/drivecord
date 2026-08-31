@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch } from "@/lib/api-base";
 import { useSession } from "next-auth/react";
 import { MonitorSmartphone, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -41,7 +42,7 @@ export function LoginApprovalWatcher() {
     let stop = false;
     const poll = async () => {
       try {
-        const res = await fetch("/api/auth/login-requests/pending");
+        const res = await authFetch("/api/auth/login-requests/pending");
         if (!res.ok) return;
         const d = await res.json();
         if (stop) return;
@@ -77,7 +78,7 @@ export function LoginApprovalWatcher() {
     if (!pending) return;
     setBusy(true);
     try {
-      await fetch(`/api/auth/login-requests/${pending.id}`, {
+      await authFetch(`/api/auth/login-requests/${pending.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),

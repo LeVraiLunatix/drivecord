@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { Code2, Copy, Plus, Trash2, Loader2 } from "lucide-react";
@@ -29,7 +30,6 @@ type ApiKeyRow = {
 
 type Drive = { driveId: string; name: string };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function formatDate(iso: string | null): string {
   if (!iso) return "jamais";
@@ -72,7 +72,7 @@ export function ApiKeysManager() {
       ...(scopes.write ? ["write"] : []),
     ];
     setBusy(true);
-    const res = await fetch("/api/settings/api-keys", {
+    const res = await authFetch("/api/settings/api-keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: name.trim(), driveId, scopes: activeScopes }),
@@ -92,7 +92,7 @@ export function ApiKeysManager() {
 
   const revoke = async (id: string) => {
     setConfirmId(null);
-    const res = await fetch(`/api/settings/api-keys/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/settings/api-keys/${id}`, { method: "DELETE" });
     if (res.ok || res.status === 204) {
       toast.success("Clé révoquée.");
       mutate();

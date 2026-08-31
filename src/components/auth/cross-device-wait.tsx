@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch } from "@/lib/api-base";
 import { Loader2, MonitorSmartphone, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -23,7 +24,7 @@ export function CrossDeviceWait({
     let cancelled = false;
     const create = async () => {
       try {
-        const res = await fetch("/api/auth/login-requests", { method: "POST" });
+        const res = await authFetch("/api/auth/login-requests", { method: "POST" });
         const d = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (res.ok) {

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch } from "@/lib/api-base";
 import { signOut } from "next-auth/react";
 import { Loader2, MailCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -44,7 +45,7 @@ export function ChallengeForm({
     sentRef.current = true;
     const send = async () => {
       try {
-        const res = await fetch("/api/auth/email-code/send", { method: "POST" });
+        const res = await authFetch("/api/auth/email-code/send", { method: "POST" });
         const data = await res.json().catch(() => ({}));
         setCooldown(data.cooldownSec ?? (res.ok ? 60 : 0));
       } catch {
@@ -65,7 +66,7 @@ export function ChallengeForm({
     if (cooldown > 0) return;
     setError(null);
     try {
-      const res = await fetch("/api/auth/email-code/send", { method: "POST" });
+      const res = await authFetch("/api/auth/email-code/send", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setCooldown(data.cooldownSec ?? 60);
@@ -85,7 +86,7 @@ export function ChallengeForm({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/email-code/verify", {
+      const res = await authFetch("/api/auth/email-code/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: c }),

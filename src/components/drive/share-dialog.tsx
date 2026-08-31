@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch } from "@/lib/api-base";
 import { Copy, Check, Link2, Loader2, Trash2, ExternalLink } from "lucide-react";
 import {
   Dialog,
@@ -46,7 +47,7 @@ export function ShareDialog({
     if (!open || !fileId || !driveId) return;
     setShare(null); setPassword(""); setExpiryDays(0); setCopied(false);
     setLoading(true);
-    fetch(`/api/drive/${driveId}/files/${fileId}/share`)
+    authFetch(`/api/drive/${driveId}/files/${fileId}/share`)
       .then((r) => r.json())
       .then((d) => setShare(d.share ?? null))
       .catch(() => {})
@@ -59,7 +60,7 @@ export function ShareDialog({
     if (!fileId || !driveId) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/drive/${driveId}/files/${fileId}/share`, {
+      const res = await authFetch(`/api/drive/${driveId}/files/${fileId}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: password || undefined, expiresInDays: expiryDays || null }),
@@ -76,7 +77,7 @@ export function ShareDialog({
     if (!fileId || !driveId) return;
     setBusy(true);
     try {
-      await fetch(`/api/drive/${driveId}/files/${fileId}/share`, { method: "DELETE" });
+      await authFetch(`/api/drive/${driveId}/files/${fileId}/share`, { method: "DELETE" });
       setShare(null); setPassword(""); setExpiryDays(0);
       toast.success("Lien révoqué");
     } catch { toast.error("Échec"); }

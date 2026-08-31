@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { authFetch } from "@/lib/api-base";
 import { signOut } from "next-auth/react";
 import {
   Loader2,
@@ -76,7 +77,7 @@ export function TwoFactorChallenge({
 
   const sendEmailCode = React.useCallback(async (notify: boolean) => {
     try {
-      const res = await fetch("/api/auth/2fa/start", { method: "POST" });
+      const res = await authFetch("/api/auth/2fa/start", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.emailSent) {
         setCooldown(data.cooldownSec ?? 60);
@@ -114,7 +115,7 @@ export function TwoFactorChallenge({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/2fa/verify", {
+      const res = await authFetch("/api/auth/2fa/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: c, recovery: recoveryMode }),
