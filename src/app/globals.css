@@ -609,4 +609,4 @@ details[open] .faq-chevron { transform: rotate(180deg); }
    WindowChrome ne réserve plus de bande : les boutons flottent dans le coin.
    La topbar du drive est la zone de déplacement ([data-tauri-drag-region]) et
    laisse la place aux boutons fenêtre à droite. */
-html.is-desktop .drive-topbar-row { padding-right: 8.5rem; }
+html.is-desktop .drive-topbar-row { padding-right: 5.25rem; }

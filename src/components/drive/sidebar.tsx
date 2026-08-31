@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   BarChart3,
+  FolderSync,
   Check,
   ChevronsUpDown,
   CloudUpload,
@@ -23,6 +24,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { fullSignOut } from "@/lib/auth/logout";
+import { isDesktopApp } from "@/lib/use-platform";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -233,19 +235,32 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Camera-roll backup + install — just above the account */}
-      <NavButton
-        label="Sauvegarde pellicule"
-        icon={Images}
-        active={false}
-        onClick={() => { router.push("/backup"); close(); }}
-      />
-      <NavButton
-        label="Installer l'app"
-        icon={Smartphone}
-        active={false}
-        onClick={() => { router.push("/install"); close(); }}
-      />
+      {/* Camera-roll backup + install — just above the account.
+          Desktop app: no PWA install, and camera-roll backup is replaced by
+          folder sync (kDrive-style). */}
+      {isDesktopApp() ? (
+        <NavButton
+          label="Synchro de dossier"
+          icon={FolderSync}
+          active={false}
+          onClick={() => { router.push("/desktop-sync"); close(); }}
+        />
+      ) : (
+        <>
+          <NavButton
+            label="Sauvegarde pellicule"
+            icon={Images}
+            active={false}
+            onClick={() => { router.push("/backup"); close(); }}
+          />
+          <NavButton
+            label="Installer l'app"
+            icon={Smartphone}
+            active={false}
+            onClick={() => { router.push("/install"); close(); }}
+          />
+        </>
+      )}
 
       {/* ── Profile + disconnect ── */}
       {onClose ? (

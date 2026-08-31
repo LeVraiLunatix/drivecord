@@ -16,7 +16,6 @@
 # next.js
 /.next/
 /out/
-/.next-desktop/
 
 # production
 /build
@@ -51,7 +50,6 @@ dc-rel/
 # desktop (Tauri) shell build
 /.desktop-build/
 /out/
-/.next-desktop/
 next.config.ts.bak
 
 # Claude Code local tooling
