@@ -18,12 +18,24 @@ const { auth } = NextAuth(authConfig);
 
 type AuthProxy = (req: NextRequest, event: unknown) => Promise<Response | undefined>;
 
-/** Origins the Tauri shell is served from (WebView2 / macOS / Linux). */
+/**
+ * Origins the Tauri shell is served from. Production build: `tauri.localhost`.
+ * `tauri dev`: a random `http://127.0.0.1:<port>` / `http://localhost:<port>`.
+ * Allowing localhost here is not a security hole — the bearer token is the real
+ * gate, and CORS is only browser-side; a non-browser client ignores it anyway.
+ */
 const DESKTOP_ORIGINS = new Set([
   "http://tauri.localhost",
   "https://tauri.localhost",
   "tauri://localhost",
 ]);
+
+function isDesktopOrigin(origin: string): boolean {
+  return (
+    DESKTOP_ORIGINS.has(origin) ||
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+  );
+}
 
 const CORS_OPTIONS: Record<string, string> = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -39,7 +51,7 @@ export async function proxy(
 
   if (pathname.startsWith("/api/")) {
     const origin = req.headers.get("origin") ?? "";
-    const fromDesktop = DESKTOP_ORIGINS.has(origin);
+    const fromDesktop = isDesktopOrigin(origin);
 
     // Preflight.
     if (req.method === "OPTIONS" && fromDesktop) {
