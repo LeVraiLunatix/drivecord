@@ -604,10 +604,9 @@ html.is-native.light .glass-bar { background: rgba(255, 255, 255, 0.5) !importan
 /* FAQ — rotation du chevron quand l'item est ouvert. */
 .faq-chevron { transition: transform 0.2s ease; }
 details[open] .faq-chevron { transform: rotate(180deg); }
-/* ── Tauri desktop shell : barre de titre custom (WindowChrome, 2rem) ──────────
-   Elle occupe 2rem en haut du <body> (enfant flex). Les mises en page en
-   hauteur de viewport doivent donc soustraire cette bande, sinon débordement. */
-html.is-desktop .min-h-\[100dvh\] { min-height: calc(100dvh - 2rem); }
-@media (min-width: 1024px) {
-  html.is-desktop .lg\:h-\[100dvh\] { height: calc(100dvh - 2rem); }
-}
+
+/* ── Tauri desktop shell ──────────────────────────────────────────────────────
+   WindowChrome ne réserve plus de bande : les boutons flottent dans le coin.
+   La topbar du drive est la zone de déplacement ([data-tauri-drag-region]) et
+   laisse la place aux boutons fenêtre à droite. */
+html.is-desktop .drive-topbar-row { padding-right: 8.5rem; }

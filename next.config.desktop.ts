@@ -13,6 +13,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "export",
+  // Isolated build dir — never touch the main `.next` (so a concurrent or prior
+  // `npm run build` can't corrupt this build and vice-versa).
+  distDir: ".next-desktop",
   images: { unoptimized: true },
   // `output: "export"` ignores redirects()/headers()/rewrites() — omitted on purpose.
   env: {

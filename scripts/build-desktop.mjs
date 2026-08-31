@@ -145,9 +145,9 @@ try {
   // 3. client redirect entry page
   fs.writeFileSync(path.join(APP, "page.tsx"), REDIRECT_PAGE);
 
-  // 4. clean build artifacts (stale .next/dev route types from `next dev` clash
-  //    with the pruned route set during type-check)
-  rmWithRetry(path.join(ROOT, ".next"));
+  // 4. clean this build's own artifacts (its distDir is `.next-desktop`, see
+  //    next.config.desktop.ts — the main `.next` is never touched).
+  rmWithRetry(path.join(ROOT, ".next-desktop"));
   rmWithRetry(path.join(ROOT, "out"));
 
   // 5. build

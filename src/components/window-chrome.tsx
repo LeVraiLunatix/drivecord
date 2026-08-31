@@ -4,10 +4,11 @@ import * as React from "react";
 import { isDesktopApp, tauriInvoke } from "@/lib/use-platform";
 
 /**
- * Custom title bar for the Tauri desktop shell (the OS bar is hidden —
- * `decorations: false`). A slim draggable strip with minimise / maximise /
- * close on the right, styled like the Windows 11 caption buttons. Renders
- * nothing on the web.
+ * Window controls for the Tauri desktop shell (the OS title bar is hidden —
+ * `decorations: false`). Just the three Windows-11-style caption buttons in the
+ * top-right corner, floating over the app content — no reserved strip, so the
+ * UI reaches the top edge. The window is dragged from `[data-tauri-drag-region]`
+ * elements (the drive topbar). Renders nothing on the web.
  */
 export function WindowChrome() {
   const [show, setShow] = React.useState(false);
@@ -15,27 +16,20 @@ export function WindowChrome() {
   React.useEffect(() => {
     if (!isDesktopApp()) return;
     setShow(true);
-    // Lets viewport-height layouts subtract the title bar (see globals.css).
     document.documentElement.classList.add("is-desktop");
   }, []);
 
   if (!show) return null;
 
   const btn =
-    "grid h-8 w-[46px] place-items-center text-foreground/55 transition-colors hover:bg-foreground/10 hover:text-foreground focus:outline-none";
+    "grid h-8 w-[44px] place-items-center text-foreground/50 transition-colors hover:bg-foreground/10 hover:text-foreground focus:outline-none";
 
   return (
-    <div
-      onMouseDown={() => {
-        void tauriInvoke("win_start_drag").catch(() => {});
-      }}
-      className="flex h-8 shrink-0 select-none items-center justify-end bg-background/80 backdrop-blur"
-    >
+    <div className="fixed right-0 top-0 z-[60] flex select-none">
       <button
         type="button"
         aria-label="Réduire"
         className={btn}
-        onMouseDown={(e) => e.stopPropagation()}
         onClick={() => void tauriInvoke("win_minimize").catch(() => {})}
       >
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
@@ -46,7 +40,6 @@ export function WindowChrome() {
         type="button"
         aria-label="Agrandir"
         className={btn}
-        onMouseDown={(e) => e.stopPropagation()}
         onClick={() => void tauriInvoke("win_toggle_maximize").catch(() => {})}
       >
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
@@ -57,7 +50,6 @@ export function WindowChrome() {
         type="button"
         aria-label="Fermer"
         className={`${btn} hover:bg-[#e81123] hover:text-white`}
-        onMouseDown={(e) => e.stopPropagation()}
         onClick={() => void tauriInvoke("win_close").catch(() => {})}
       >
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
