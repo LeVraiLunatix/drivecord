@@ -30,6 +30,7 @@ const KEEP_DIRS = new Set([
   "login",
   "register",
   "desktop-sync",
+  "fonts",
 ]);
 /** Files kept directly under src/app. */
 const KEEP_FILES = new Set([

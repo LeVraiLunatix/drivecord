@@ -13,7 +13,10 @@ export function WindowChrome() {
   const [show, setShow] = React.useState(false);
 
   React.useEffect(() => {
-    if (isDesktopApp()) setShow(true);
+    if (!isDesktopApp()) return;
+    setShow(true);
+    // Lets viewport-height layouts subtract the title bar (see globals.css).
+    document.documentElement.classList.add("is-desktop");
   }, []);
 
   if (!show) return null;

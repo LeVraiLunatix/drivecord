@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -17,19 +17,21 @@ import { DesktopTokenBridge } from "@/components/auth/desktop-token-bridge";
 import { WindowChrome } from "@/components/window-chrome";
 import "./globals.css";
 
-const interSans = Inter({
+// Self-hosted (vendored in src/app/fonts/) — no build-time Google Fonts fetch,
+// so the desktop static export works offline too.
+const interSans = localFont({
+  src: "./fonts/inter-latin-variable.woff2",
   variable: "--font-sans",
-  subsets: ["latin"],
   display: "swap",
-  style: "normal",
+  weight: "100 900",
   preload: false,
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
+  src: "./fonts/jetbrains-mono-latin-variable.woff2",
   variable: "--font-mono",
-  subsets: ["latin"],
   display: "swap",
-  style: "normal",
+  weight: "100 800",
   preload: false,
 });
 
