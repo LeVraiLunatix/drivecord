@@ -4,13 +4,14 @@ import { nanoid } from "nanoid";
 import { mutate } from "swr";
 import type { FolderEntry, FileEntry, ParentId } from "./schema";
 import { ROOT_PARENT } from "./schema";
+import { authFetch } from "@/lib/api-base";
 
 function invalidateDrive(driveId: string) {
   mutate((key) => typeof key === "string" && key.includes(`/api/drive/${driveId}`));
 }
 
 async function apiFetch(url: string, opts?: RequestInit): Promise<Response> {
-  const res = await fetch(url, { ...opts, headers: { "Content-Type": "application/json", ...opts?.headers } });
+  const res = await authFetch(url, { ...opts, headers: { "Content-Type": "application/json", ...opts?.headers } });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error ?? "Erreur API");
@@ -91,13 +92,13 @@ export async function hardDeleteFolder(driveId: string, id: string): Promise<voi
 }
 
 export async function getFolder(driveId: string, id: string): Promise<FolderEntry | undefined> {
-  const res = await fetch(`/api/drive/${driveId}/folders/${id}`);
+  const res = await authFetch(`/api/drive/${driveId}/folders/${id}`);
   if (!res.ok) return undefined;
   return res.json();
 }
 
 export async function listAllFolders(driveId: string): Promise<FolderEntry[]> {
-  const res = await fetch(`/api/drive/${driveId}/folders`);
+  const res = await authFetch(`/api/drive/${driveId}/folders`);
   if (!res.ok) return [];
   const data = await res.json();
   return data.folders;

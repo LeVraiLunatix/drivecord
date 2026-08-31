@@ -5,6 +5,7 @@ import { mutate } from "swr";
 import type { FileManifest } from "@/lib/discord";
 import type { FileEntry, ParentId } from "./schema";
 import { ROOT_PARENT } from "./schema";
+import { authFetch } from "@/lib/api-base";
 
 /** Invalidate all SWR caches for a drive. */
 function invalidateDrive(driveId: string) {
@@ -17,7 +18,7 @@ export function refreshDrive(driveId: string) {
 }
 
 async function apiFetch(url: string, opts?: RequestInit): Promise<Response> {
-  const res = await fetch(url, { ...opts, headers: { "Content-Type": "application/json", ...opts?.headers } });
+  const res = await authFetch(url, { ...opts, headers: { "Content-Type": "application/json", ...opts?.headers } });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error ?? "Erreur API");
@@ -58,7 +59,7 @@ export async function recordUploadedFile(args: {
 }
 
 export async function getFile(driveId: string, id: string): Promise<FileEntry | undefined> {
-  const res = await fetch(`/api/drive/${driveId}/files/${id}`);
+  const res = await authFetch(`/api/drive/${driveId}/files/${id}`);
   if (!res.ok) return undefined;
   return res.json();
 }

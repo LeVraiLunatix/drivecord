@@ -18,8 +18,7 @@ import {
   type FolderEntry,
   type ParentId,
 } from "./schema";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { apiFetcher as fetcher } from "@/lib/api-base";
 
 // ── Active drive (stays in IndexedDB / localStorage) ──────────────────────────
 

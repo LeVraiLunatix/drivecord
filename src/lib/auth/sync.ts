@@ -13,6 +13,7 @@ import { db } from "@/lib/storage/db";
 import { getActiveDriveId, setActiveDriveId, clearActiveDriveId } from "@/lib/storage/drives";
 import type { Drive } from "@/lib/storage/schema";
 import { generateDriveKeyB64, importDriveKey } from "@/lib/crypto/drive-crypto";
+import { authFetch } from "@/lib/api-base";
 
 type ServerWebhook = {
   driveId: string;
@@ -31,7 +32,7 @@ type ServerWebhook = {
  * Returns the number of webhooks synced.
  */
 export async function syncWebhooksFromServer(): Promise<number> {
-  const res = await fetch("/api/webhooks");
+  const res = await authFetch("/api/webhooks");
   if (!res.ok) return 0;
 
   const webhooks: ServerWebhook[] = await res.json();
@@ -96,7 +97,7 @@ export async function pushWebhookToServer(drive: Drive): Promise<void> {
   // the server confirms storage — so a key never exists unless it's safely
   // backed up on the account (losing the only copy = files unreadable forever).
   const encKey = drive.encKey ?? generateDriveKeyB64();
-  const res = await fetch("/api/webhooks", {
+  const res = await authFetch("/api/webhooks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -133,5 +134,5 @@ export async function ensureDriveKey(drive: Drive): Promise<CryptoKey | null> {
  * Remove a drive from the server after it's removed locally.
  */
 export async function removeWebhookFromServer(driveId: string): Promise<void> {
-  await fetch(`/api/webhooks/${driveId}`, { method: "DELETE" });
+  await authFetch(`/api/webhooks/${driveId}`, { method: "DELETE" });
 }
