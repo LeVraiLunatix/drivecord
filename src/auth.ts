@@ -72,6 +72,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
       }
+
+      // One-off: pull name/avatar from the DB into stale existing tokens
+      // (they're only set at sign-in, so an avatar change never propagated to
+      // long-lived sessions). Runs once per token, then the flag skips it.
+      // Bump `PIC_REV` to force a re-sync for everyone.
+      const PIC_REV = 1;
+      if (uid && token.picRev !== PIC_REV) {
+        const u = await prisma.user
+          .findUnique({ where: { id: uid }, select: { image: true, name: true } })
+          .catch(() => null);
+        if (u) {
+          token.picture = u.image;
+          token.name = u.name;
+        }
+        token.picRev = PIC_REV;
+      }
       // Legacy tokens minted before step-up existed are treated as full.
       if (token.level === undefined) token.level = "full";
       return token;

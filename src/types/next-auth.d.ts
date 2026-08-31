@@ -9,6 +9,8 @@ declare module "next-auth/jwt" {
     id?: string;
     level?: AuthLevel;
     pendingReason?: PendingReason;
+    /** Revision of the one-off name/avatar backfill from DB (see auth.ts). */
+    picRev?: number;
   }
 }
 
