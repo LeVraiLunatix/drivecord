@@ -24,8 +24,9 @@ export function DesktopTokenBridge() {
     let cancelled = false;
     (async () => {
       try {
-        const existing = await tauriInvoke<string | null>("get_token").catch(() => null);
-        if (existing || cancelled) return;
+        // Always mint a FRESH token — this only runs on the remote page, which
+        // is reached at boot-without-token or right after a (re)login, so the
+        // session here is the freshest source (name/avatar included).
         const res = await fetch(apiUrl("/api/auth/desktop-token"), { method: "POST" });
         if (!res.ok || cancelled) return;
         const { token } = (await res.json()) as { token: string };

@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server";
 import { encode } from "next-auth/jwt";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
@@ -24,13 +25,21 @@ export async function POST() {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
+  // DB is authoritative for name/avatar (the session JWT can lag behind).
+  const dbUser = await prisma.user
+    .findUnique({
+      where: { id: session.user.id },
+      select: { name: true, image: true },
+    })
+    .catch(() => null);
+
   const token = await encode({
     token: {
       sub: session.user.id,
       id: session.user.id,
-      name: session.user.name,
+      name: dbUser?.name ?? session.user.name,
       email: session.user.email,
-      picture: session.user.image,
+      picture: dbUser?.image ?? session.user.image,
       level: "full",
     },
     secret: process.env.AUTH_SECRET!,

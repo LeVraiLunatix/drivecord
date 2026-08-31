@@ -26,15 +26,35 @@ function DesktopSessionProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     let alive = true;
-    authFetch("/api/auth/session")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: unknown) => {
-        if (!alive) return;
+    (async () => {
+      try {
+        const res = await authFetch("/api/auth/session");
+        const data: unknown = res.ok ? await res.json() : null;
         const ok =
           data && typeof data === "object" && Object.keys(data).length > 0;
-        setSession(ok ? (data as Session) : null);
-      })
-      .catch(() => alive && setSession(null));
+        if (!ok) {
+          if (alive) setSession(null);
+          return;
+        }
+        const s = data as Session;
+        // The bearer JWT can carry a stale name/avatar — the DB is authoritative.
+        try {
+          const acc = await authFetch("/api/account");
+          if (acc.ok) {
+            const a = (await acc.json()) as { name?: string; image?: string };
+            if (s.user) {
+              if (a.image) s.user.image = a.image;
+              if (a.name) s.user.name = a.name;
+            }
+          }
+        } catch {
+          /* keep the session as-is */
+        }
+        if (alive) setSession(s);
+      } catch {
+        if (alive) setSession(null);
+      }
+    })();
     return () => {
       alive = false;
     };
