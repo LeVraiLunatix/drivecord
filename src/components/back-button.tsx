@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isDesktopApp } from "@/lib/use-platform";
 
 /**
  * Reusable back button. Navigates straight to `fallback` (the logical parent
@@ -21,10 +22,19 @@ export function BackButton({
   className?: string;
 }) {
   const router = useRouter();
+  const [hidden, setHidden] = React.useState(false);
+
+  // The desktop shell has its own window chrome + in-app navigation — a "back"
+  // that points at the marketing site makes no sense there.
+  React.useEffect(() => {
+    if (isDesktopApp()) setHidden(true);
+  }, []);
 
   const onClick = React.useCallback(() => {
     router.push(fallback);
   }, [router, fallback]);
+
+  if (hidden) return null;
 
   return (
     <Button
