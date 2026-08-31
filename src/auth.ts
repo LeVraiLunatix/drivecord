@@ -31,14 +31,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user?.id) token.id = user.id;
       const uid = (token.id as string | undefined) ?? token.sub;
 
-      // Discord avatars change (and Nitro users have animated `a_…` ones). The
+      // Discord avatars change (Nitro users have animated `a_…` ones). The
       // Prisma adapter only sets `user.image` at first link, so refresh it — and
       // the JWT `picture` — from the fresh profile on every Discord sign-in.
       if (trigger === "signIn" && account?.provider === "discord" && profile) {
-        const p = profile as { id?: string; avatar?: string | null };
-        if (p.id && p.avatar) {
+        const p = profile as {
+          id?: string;
+          avatar?: string | null;
+          image_url?: string;
+        };
+        let image: string | undefined;
+        if (typeof p.avatar === "string" && p.avatar && p.id) {
           const ext = p.avatar.startsWith("a_") ? "gif" : "png";
-          const image = `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.${ext}?size=128`;
+          image = `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.${ext}?size=128`;
+        } else if (typeof p.image_url === "string" && p.image_url) {
+          image = p.image_url;
+        }
+        if (image) {
           token.picture = image;
           if (uid) {
             await prisma.user
