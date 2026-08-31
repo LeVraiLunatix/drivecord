@@ -77,16 +77,13 @@ export function DriveTopbar({
     <div
       className="glass-bar sticky top-0 z-30 shrink-0 border-b border-border/50"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
-      // In the Tauri desktop shell this row doubles as the window drag handle.
-      // Interactive children (buttons, the search input) keep working — Tauri
-      // only starts a drag when the exact mousedown target is the region itself.
-      data-tauri-drag-region
+      // In the Tauri desktop shell the whole topbar is the window drag handle.
+      // `"deep"` = a mousedown anywhere in the subtree drags — except on
+      // clickable elements (buttons, the search input), which Tauri excludes.
+      data-tauri-drag-region="deep"
     >
       {/* ── Main row ──────────────────────────────────────────────────────── */}
-      <div
-        data-tauri-drag-region
-        className="drive-topbar-row flex items-center gap-1.5 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3"
-      >
+      <div className="drive-topbar-row flex items-center gap-1.5 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">
 
         {/* Hamburger — mobile web only (hidden in the native app, which uses the
             bottom tab bar + the native drive menu below). */}
