@@ -51,3 +51,6 @@ dc-rel/
 /.desktop-build/
 /out/
 next.config.ts.bak
+
+# Claude Code local tooling
+.claude/
