@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { formatBytes } from "@/lib/utils/format";
 import { useActiveDrive } from "@/lib/storage";
+import { apiFetcher as fetcher } from "@/lib/api-base";
 import type { FileKind } from "@/lib/utils/file-icons";
 
 type Stats = {
@@ -48,7 +49,6 @@ function fmtDate(ts: number | null): string {
   return ts ? new Date(ts).toLocaleDateString("fr", { day: "numeric", month: "short", year: "numeric" }) : "—";
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const KIND_META: Record<string, { label: string; color: string; Icon: typeof File }> = {
   image: { label: "Images", color: "#34d399", Icon: ImageIcon },

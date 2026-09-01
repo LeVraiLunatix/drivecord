@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { formatBytes } from "@/lib/utils/format";
+import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 
 type Share = {
   token: string;
@@ -35,7 +36,6 @@ type Share = {
   createdAt: number;
 };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 /** "N'expire jamais" / "Expire dans X jour(s)" / "Expire bientôt". */
 function expiryLabel(expiresAt: number | null): string {
@@ -85,7 +85,7 @@ export default function SharesPage() {
 
   const revoke = async (token: string) => {
     try {
-      await fetch(`/api/account/shares/${token}`, { method: "DELETE" });
+      await authFetch(`/api/account/shares/${token}`, { method: "DELETE" });
       toast.success("Lien révoqué");
       mutate();
     } catch { toast.error("Échec"); }
