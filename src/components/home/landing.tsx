@@ -13,6 +13,7 @@ import {
   ArrowRight,
   ExternalLink,
   ShieldCheck,
+  MonitorDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -169,11 +170,19 @@ export function Landing() {
               Aucune carte bancaire · Open source
             </motion.p>
 
-            {/* Install app CTA */}
-            <motion.div variants={v ?? item}>
+            {/* App download CTAs */}
+            <motion.div variants={v ?? item} className="flex flex-col gap-2 sm:flex-row">
+              <Link
+                href="/download/windows"
+                className="group flex items-center justify-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm backdrop-blur-sm transition-colors hover:border-primary/40 hover:bg-card"
+              >
+                <MonitorDown className="size-4 text-primary" />
+                <span className="font-medium">Télécharger pour Windows</span>
+                <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              </Link>
               <Link
                 href="/install"
-                className="group flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm backdrop-blur-sm transition-colors hover:border-primary/40 hover:bg-card"
+                className="group flex items-center justify-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-sm backdrop-blur-sm transition-colors hover:border-primary/40 hover:bg-card"
               >
                 <Smartphone className="size-4 text-primary" />
                 <span className="font-medium">Installer l&apos;app iPhone</span>

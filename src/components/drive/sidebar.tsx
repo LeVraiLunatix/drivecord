@@ -9,6 +9,7 @@ import {
   CloudUpload,
   HardDrive,
   Images,
+  MonitorDown,
   Link2,
   Lock,
   LogOut,
@@ -254,10 +255,16 @@ function SidebarContent({
             onClick={() => { router.push("/backup"); close(); }}
           />
           <NavButton
-            label="Installer l'app"
+            label="App iPhone"
             icon={Smartphone}
             active={false}
             onClick={() => { router.push("/install"); close(); }}
+          />
+          <NavButton
+            label="App Windows"
+            icon={MonitorDown}
+            active={false}
+            onClick={() => { window.location.href = "/download/windows"; }}
           />
         </>
       )}
