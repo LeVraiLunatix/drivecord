@@ -7,13 +7,16 @@ import {
   ChevronRight,
   Download,
   FileX,
+  FolderSymlink,
   Music,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
 import { kindOf } from "@/lib/utils/file-icons";
+import { isDesktopApp, tauriInvoke } from "@/lib/use-platform";
 import { useFile } from "@/lib/storage";
 import { useDiscordClient } from "@/lib/discord/context";
 import { RichTextPreview } from "@/components/drive/rich-text-preview";
@@ -33,6 +36,14 @@ type LoadState = "idle" | "loading" | "done" | "error";
 
 const TEXT_KINDS = new Set(["code", "text"]);
 const PREVIEWABLE_KINDS = new Set(["image", "video", "audio", "pdf", "code", "text"]);
+
+/**
+ * In the desktop shell, videos above this size can't go through the in-modal
+ * player — it downloads + decrypts the whole file into WebView memory, which
+ * blows up around a few hundred MB. Offer to open them from the synced folder
+ * instead (Explorer streams them natively).
+ */
+const DESKTOP_HEAVY_VIDEO_BYTES = 60 * 1024 * 1024;
 
 /** HEIC/HEIF extensions that need client-side conversion. */
 const HEIC_EXTS = new Set(["heic", "heif"]);
@@ -147,6 +158,27 @@ export function PreviewModal({
   const [loadState, setLoadState] = React.useState<LoadState>("idle");
   const [errorMsg, setErrorMsg] = React.useState<string>("");
   const [convertingHeic, setConvertingHeic] = React.useState(false);
+  const [openingInFolder, setOpeningInFolder] = React.useState(false);
+
+  /** Heavy video in the desktop shell → route to the synced folder instead. */
+  const heavyDesktopVideo =
+    !!file &&
+    isDesktopApp() &&
+    kindOf(file.filename, file.mimeType) === "video" &&
+    file.size > DESKTOP_HEAVY_VIDEO_BYTES;
+
+  const openInSyncFolder = async () => {
+    if (!driveId || !fileId) return;
+    setOpeningInFolder(true);
+    try {
+      await tauriInvoke("sync_open_file", { driveId, fileId });
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOpeningInFolder(false);
+    }
+  };
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const currentIdx = fileId ? siblings.indexOf(fileId) : -1;
@@ -202,6 +234,14 @@ export function PreviewModal({
     setText(null);
     setErrorMsg("");
     setConvertingHeic(false);
+
+    // Skip the in-memory download for heavy desktop videos — the dedicated
+    // panel handles them.
+    if (heavyDesktopVideo) {
+      setLoadState("done");
+      return;
+    }
+
     setLoadState("loading");
 
     let cancelled = false;
@@ -375,8 +415,28 @@ export function PreviewModal({
           />
         )}
 
+        {/* Heavy video in the desktop shell → open from the synced folder */}
+        {heavyDesktopVideo && loadState !== "error" && file && (
+          <div className="flex max-w-sm flex-col items-center gap-4 text-center text-white/70">
+            <FolderSymlink className="size-12 text-white/40" />
+            <p className="text-sm">
+              Vidéo volumineuse ({formatBytes(file.size)}). Le lecteur intégré ne
+              peut pas la charger — ouvre-la depuis ton dossier synchronisé,
+              l&apos;explorateur la lit en streaming sans tout mettre en mémoire.
+            </p>
+            <Button
+              onClick={openInSyncFolder}
+              disabled={openingInFolder}
+              className="gap-2"
+            >
+              <FolderSymlink className="size-4" />
+              {openingInFolder ? "Ouverture…" : "Ouvrir dans le dossier synchronisé"}
+            </Button>
+          </div>
+        )}
+
         {/* Video — tries original, auto-retries as mp4 for .mov if needed */}
-        {loadState === "done" && kind === "video" && blobUrl && (
+        {!heavyDesktopVideo && loadState === "done" && kind === "video" && blobUrl && (
           <VideoPreview
             blobUrl={blobUrl}
             mp4FallbackUrl={mp4FallbackUrl}
