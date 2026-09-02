@@ -11,10 +11,13 @@ import { isDesktopApp, tauriInvoke } from "@/lib/use-platform";
  */
 export function WindowChrome() {
   const [show, setShow] = React.useState(false);
+  // The "Import Drivecord" window is fixed-size → no maximise button there.
+  const [compact, setCompact] = React.useState(false);
 
   React.useEffect(() => {
     if (!isDesktopApp()) return;
     setShow(true);
+    setCompact(window.location.pathname.startsWith("/desktop-uploads"));
     document.documentElement.classList.add("is-desktop");
   }, []);
 
@@ -37,7 +40,7 @@ export function WindowChrome() {
   return (
     <div className="group/wc fixed right-0 top-0 z-[60] flex h-[52px] select-none items-center gap-[9px] pr-4">
       {dot("#febc2e", "Réduire", "win_minimize", "−")}
-      {dot("#28c840", "Agrandir", "win_toggle_maximize", "+")}
+      {!compact && dot("#28c840", "Agrandir", "win_toggle_maximize", "+")}
       {dot("#ff5f57", "Fermer", "win_close", "×")}
     </div>
   );

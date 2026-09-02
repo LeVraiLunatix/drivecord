@@ -86,7 +86,7 @@ export default function DesktopUploadsPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-3 [scrollbar-color:rgba(255,255,255,0.14)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10 hover:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
         {items.length === 0 ? (
           <p className="mt-10 text-center text-sm text-white/35">Aucun import en cours.</p>
         ) : (
