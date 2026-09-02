@@ -30,6 +30,7 @@ const KEEP_DIRS = new Set([
   "login",
   "register",
   "desktop-sync",
+  "desktop-uploads",
   "shares",
   "stats",
   "fonts",

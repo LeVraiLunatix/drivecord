@@ -14,6 +14,9 @@ export function WindowChrome() {
 
   React.useEffect(() => {
     if (!isDesktopApp()) return;
+    // The standalone "Import Drivecord" window keeps its native title bar —
+    // no traffic lights there (they'd drive the main window anyway).
+    if (window.location.pathname.startsWith("/desktop-uploads")) return;
     setShow(true);
     document.documentElement.classList.add("is-desktop");
   }, []);
