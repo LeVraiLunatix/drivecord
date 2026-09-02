@@ -15,6 +15,7 @@ import { AnnouncementPopup } from "@/components/announcement-popup";
 import { NativePushRegister } from "@/components/native-push-register";
 import { DesktopTokenBridge } from "@/components/auth/desktop-token-bridge";
 import { WindowChrome } from "@/components/window-chrome";
+import { CloseConfirm } from "@/components/close-confirm";
 import "./globals.css";
 
 // Self-hosted (vendored in src/app/fonts/) — no build-time Google Fonts fetch,
@@ -184,6 +185,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <WindowChrome />
+        <CloseConfirm />
         <NativeDeepLink />
         <NativeClass />
         <NativeBackdrop />
