@@ -71,7 +71,10 @@ export default function DesktopUploadsPage() {
 
   return (
     <div className="flex h-[100dvh] w-full flex-col bg-[#0b0b0f] text-white">
-      <header className="flex shrink-0 items-center gap-2.5 border-b border-white/10 px-4 py-3">
+      <header
+        data-tauri-drag-region="deep"
+        className="flex shrink-0 items-center gap-2.5 border-b border-white/10 py-3 pl-4 pr-[5rem]"
+      >
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500">
           <FileUp className="size-4" />
         </div>
