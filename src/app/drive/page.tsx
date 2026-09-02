@@ -172,12 +172,23 @@ function DriveContent() {
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+  // Desktop tray "Ouvrir un drive" navigates here with ?open=<driveId>.
+  React.useEffect(() => {
+    if (!mounted || allDrives === undefined) return;
+    const open = searchParams.get("open");
+    if (open && allDrives.some((d) => d.id === open)) {
+      if (open !== activeDriveId) selectDrive(open);
+      router.replace("/drive");
+    }
+  }, [mounted, allDrives, searchParams, activeDriveId, selectDrive, router]);
+
   // Decide what a driveless page does — only once the sync for the current
   // account has settled. A stale activeDriveId (e.g. a drive from a previous
   // account that no longer exists) counts as "no selection", so switching
   // accounts never leaves the page blank.
   React.useEffect(() => {
     if (!mounted || !synced || allDrives === undefined) return;
+    if (searchParams.get("open")) return; // handled by the effect above
     const validSelection =
       activeDriveId !== null && allDrives.some((d) => d.id === activeDriveId);
     if (validSelection) return;
