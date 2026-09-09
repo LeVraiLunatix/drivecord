@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
         // permanent (307) exprès : si l'invitation change un jour, il suffit
         // de modifier l'URL ci-dessous — aucun cache navigateur à purger.
         source: "/discord",
-        destination: "https://discord.gg/VjgHeN45Jb",
+        destination: "https://discord.gg/drivecord",
         permanent: false,
       },
       {
