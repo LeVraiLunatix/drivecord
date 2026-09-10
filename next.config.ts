@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
+        // Lien vanity vers le dépôt GitHub : on communique drivecord.app/github
+        // et il redirige vers le dépôt réel. Non permanent (307) exprès pour
+        // pouvoir changer d'organisation ou de nom de dépôt sans purge cache.
+        source: "/github",
+        destination: "https://github.com/LeVraiLunatix/drivecord",
+        permanent: false,
+      },
+      {
         // Lien vanity vers la page Patreon : on communique drivecord.app/patreon
         // et il redirige vers la vraie page. Non permanent (307) pour pouvoir
         // changer le slug sans purge cache.
