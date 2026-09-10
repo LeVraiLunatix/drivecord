@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
         // permanent (307) exprès : si l'invitation change un jour, il suffit
         // de modifier l'URL ci-dessous — aucun cache navigateur à purger.
         source: "/discord",
-        destination: "https://discord.gg/VjgHeN45Jb",
+        destination: "https://discord.gg/drivecord",
         permanent: false,
       },
       {
@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
         // permanent (307) exprès pour pouvoir changer l'URL sans purge cache.
         source: "/drivebot",
         destination: "https://drivebot-dashboard.vercel.app/",
+        permanent: false,
+      },
+      {
+        // Lien vanity vers le dépôt GitHub : on communique drivecord.app/github
+        // et il redirige vers le dépôt réel. Non permanent (307) exprès pour
+        // pouvoir changer d'organisation ou de nom de dépôt sans purge cache.
+        source: "/github",
+        destination: "https://github.com/LeVraiLunatix/drivecord",
         permanent: false,
       },
       {
