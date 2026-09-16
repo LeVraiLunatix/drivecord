@@ -96,8 +96,10 @@ export default function DesktopSyncPage() {
         toast.success("Dossier choisi.");
         refresh();
       }
-    } catch {
-      toast.error("Impossible de choisir le dossier.");
+    } catch (e) {
+      toast.error(
+        `Impossible de choisir le dossier : ${e instanceof Error ? e.message : String(e)}`,
+      );
     } finally {
       setBusy(false);
     }
