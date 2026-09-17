@@ -47,3 +47,16 @@ export function linkPatreon(callbackUrl = "/settings") {
   }
   signIn("patreon", { callbackUrl });
 }
+
+/**
+ * Lier un compte Discord à la session COURANTE (ex : pour la configuration
+ * automatique de drive). Même logique que `linkPatreon` : pas de déconnexion
+ * préalable, on veut rattacher Discord au compte déjà connecté.
+ */
+export function linkDiscord(callbackUrl = "/setup") {
+  if (isNativeApp()) {
+    window.open(`${window.location.origin}${callbackUrl}`, "_system");
+    return;
+  }
+  signIn("discord", { callbackUrl });
+}

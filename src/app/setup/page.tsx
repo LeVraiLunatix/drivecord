@@ -2,17 +2,21 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import {
   CheckCircle2,
   ChevronLeft,
   CloudUpload,
   ExternalLink,
   Loader2,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -25,6 +29,14 @@ import { pushWebhookToServer } from "@/lib/auth/sync";
 import { BackButton } from "@/components/back-button";
 import { useSession } from "next-auth/react";
 import { fullSignOut } from "@/lib/auth/logout";
+import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
+import { linkDiscord } from "@/lib/auth/oauth";
+
+type AutoSetupState = {
+  available: boolean;
+  discordLinked: boolean;
+  alreadyConfigured: boolean;
+};
 
 export default function SetupPage() {
   const router = useRouter();
@@ -32,21 +44,49 @@ export default function SetupPage() {
   const { status } = useSession();
   const [url, setUrl] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const [autoBusy, setAutoBusy] = React.useState(false);
+
+  const { data: autoState } = useSWR<AutoSetupState>(
+    status === "authenticated" ? "/api/webhooks/auto-setup" : null,
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+
+  // Shared by both the manual form and "configuration automatique" — takes a
+  // webhook URL (however it was obtained) through the exact same local
+  // validation + server persistence pipeline.
+  const finishSetup = async (webhookUrl: string) => {
+    const drive = await addDriveFromWebhook(webhookUrl);
+    // Awaited (but non-fatal on failure) so the server has the webhook
+    // committed before we navigate — otherwise a concurrent reconciliation
+    // sync can see it as "not on the server yet" and delete it locally.
+    await pushWebhookToServer(drive).catch(() => {});
+    toast.success("Drive prêt !");
+    router.push("/drive");
+  };
 
   const submit = async () => {
     setBusy(true);
     try {
-      const drive = await addDriveFromWebhook(url);
-      // Awaited (but non-fatal on failure) so the server has the webhook
-      // committed before we navigate — otherwise a concurrent reconciliation
-      // sync can see it as "not on the server yet" and delete it locally.
-      await pushWebhookToServer(drive).catch(() => {});
-      toast.success("Drive prêt !");
-      router.push("/drive");
+      await finishSetup(url);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const autoSetup = async () => {
+    setAutoBusy(true);
+    try {
+      const res = await authFetch("/api/webhooks/auto-setup", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Échec de la configuration automatique.");
+      await finishSetup(data.webhookUrl as string);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setAutoBusy(false);
     }
   };
 
@@ -83,14 +123,68 @@ export default function SetupPage() {
           Connecte un webhook Discord
         </h1>
         <p className="text-muted-foreground">
-          Drivecord utilise un webhook Discord comme « compte ». Crée-en un dans
-          un salon dédié, colle l&apos;URL ci-dessous, et tu es prêt à uploader.
+          Drivecord utilise un webhook Discord comme « compte ». Laisse Drivecord
+          t&apos;en créer un automatiquement, ou héberge le tien sur ton propre
+          serveur.
         </p>
       </div>
 
+      {autoState?.available && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="size-4 text-primary" />
+              Configuration automatique
+            </CardTitle>
+            <CardDescription>
+              Drivecord crée pour toi un salon privé et un webhook sur son serveur
+              Discord officiel — pas besoin de créer ton propre serveur.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-2 rounded-md border border-border/50 bg-muted/30 p-3 text-sm text-muted-foreground">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+              <p>
+                Tes fichiers sont chiffrés sur ton appareil avant l&apos;envoi. Même
+                sur un salon Discord géré par Drivecord, personne — ni Discord, ni
+                l&apos;équipe Drivecord — ne peut lire leur contenu.
+              </p>
+            </div>
+
+            {autoState.discordLinked ? (
+              <div className="space-y-3">
+                <Badge variant="secondary" className="gap-1.5">
+                  <CheckCircle2 className="size-3.5" /> Compte Discord détecté
+                </Badge>
+                <Button onClick={autoSetup} disabled={autoBusy} className="w-full gap-2">
+                  {autoBusy ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-4" />
+                  )}
+                  {autoState.alreadyConfigured
+                    ? "Récupérer mon drive Discord"
+                    : "Configuration automatique"}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => linkDiscord()}
+                className="w-full gap-2"
+              >
+                Lier mon compte Discord
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">URL du webhook</CardTitle>
+          <CardTitle className="text-base">
+            {autoState?.available ? "Méthode manuelle — mon propre serveur" : "URL du webhook"}
+          </CardTitle>
           <CardDescription>
             Tes drives sont stockés <strong>localement</strong>{" "}dans ton
             navigateur. L&apos;URL n&apos;est jamais envoyée à un serveur tiers.
