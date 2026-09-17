@@ -123,9 +123,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Discord OAuth — works inside the in-app WebView (unlike Google).
     // Reads AUTH_DISCORD_ID / AUTH_DISCORD_SECRET. `prompt: consent` forces
     // the account chooser so users can switch Discord accounts.
+    // `guilds.join` : permet d'ajouter l'utilisateur comme membre du guild de
+    // stockage (voir src/lib/discord/storage-guild.ts) pour lui donner un
+    // accès lecture seule à son propre salon — sans ça il ne peut recevoir
+    // AUCUN overwrite de permission sur ce salon (il faut être membre du
+    // serveur). L'access_token est conservé par l'adapter Prisma (Account.
+    // access_token) pour l'appel `PUT /guilds/{id}/members/{id}`.
     Discord({
       authorization: {
-        params: { scope: "identify email", prompt: "consent" },
+        params: { scope: "identify email guilds.join", prompt: "consent" },
       },
       allowDangerousEmailAccountLinking: true,
     }),

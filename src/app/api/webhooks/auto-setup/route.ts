@@ -1,20 +1,21 @@
 /**
- * "Configuration automatique" — provisionne un salon + webhook Discord privés
- * via le bot Drivebot, pour les utilisateurs qui ne veulent pas créer un
- * webhook manuellement.
+ * "Configuration automatique" — provisionne un ou plusieurs salons + webhooks
+ * Discord privés via le bot Drivebot, pour les utilisateurs qui ne veulent
+ * pas créer de webhook manuellement. Un utilisateur peut en créer plusieurs
+ * (nommés librement) ; tous sont regroupés dans sa propre catégorie sur le
+ * guild de stockage (voir src/lib/discord/storage-guild.ts).
  *
- * GET  → { available, discordLinked, alreadyConfigured } — état pour l'UI,
- *        aucun appel Discord (juste des lectures DB + variables d'env).
- * POST → { webhookUrl, name, channelId, guildId, reused }
- *        L'URL n'est PAS persistée ici : le frontend la fait passer par le
- *        même pipeline qu'une saisie manuelle (addDriveFromWebhook puis
+ * GET  → { available, discordLinked, drives[] } — état pour l'UI, aucun appel
+ *        Discord (juste des lectures DB + variables d'env). `drives` liste
+ *        tous les drives déjà auto-provisionnés pour l'utilisateur (pour les
+ *        réafficher/réutiliser, comme la méthode manuelle).
+ * POST → { webhookUrl, name, channelId, guildId } — crée toujours un NOUVEAU
+ *        salon + webhook (accepte { name } en body pour le nommer). L'URL
+ *        n'est PAS persistée ici : le frontend la fait passer par le même
+ *        pipeline qu'une saisie manuelle (addDriveFromWebhook puis
  *        POST /api/webhooks), qui chiffre et stocke exactement pareil.
- *        Idempotent : si un webhook existe déjà pour cet utilisateur sur le
- *        guild de stockage, on renvoie celui-là au lieu d'en créer un autre
- *        (évite d'accumuler des salons — un serveur Discord est plafonné à
- *        ~500 salons).
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
@@ -32,24 +33,33 @@ export async function GET() {
   }
 
   if (!isAutoSetupAvailable()) {
-    return NextResponse.json({ available: false, discordLinked: false, alreadyConfigured: false });
+    return NextResponse.json({ available: false, discordLinked: false, drives: [] });
   }
 
   const userId = session.user.id;
   const guildId = process.env.DISCORD_STORAGE_GUILD_ID!;
   const [account, existing] = await Promise.all([
     prisma.account.findFirst({ where: { userId, provider: "discord" }, select: { provider: true } }),
-    prisma.webhook.findFirst({ where: { userId, guildId }, select: { id: true } }),
+    prisma.webhook.findMany({
+      where: { userId, guildId },
+      select: { driveId: true, name: true, channelId: true, encryptedUrl: true },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   return NextResponse.json({
     available: true,
     discordLinked: Boolean(account),
-    alreadyConfigured: Boolean(existing),
+    drives: existing.map((w) => ({
+      driveId: w.driveId,
+      name: w.name,
+      channelId: w.channelId,
+      webhookUrl: decryptUrl(w.encryptedUrl),
+    })),
   });
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id || session.level !== "full") {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
@@ -73,7 +83,7 @@ export async function POST() {
 
   const account = await prisma.account.findFirst({
     where: { userId, provider: "discord" },
-    select: { provider: true },
+    select: { providerAccountId: true, access_token: true },
   });
   if (!account) {
     return NextResponse.json(
@@ -82,23 +92,18 @@ export async function POST() {
     );
   }
 
-  // Idempotence : un webhook existe déjà pour cet utilisateur sur le guild de
-  // stockage → on le renvoie tel quel plutôt que de créer un salon en plus.
-  const guildId = process.env.DISCORD_STORAGE_GUILD_ID!;
-  const existing = await prisma.webhook.findFirst({ where: { userId, guildId } });
-  if (existing) {
-    return NextResponse.json({
-      webhookUrl: decryptUrl(existing.encryptedUrl),
-      name: existing.name,
-      channelId: existing.channelId,
-      guildId: existing.guildId,
-      reused: true,
-    });
-  }
+  const body = (await req.json().catch(() => ({}))) as { name?: string };
+  const driveName = typeof body.name === "string" ? body.name.trim().slice(0, 80) : undefined;
 
   try {
-    const result = await provisionStorageWebhook(userId, session.user.name);
-    return NextResponse.json({ ...result, reused: false }, { status: 201 });
+    const result = await provisionStorageWebhook(
+      userId,
+      session.user.name,
+      account.providerAccountId,
+      account.access_token,
+      driveName,
+    );
+    return NextResponse.json(result, { status: 201 });
   } catch (err) {
     if (err instanceof DiscordBotError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

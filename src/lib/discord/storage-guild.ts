@@ -1,7 +1,9 @@
 /**
  * "Configuration automatique" — provisionne un salon + un webhook privés pour
  * un utilisateur sur le serveur Discord de stockage officiel, via le BOT
- * Drivebot (jamais via un token OAuth utilisateur).
+ * Drivebot (jamais via un token OAuth utilisateur). Un utilisateur peut en
+ * provisionner plusieurs (chacun avec son propre nom) ; tous ses salons sont
+ * regroupés dans sa propre catégorie (voir `findOrCreateUserCategory`).
  *
  * Le salon est rendu invisible à `@everyone` sur ce serveur. C'est une mesure
  * D'ORGANISATION (éviter que les salons de stockage des utilisateurs polluent
@@ -9,6 +11,14 @@
  * fichiers est chiffré côté client (AES-256-GCM) AVANT l'upload, donc même
  * quelqu'un qui aurait accès au salon Discord brut (admin du serveur, membre
  * du staff Discord…) ne peut pas lire les fichiers.
+ *
+ * Le propriétaire du drive obtient un accès lecture seule à SON salon (voir
+ * `joinStorageGuild`) : Discord n'autorise un permission overwrite que pour
+ * quelqu'un qui est déjà membre du serveur, donc on l'y ajoute d'abord (via
+ * son access_token OAuth, scope `guilds.join` — voir auth.ts) avant de créer
+ * le salon. Best-effort : si le join échoue (token expiré, scope absent sur
+ * un lien Discord fait avant l'ajout de `guilds.join`…), le salon est quand
+ * même créé, juste sans overwrite propriétaire.
  *
  * Variables d'environnement :
  *   DISCORD_BOT_TOKEN         token du bot (déjà utilisé par discord-roles.ts)
@@ -21,20 +31,18 @@
  * c'est le seam à étendre le jour où il faut répartir sur plusieurs guilds.
  *
  * Permissions bot requises sur DISCORD_STORAGE_GUILD_ID : Gérer les salons
- * (MANAGE_CHANNELS) et Gérer les webhooks (MANAGE_WEBHOOKS).
+ * (MANAGE_CHANNELS), Gérer les webhooks (MANAGE_WEBHOOKS) et Gérer les rôles
+ * (MANAGE_ROLES — requis par Discord pour accorder une permission de salon à
+ * un membre autre que le bot lui-même).
  */
 import { DISCORD_API_BASE } from "./constants";
-
-// Renommée manuellement par l'admin sur le serveur de stockage — garder cette
-// constante synchronisée avec le nom réel de la catégorie, sinon un nouveau
-// "☁ Drivecord Storage" par défaut serait recréé à côté.
-const CATEGORY_NAME = "☁・DRIVECORD STORAGE";
 
 // Discord permission bits (voir https://discord.com/developers/docs/topics/permissions).
 // BigInt(...) plutôt que des littéraux `10n` : la cible TS du projet (ES2017)
 // n'accepte pas la syntaxe des littéraux BigInt.
 const PERM_VIEW_CHANNEL = BigInt(1) << BigInt(10);
 const PERM_MANAGE_CHANNELS = BigInt(1) << BigInt(4);
+const PERM_READ_MESSAGE_HISTORY = BigInt(1) << BigInt(16);
 const PERM_MANAGE_WEBHOOKS = BigInt(1) << BigInt(29);
 
 export class DiscordBotError extends Error {
@@ -105,6 +113,36 @@ async function botFetchOrThrow(path: string, init: RequestInit, context: string)
   return res;
 }
 
+/**
+ * Ajoute (ou confirme la présence de) l'utilisateur comme membre du guild de
+ * stockage, via son propre access_token OAuth (scope `guilds.join`). Requis
+ * pour que le permission overwrite lecture seule de son salon soit accepté
+ * par Discord (un overwrite ne peut viser qu'un membre existant). Best-effort
+ * : ne lève jamais — un token expiré ou un lien Discord fait avant l'ajout du
+ * scope `guilds.join` ne doit pas empêcher la création du salon/webhook.
+ */
+async function joinStorageGuild(
+  guildId: string,
+  discordUserId: string,
+  userAccessToken: string,
+): Promise<boolean> {
+  try {
+    const res = await botFetch(`/guilds/${guildId}/members/${discordUserId}`, {
+      method: "PUT",
+      body: JSON.stringify({ access_token: userAccessToken }),
+    });
+    // 201 (ajouté) ou 204 (déjà membre) : succès.
+    if (res.ok) return true;
+    console.error(
+      `[discord/storage-guild] échec ajout membre ${discordUserId} : HTTP ${res.status}`,
+    );
+    return false;
+  } catch (err) {
+    console.error(`[discord/storage-guild] échec ajout membre ${discordUserId}`, err);
+    return false;
+  }
+}
+
 /** Id Discord du bot lui-même — mis en cache pour toute la durée du process. */
 let botUserIdPromise: Promise<string> | null = null;
 function getBotUserId(): Promise<string> {
@@ -123,42 +161,49 @@ function getBotUserId(): Promise<string> {
 type DiscordChannel = { id: string; type: number; name: string; parent_id?: string | null };
 
 /**
- * Retrouve (ou crée) la catégorie qui regroupe les salons de stockage
- * auto-provisionnés, pour ne pas polluer la racine du serveur.
+ * Retrouve (ou crée) la catégorie d'un utilisateur, qui regroupe TOUS ses
+ * salons de stockage (un utilisateur peut avoir plusieurs drives). Une
+ * catégorie par utilisateur plutôt qu'une catégorie partagée : permet de
+ * créer beaucoup plus de drives au total avant d'atteindre la limite Discord
+ * de ~500 salons/catégories par serveur, et garde chaque utilisateur
+ * facilement repérable pour un admin qui parcourt le serveur.
+ *
+ * Comme pour les salons, la recherche se fait par nom exact — si l'admin
+ * renomme une catégorie utilisateur à la main, une nouvelle sera recréée à
+ * côté au prochain drive de cet utilisateur.
  */
-async function findOrCreateStorageCategory(guildId: string): Promise<string> {
+async function findOrCreateUserCategory(guildId: string, categoryName: string): Promise<string> {
   const res = await botFetchOrThrow(
     `/guilds/${guildId}/channels`,
     { method: "GET" },
     "lister les salons du serveur",
   );
   const channels = (await res.json()) as DiscordChannel[];
-  const existing = channels.find((c) => c.type === 4 && c.name === CATEGORY_NAME);
+  const existing = channels.find((c) => c.type === 4 && c.name === categoryName);
   if (existing) return existing.id;
 
   const created = await botFetchOrThrow(
     `/guilds/${guildId}/channels`,
-    { method: "POST", body: JSON.stringify({ name: CATEGORY_NAME, type: 4 }) },
-    "créer la catégorie de stockage",
+    { method: "POST", body: JSON.stringify({ name: categoryName, type: 4 }) },
+    "créer la catégorie de l'utilisateur",
   );
   const category = (await created.json()) as DiscordChannel;
   return category.id;
 }
 
 /**
- * Crée le salon privé d'un utilisateur : invisible à `@everyone`, visible
- * uniquement par le bot (qui en a besoin pour créer/gérer le webhook).
- *
- * Le propriétaire lui-même n'a PAS d'accès, même en lecture : le guild de
- * stockage n'a aucun membre humain par design (backend invisible), et un
- * permission overwrite ne peut viser que quelqu'un qui est déjà membre du
- * serveur — le propriétaire ne l'est pas (compte lié via OAuth "identify",
- * pas une invitation au serveur).
+ * Crée le salon privé d'un utilisateur : invisible à `@everyone`, en lecture
+ * seule pour son propriétaire (voir/retrouver son salon, jamais
+ * envoyer/gérer — évite qu'il casse le stockage en supprimant un message à
+ * la main) si `ownerDiscordId` est fourni ET que le join du guild (voir
+ * `joinStorageGuild`) a réussi, et pleinement géré par le bot (qui en a
+ * besoin pour créer/gérer le webhook).
  */
 async function createUserChannel(
   guildId: string,
   categoryId: string,
   channelName: string,
+  ownerDiscordId?: string,
 ): Promise<string> {
   const botUserId = await getBotUserId();
 
@@ -175,7 +220,7 @@ async function createUserChannel(
         // @everyone (id = guildId) : caché. Le bot : explicitement autorisé —
         // sans cet overwrite le bot ne pourrait pas voir son propre salon
         // pour y créer le webhook, puisque le deny @everyone s'appliquerait
-        // aussi à lui.
+        // aussi à lui. Le propriétaire (si fourni) : lecture seule.
         permission_overwrites: [
           { id: guildId, type: 0, deny: PERM_VIEW_CHANNEL.toString() },
           {
@@ -183,6 +228,15 @@ async function createUserChannel(
             type: 1,
             allow: (PERM_VIEW_CHANNEL | PERM_MANAGE_CHANNELS | PERM_MANAGE_WEBHOOKS).toString(),
           },
+          ...(ownerDiscordId
+            ? [
+                {
+                  id: ownerDiscordId,
+                  type: 1,
+                  allow: (PERM_VIEW_CHANNEL | PERM_READ_MESSAGE_HISTORY).toString(),
+                },
+              ]
+            : []),
         ],
       }),
     },
@@ -211,39 +265,61 @@ export type ProvisionedWebhook = {
 };
 
 /**
- * Nom de salon Discord valide à partir du pseudo Drivecord : minuscules,
- * alphanumérique + tirets, tronqué. Vide/invalide → id (pas de pseudo
- * exploitable, p.ex. compte jamais renommé) ; pseudo pas garanti unique donc
- * deux salons peuvent en théorie partager le même nom — sans conséquence
- * fonctionnelle, seul l'id stocké en base identifie le salon.
+ * Nom de salon/catégorie Discord valide à partir d'un texte libre (pseudo
+ * Drivecord ou nom de drive choisi par l'utilisateur) : minuscules,
+ * alphanumérique + tirets, tronqué. Vide/invalide → repli sur `fallback`
+ * (typiquement l'id utilisateur). Pas garanti unique (deux salons/catégories
+ * peuvent en théorie partager le même nom) — sans conséquence fonctionnelle,
+ * seul l'id stocké en base identifie le salon.
  */
-function slugifyChannelName(userName: string | null | undefined, userId: string): string {
-  const slug = (userName ?? "")
+function slugify(text: string | null | undefined, fallback: string): string {
+  const slug = (text ?? "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
-  return slug || userId.toLowerCase();
+  return slug || fallback.toLowerCase();
 }
 
 /**
  * Provisionne un salon + un webhook de stockage pour `userId` sur le guild de
- * stockage actif.
+ * stockage actif. `driveName` (choisi par l'utilisateur au setup) nomme le
+ * salon ; à défaut, replie sur le pseudo Drivecord puis sur l'id.
  */
 export async function provisionStorageWebhook(
   userId: string,
   userName?: string | null,
+  ownerDiscordId?: string,
+  ownerAccessToken?: string | null,
+  driveName?: string | null,
 ): Promise<ProvisionedWebhook> {
   const guildId = resolveStorageGuild();
-  const channelName = `drive-${slugifyChannelName(userName, userId)}`;
+  const categoryName = `👤・${slugify(userName, userId)}`;
+  const channelName = `drive-${slugify(driveName ?? userName, userId)}`;
 
-  const categoryId = await findOrCreateStorageCategory(guildId);
-  const channelId = await createUserChannel(guildId, categoryId, channelName);
-  const webhookUrl = await createChannelWebhook(channelId, "Drivecord");
+  const joined =
+    ownerDiscordId && ownerAccessToken
+      ? await joinStorageGuild(guildId, ownerDiscordId, ownerAccessToken)
+      : false;
 
-  return { webhookUrl, name: "Mon drive Discord", channelId, guildId };
+  const categoryId = await findOrCreateUserCategory(guildId, categoryName);
+  const channelId = await createUserChannel(
+    guildId,
+    categoryId,
+    channelName,
+    joined ? ownerDiscordId : undefined,
+  );
+  const webhookName = driveName?.trim() || "Mon drive Discord";
+  const webhookUrl = await createChannelWebhook(channelId, webhookName);
+
+  return {
+    webhookUrl,
+    name: webhookName,
+    channelId,
+    guildId,
+  };
 }
 
 /**
