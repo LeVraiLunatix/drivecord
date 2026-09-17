@@ -10,6 +10,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth/admin";
 import { TIER_LABEL, type PatreonTier } from "@/lib/patreon";
+import { deleteStorageChannel } from "@/lib/discord/storage-guild";
 
 export async function GET() {
   const session = await auth();
@@ -86,7 +87,20 @@ export async function DELETE() {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
+  // Salons auto-provisionnés (sur le guild de stockage) : à nettoyer côté
+  // Discord aussi. Capturé avant la suppression pour avoir les channelId.
+  const storageGuildId = process.env.DISCORD_STORAGE_GUILD_ID;
+  const toCleanup = storageGuildId
+    ? await prisma.webhook.findMany({
+        where: { userId: session.user.id, guildId: storageGuildId },
+        select: { channelId: true },
+      })
+    : [];
+
   // Cascade: accounts, sessions, webhooks → DriveFile / DriveFolder.
   await prisma.user.delete({ where: { id: session.user.id } });
+
+  await Promise.all(toCleanup.map((w) => deleteStorageChannel(w.channelId)));
+
   return new NextResponse(null, { status: 204 });
 }

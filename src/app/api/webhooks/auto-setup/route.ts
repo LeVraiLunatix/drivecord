@@ -97,7 +97,7 @@ export async function POST() {
   }
 
   try {
-    const result = await provisionStorageWebhook(userId);
+    const result = await provisionStorageWebhook(userId, session.user.name);
     return NextResponse.json({ ...result, reused: false }, { status: 201 });
   } catch (err) {
     if (err instanceof DiscordBotError) {

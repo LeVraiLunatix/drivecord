@@ -107,6 +107,17 @@ export async function sendVerificationEmail(
   expiresMinutes = 10,
   secureUrl?: string,
 ): Promise<void> {
+  // Dev convenience: without a real Resend key, print the code instead of
+  // failing the whole auth flow — AUTH_RESEND_KEY is prod-only in most local
+  // setups. Never applies outside development, so prod always requires a
+  // working key.
+  if (process.env.NODE_ENV !== "production" && !process.env.AUTH_RESEND_KEY) {
+    console.log(
+      `[email] Code de vérification (${purpose}) pour ${email} : ${code}`,
+    );
+    return;
+  }
+
   const c = COPY[purpose];
   const { error } = await getResend().emails.send({
     from: FROM,
