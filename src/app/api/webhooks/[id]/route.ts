@@ -48,6 +48,9 @@ export async function DELETE(
 
   const { id: driveId } = await params;
 
+  // Dissociation non destructive par design (voir copie UI dans
+  // settings/page.tsx : "réajouté avec la même URL de webhook") — le salon
+  // Discord n'est PAS supprimé ici, contrairement à la suppression de compte.
   await prisma.webhook.deleteMany({
     where: { userId: session.user.id, driveId },
   });

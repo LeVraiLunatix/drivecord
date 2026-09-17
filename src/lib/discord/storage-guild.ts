@@ -25,7 +25,10 @@
  */
 import { DISCORD_API_BASE } from "./constants";
 
-const CATEGORY_NAME = "☁ Drivecord Storage";
+// Renommée manuellement par l'admin sur le serveur de stockage — garder cette
+// constante synchronisée avec le nom réel de la catégorie, sinon un nouveau
+// "☁ Drivecord Storage" par défaut serait recréé à côté.
+const CATEGORY_NAME = "☁・DRIVECORD STORAGE";
 
 // Discord permission bits (voir https://discord.com/developers/docs/topics/permissions).
 // BigInt(...) plutôt que des littéraux `10n` : la cible TS du projet (ES2017)
@@ -145,6 +148,12 @@ async function findOrCreateStorageCategory(guildId: string): Promise<string> {
 /**
  * Crée le salon privé d'un utilisateur : invisible à `@everyone`, visible
  * uniquement par le bot (qui en a besoin pour créer/gérer le webhook).
+ *
+ * Le propriétaire lui-même n'a PAS d'accès, même en lecture : le guild de
+ * stockage n'a aucun membre humain par design (backend invisible), et un
+ * permission overwrite ne peut viser que quelqu'un qui est déjà membre du
+ * serveur — le propriétaire ne l'est pas (compte lié via OAuth "identify",
+ * pas une invitation au serveur).
  */
 async function createUserChannel(
   guildId: string,
@@ -202,17 +211,56 @@ export type ProvisionedWebhook = {
 };
 
 /**
- * Provisionne un salon + un webhook de stockage pour `userId` sur le guild de
- * stockage actif. Le nom du salon est dérivé de l'id Drivecord (pas du
- * pseudo) pour ne rien exposer de personnel et éviter les collisions.
+ * Nom de salon Discord valide à partir du pseudo Drivecord : minuscules,
+ * alphanumérique + tirets, tronqué. Vide/invalide → id (pas de pseudo
+ * exploitable, p.ex. compte jamais renommé) ; pseudo pas garanti unique donc
+ * deux salons peuvent en théorie partager le même nom — sans conséquence
+ * fonctionnelle, seul l'id stocké en base identifie le salon.
  */
-export async function provisionStorageWebhook(userId: string): Promise<ProvisionedWebhook> {
+function slugifyChannelName(userName: string | null | undefined, userId: string): string {
+  const slug = (userName ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return slug || userId.toLowerCase();
+}
+
+/**
+ * Provisionne un salon + un webhook de stockage pour `userId` sur le guild de
+ * stockage actif.
+ */
+export async function provisionStorageWebhook(
+  userId: string,
+  userName?: string | null,
+): Promise<ProvisionedWebhook> {
   const guildId = resolveStorageGuild();
-  const channelName = `drive-${userId.toLowerCase()}`;
+  const channelName = `drive-${slugifyChannelName(userName, userId)}`;
 
   const categoryId = await findOrCreateStorageCategory(guildId);
   const channelId = await createUserChannel(guildId, categoryId, channelName);
   const webhookUrl = await createChannelWebhook(channelId, "Drivecord");
 
   return { webhookUrl, name: "Mon drive Discord", channelId, guildId };
+}
+
+/**
+ * Supprime le salon de stockage d'un utilisateur (compte ou drive supprimé).
+ * Best-effort : un salon déjà supprimé manuellement ou une permission
+ * manquante ne doit jamais faire échouer la suppression du compte/drive côté
+ * Drivecord.
+ */
+export async function deleteStorageChannel(channelId: string): Promise<void> {
+  try {
+    const res = await botFetch(`/channels/${channelId}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 404) {
+      console.error(
+        `[discord/storage-guild] échec suppression salon ${channelId} : HTTP ${res.status}`,
+      );
+    }
+  } catch (err) {
+    console.error(`[discord/storage-guild] échec suppression salon ${channelId}`, err);
+  }
 }
