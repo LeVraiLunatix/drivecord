@@ -9,8 +9,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { biometryAvailable, runBiometric } from "@/lib/biometric";
-import { deriveVaultKey } from "@/lib/crypto/vault-crypto";
+import {
+  deriveVaultKey,
+  deriveVaultKeyRaw,
+  generateMasterKeyBytes,
+  importMasterKey,
+  randomSaltB64,
+  unwrapMasterKey,
+  wrapMasterKey,
+} from "@/lib/crypto/vault-crypto";
 import { setVaultKey } from "@/lib/crypto/vault-key-store";
+
+/**
+ * Opportunistically upgrade a legacy vault (PIN+salt derived the file key
+ * directly) to the wrapped-master-key scheme, so a future PIN change no
+ * longer breaks decryption of existing files. Best-effort: failures are
+ * swallowed since the vault still works with the legacy key either way.
+ */
+async function migrateLegacyVaultKey(pin: string, masterRaw: Uint8Array): Promise<void> {
+  const salt = randomSaltB64();
+  const kek = await deriveVaultKey(pin, salt);
+  const { wrapped, iv } = await wrapMasterKey(masterRaw, kek);
+  await authFetch("/api/account/vault-pin", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPin: pin, newPin: pin, salt, wrappedKey: wrapped, wrappedKeyIv: iv }),
+  });
+}
 
 
 /**
@@ -58,18 +83,22 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
 
   const createPin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!/^\d{4,12}$/.test(pin)) { toast.error("Le code doit faire 4 à 12 chiffres"); return; }
     if (pin !== confirm) { toast.error("Les codes ne correspondent pas"); return; }
     setBusy(true);
     try {
+      const masterRaw = generateMasterKeyBytes();
+      const salt = randomSaltB64();
+      const kek = await deriveVaultKey(pin, salt);
+      const { wrapped, iv } = await wrapMasterKey(masterRaw, kek);
       const res = await authFetch("/api/account/vault-pin", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPin: pin }),
+        body: JSON.stringify({ newPin: pin, salt, wrappedKey: wrapped, wrappedKeyIv: iv }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Échec");
-      // Derive + hold the encryption key for this session.
-      if (d.salt) setVaultKey(await deriveVaultKey(pin, d.salt));
+      setVaultKey(await importMasterKey(masterRaw));
       toast.success("Coffre-fort créé et chiffré 🔒");
       await mutate();
       onUnlock();
@@ -88,10 +117,20 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
       });
       const d = await res.json();
       if (d.ok) {
-        if (d.salt) setVaultKey(await deriveVaultKey(pin, d.salt));
+        if (d.wrappedKey && d.wrappedKeyIv && d.salt) {
+          const kek = await deriveVaultKey(pin, d.salt);
+          setVaultKey(await unwrapMasterKey(d.wrappedKey, d.wrappedKeyIv, kek));
+        } else if (d.salt) {
+          // Legacy vault created before the wrapped-master-key scheme.
+          const masterRaw = await deriveVaultKeyRaw(pin, d.salt);
+          setVaultKey(await importMasterKey(masterRaw));
+          void migrateLegacyVaultKey(pin, masterRaw);
+        } else {
+          throw new Error("Clé de coffre indisponible.");
+        }
         onUnlock();
       } else { toast.error("Code incorrect"); setPin(""); }
-    } catch { toast.error("Erreur"); }
+    } catch (err) { toast.error((err as Error).message ?? "Erreur"); }
     finally { setBusy(false); }
   };
 

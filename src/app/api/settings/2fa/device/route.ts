@@ -2,30 +2,24 @@
  * POST /api/settings/2fa/device — activer la 2FA par approbation d'appareil.
  *
  * Le 2e facteur sera d'approuver la connexion depuis un autre appareil de
- * confiance (onglet « Approuver »). Nécessite donc d'avoir DÉJÀ au moins un
- * appareil de confiance, sinon on ne pourrait plus se connecter.
- * N'écrase pas les autres méthodes ; codes de récupération générés au 1er facteur.
- *
- * Activation réservée à l'app native (UA « DrivecordNative ») — c'est là que se
- * fait l'approbation.
+ * confiance (onglet « Approuver », accessible sur web comme dans l'app).
+ * Nécessite donc d'avoir DÉJÀ au moins un appareil de confiance, sinon on ne
+ * pourrait plus se connecter — c'est cette condition, vérifiée ci-dessous,
+ * qui protège réellement contre un verrouillage du compte (un simple header
+ * `User-Agent` ne serait qu'une vérification côté client trivialement
+ * falsifiable, pas un vrai contrôle d'accès).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { replaceRecoveryCodes } from "@/lib/auth/recovery-codes";
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id || session.level !== "full") {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  if (!(req.headers.get("user-agent") ?? "").includes("DrivecordNative")) {
-    return NextResponse.json(
-      { error: "Cette méthode s'active depuis l'app Drivecord." },
-      { status: 403 },
-    );
-  }
   const userId = session.user.id;
 
   const [current, recoveryCount, trustedCount] = await Promise.all([

@@ -73,6 +73,17 @@ export async function restoreFolder(driveId: string, id: string): Promise<void> 
   invalidateDrive(driveId);
 }
 
+/**
+ * List every file in a folder's subtree (with chunk refs), without deleting
+ * anything. Used to attempt Discord cleanup BEFORE committing a permanent
+ * delete, so a failed cleanup never orphans Discord attachments.
+ */
+export async function getFolderSubtreeFiles(driveId: string, id: string): Promise<FileEntry[]> {
+  const res = await apiFetch(`/api/drive/${driveId}/folders/${id}?subtree=1`);
+  const data = await res.json();
+  return data.files as FileEntry[];
+}
+
 export async function hardDeleteFolderSubtree(
   driveId: string,
   id: string,

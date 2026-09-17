@@ -159,9 +159,11 @@ export default function AdminPage() {
         </p>
       </motion.header>
 
-      <motion.div variants={v ?? item}>
-        <AnnouncementAdmin />
-      </motion.div>
+      {data && (
+        <motion.div variants={v ?? item}>
+          <AnnouncementAdmin />
+        </motion.div>
+      )}
 
       <motion.h2 variants={v ?? item} className="flex items-center gap-2 pt-2 text-lg font-semibold">
         <UserIcon className="size-5 text-muted-foreground" />

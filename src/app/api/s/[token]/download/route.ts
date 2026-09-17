@@ -67,10 +67,8 @@ export async function POST(
     }),
   );
 
-  await prisma.share.update({
-    where: { token },
-    data: { downloads: { increment: 1 } },
-  }).catch(() => {});
+  const countDownload = () =>
+    prisma.share.update({ where: { token }, data: { downloads: { increment: 1 } } }).catch(() => {});
 
   // Encrypted file → decrypt server-side and serve the plaintext bytes directly.
   // (Vault-locked files can't be served: the server doesn't hold the PIN key.)
@@ -95,6 +93,8 @@ export async function POST(
     }
     const keyB64 = decryptUrl(share.webhook.encKey);
     const plain = decryptFileBuffer(Buffer.concat(parts), keyB64, file.encIv);
+    // Only count the download once the bytes are actually ready to serve.
+    await countDownload();
     return new NextResponse(new Uint8Array(plain), {
       headers: {
         "Content-Type": file.mimeType || "application/octet-stream",
@@ -105,6 +105,7 @@ export async function POST(
   }
 
   // Plaintext file → return a manifest the visitor's browser fetches via /api/proxy.
+  await countDownload();
   return NextResponse.json({
     filename: file.filename,
     size: file.size,

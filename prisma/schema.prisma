@@ -22,8 +22,15 @@ model User {
   password      String?
   /// bcrypt hash of the vault PIN — null until the user sets one
   vaultPin      String?
-  /// base64 PBKDF2 salt used to derive the vault encryption key from the PIN
+  /// base64 PBKDF2 salt used to derive the PIN-based key-encryption-key (KEK)
   vaultSalt     String?
+  /// base64 AES-256-GCM ciphertext of the random vault master key, wrapped
+  /// under the PIN-derived KEK. The master key (not the PIN-derived KEK)
+  /// actually encrypts vault files, so changing the PIN only re-wraps this
+  /// blob — it never touches already-encrypted file content.
+  vaultKeyWrapped String?
+  /// base64 IV used for the `vaultKeyWrapped` AES-GCM wrapping
+  vaultKeyIv      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -184,8 +191,11 @@ model DriveFile {
   driveId   String
   parentId  String    @default("")
   filename  String
-  /// Total byte size (sum of chunks). Int covers up to ~2 GB.
-  size      Int
+  /// Total byte size (sum of chunks). BigInt in the DB (chunking targets
+  /// unlimited file size; Int would overflow past ~2 GiB) — exposed as a
+  /// plain JS `number` everywhere else via the Prisma client extension in
+  /// lib/prisma.ts (safe: max safe integer is ~9 PB, far past any real file).
+  size      BigInt
   mimeType  String    @default("")
   chunkSize Int
   /// ChunkRef[] — ordered list of Discord message references.

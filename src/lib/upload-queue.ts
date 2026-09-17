@@ -2,10 +2,11 @@
 
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type {
-  DiscordClient,
-  FileManifest,
-  UploadProgress,
+import {
+  DiscordApiError,
+  type DiscordClient,
+  type FileManifest,
+  type UploadProgress,
 } from "@/lib/discord";
 import { recordUploadedFile } from "@/lib/storage";
 import type { ParentId } from "@/lib/storage";
@@ -44,8 +45,12 @@ export type QueueItem = {
 };
 
 type InternalQueueItem = QueueItem & {
-  /** Not part of the public type — kept here to actually run the upload. */
-  _file: File;
+  /** Not part of the public type — kept here to actually run the upload.
+   *  Cleared once the item reaches a terminal status (see `_setItem`) so a
+   *  long session backing up many/large files doesn't keep every uploaded
+   *  File/Blob alive in memory just because the user hasn't dismissed the
+   *  queue entry yet. */
+  _file?: File;
   _abort: AbortController;
   /** When set, the file bytes are AES-GCM encrypted with this key before upload. */
   _encryptKey?: CryptoKey;
@@ -88,6 +93,15 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
     const cur = map.get(id);
     if (!cur) return;
     const next = { ...cur, ...patch } as InternalQueueItem;
+    // Drop the (potentially large) File reference once the upload attempt is
+    // over — nothing needs it anymore, but it would otherwise sit in the map
+    // for as long as the item stays in history (until remove/clearFinished).
+    if (
+      next._file &&
+      (next.status === "done" || next.status === "error" || next.status === "cancelled")
+    ) {
+      next._file = undefined;
+    }
     map.set(id, next);
     set({
       items: Array.from(map.values()).map(stripInternal),
@@ -127,8 +141,8 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
           const next = Array.from(map.values()).find(
             (i) => i.status === "pending",
           );
-          if (!next) break;
-          await runOne(next, client, get()._setItem, onUploaded);
+          if (!next || !next._file) break;
+          await runOne(next as InternalQueueItem & { _file: File }, client, get()._setItem, onUploaded);
         }
       } finally {
         set({ _pumping: false });
@@ -176,12 +190,16 @@ function stripInternal(item: InternalQueueItem): QueueItem {
 }
 
 async function runOne(
-  item: InternalQueueItem,
+  item: InternalQueueItem & { _file: File },
   client: DiscordClient,
   setItem: UploadQueueState["_setItem"],
   onUploaded?: (item: QueueItem, manifest: FileManifest) => void,
 ): Promise<void> {
   setItem(item.id, { status: "uploading", startedAt: Date.now() });
+  // Tracks chunks that made it to Discord so we can clean them up if a later
+  // step (metadata persistence) fails — otherwise they're orphaned
+  // attachments with no metadata anywhere referencing them.
+  let uploadedManifest: FileManifest | undefined;
   try {
     // E2EE: encrypt the bytes before upload, preserving the original name/type
     // in the manifest so display + decryption work transparently.
@@ -197,6 +215,7 @@ async function runOne(
       signal: item._abort.signal,
       onProgress: (p) => setItem(item.id, { progress: p }),
     });
+    uploadedManifest = manifest;
     const fileEntryId = await recordUploadedFile({
       driveId: item.driveId,
       parentId: item.parentId,
@@ -211,6 +230,15 @@ async function runOne(
     });
     onUploaded?.(stripInternal({ ...item, fileEntryId, status: "done" } as InternalQueueItem), manifest);
   } catch (err) {
+    // Best-effort: delete whatever landed on Discord before giving up, so a
+    // failed/cancelled/partial upload never leaves orphaned attachments.
+    const cleanup: FileManifest | undefined =
+      uploadedManifest ??
+      (err instanceof DiscordApiError && err.partialChunks?.length
+        ? { size: 0, mimeType: "", filename: item._file.name, chunkSize: 0, chunks: err.partialChunks }
+        : undefined);
+    if (cleanup) await client.deleteFile(cleanup).catch(() => {});
+
     if (item._abort.signal.aborted) {
       setItem(item.id, { status: "cancelled", endedAt: Date.now() });
     } else {

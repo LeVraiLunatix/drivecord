@@ -11,13 +11,23 @@ import type { PendingReason } from "./auth-level";
 
 export type EmailPurpose = "signup" | "login_24h" | "2fa" | "email_change";
 
-/** Map a session's pending reason to the email code purpose, if email-based. */
+/**
+ * Map a session's pending reason to the email code purpose, if email-based —
+ * for the GENERIC `/api/auth/email-code/*` routes only.
+ *
+ * `"2fa"` is deliberately NOT mapped here even though `EmailPurpose` includes
+ * it: a pending(2fa) session's level is recomputed from `twoFactorEnabled`
+ * (see auth-level.ts), which stays true after verifying, so promoting the
+ * session generically (as these routes do) would just loop back to the same
+ * 2fa challenge. `/api/auth/2fa/start` + `/api/auth/2fa/verify` handle the
+ * 2fa email code correctly (via `markFullSession`) and pass `purpose: "2fa"`
+ * directly — they don't go through this helper.
+ */
 export function emailPurposeFromReason(
   reason: PendingReason,
 ): EmailPurpose | null {
   if (reason === "email_verify") return "signup";
   if (reason === "login_24h") return "login_24h";
-  if (reason === "2fa") return "2fa";
   return null;
 }
 

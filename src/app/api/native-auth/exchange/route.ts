@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
       name: user.name,
       email: user.email,
       picture: user.image,
+      level: "full",
     },
     secret: process.env.AUTH_SECRET!,
     salt: cookieName,

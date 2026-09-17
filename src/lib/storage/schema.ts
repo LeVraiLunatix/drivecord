@@ -31,9 +31,11 @@ export type Drive = {
   createdAt: number;
   /** Last time the user opened this drive. */
   lastOpenedAt: number;
-  /** base64 AES-256-GCM key encrypting this drive's regular files. Backed up
-   *  (encrypted) on the account; present locally only once confirmed
-   *  server-side, so a key never exists unless it's safely synced. */
+  /** AES-256-GCM key encrypting this drive's regular files, wrapped for local
+   *  storage (JSON `{w,iv}`, see drive-crypto.ts wrapDriveKeyForLocalStorage)
+   *  — never persisted raw. Backed up (encrypted) on the account; present
+   *  locally only once confirmed server-side, so a key never exists unless
+   *  it's safely synced. Use unwrapDriveKeyFromLocalStorage before importing. */
   encKey?: string;
 };
 
@@ -111,7 +113,6 @@ export type ShareEntry = {
   /** Optional password (PBKDF2 hash). */
   passwordHash?: string;
   expiresAt?: number;
-  maxDownloads?: number;
   downloads: number;
   createdAt: number;
 };

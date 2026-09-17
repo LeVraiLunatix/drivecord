@@ -305,7 +305,7 @@ export function PreviewModal({
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file?.id]);
+  }, [file?.id, client]);
 
   // Revoke blob URLs on unmount
   React.useEffect(() => {

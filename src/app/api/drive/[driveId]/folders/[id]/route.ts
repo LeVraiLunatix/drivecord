@@ -1,5 +1,8 @@
 /**
- * GET    /api/drive/[driveId]/folders/[id]
+ * GET    /api/drive/[driveId]/folders/[id]              — folder entry
+ * GET    /api/drive/[driveId]/folders/[id]?subtree=1     — files in the whole
+ *   subtree, read-only (used by the client to attempt Discord cleanup BEFORE
+ *   committing a permanent delete, so a failed cleanup never orphans metadata)
  * PATCH  /api/drive/[driveId]/folders/[id]  — update name/color/parentId/trashed
  * DELETE /api/drive/[driveId]/folders/[id]  — hard-delete subtree; returns deleted file entries
  */
@@ -9,10 +12,18 @@ import { getAuthorizedWebhook, toFileEntry, toFolderEntry } from "../../../_help
 
 type RouteParams = { params: Promise<{ driveId: string; id: string }> };
 
-export async function GET(_req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   const { driveId, id } = await params;
   const result = await getAuthorizedWebhook(driveId);
   if (!result) return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+
+  if (req.nextUrl.searchParams.get("subtree") === "1") {
+    const subtreeIds = await collectSubtreeIds(result.webhook.id, id);
+    const files = await prisma.driveFile.findMany({
+      where: { webhookId: result.webhook.id, parentId: { in: subtreeIds } },
+    });
+    return NextResponse.json({ files: files.map(toFileEntry) });
+  }
 
   const row = await prisma.driveFolder.findFirst({
     where: { id, webhookId: result.webhook.id },
@@ -35,8 +46,15 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   };
 
   if (body.parentId !== undefined && body.parentId !== "") {
+    const target = await prisma.driveFolder.findFirst({
+      where: { id: body.parentId, webhookId: webhook.id },
+      select: { parentId: true },
+    });
+    if (!target) {
+      return NextResponse.json({ error: "Dossier de destination introuvable." }, { status: 400 });
+    }
     // Cycle check: walk up from target to root; reject if we encounter `id`.
-    let cur = body.parentId;
+    let cur: string = body.parentId;
     const seen = new Set<string>();
     while (cur && cur !== "") {
       if (cur === id) {
@@ -75,7 +93,14 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json(toFolderEntry(row));
   }
 
-  const row = await prisma.driveFolder.update({ where: { id }, data });
+  const { count } = await prisma.driveFolder.updateMany({
+    where: { id, webhookId: webhook.id },
+    data,
+  });
+  if (count === 0) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
+
+  const row = await prisma.driveFolder.findFirst({ where: { id, webhookId: webhook.id } });
+  if (!row) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
   return NextResponse.json(toFolderEntry(row));
 }
 

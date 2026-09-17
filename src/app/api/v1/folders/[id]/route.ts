@@ -68,14 +68,18 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     }
   }
 
-  // Best-effort Discord cleanup for every file in the subtree.
+  // Discord cleanup for every file in the subtree, attempted BEFORE the DB
+  // delete commits. A failure here (rate limit, revoked webhook, …) must not
+  // drop metadata for a file whose Discord messages are still live — that
+  // would orphan them with nothing left to ever clean them up.
   const files = await prisma.driveFile.findMany({
     where: { webhookId: auth.webhook.id, parentId: { in: subtreeIds } },
   });
   if (files.length > 0) {
     const client = DiscordClient.fromUrl(decryptUrl(auth.webhook.encryptedUrl));
+    const failures: string[] = [];
     await Promise.all(
-      files.map((f) => {
+      files.map(async (f) => {
         const manifest: FileManifest = {
           size: f.size,
           mimeType: f.mimeType,
@@ -83,11 +87,22 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
           chunkSize: f.chunkSize,
           chunks: f.chunks as unknown as ChunkRef[],
         };
-        return client.deleteFile(manifest).catch(() => {
-          // Messages may already be gone — nothing to do.
-        });
+        try {
+          await client.deleteFile(manifest);
+        } catch {
+          failures.push(f.filename);
+        }
       }),
     );
+    if (failures.length > 0) {
+      return corsJson(
+        {
+          error: `Échec de nettoyage Discord pour ${failures.length}/${files.length} fichier(s). Rien n'a été supprimé — réessaie.`,
+          failedFiles: failures,
+        },
+        { status: 502 },
+      );
+    }
   }
 
   await prisma.$transaction([

@@ -5,10 +5,26 @@ import type { ChunkRef } from "@/lib/discord";
 // ── Module-level in-memory cache ─────────────────────────────────────────────
 // Stores compressed JPEG data URLs (not blob URLs) so memory stays small and
 // there's nothing to revoke. Persists for the browser session.
+//
+// Capped at MAX_ENTRIES with LRU eviction (Map preserves insertion order, so
+// re-inserting an entry on access moves it to the end) — otherwise browsing a
+// drive with thousands of images grows this unboundedly for the whole session.
+const MAX_ENTRIES = 500;
 const cache = new Map<string, string>();
 
+function touch(fileId: string, dataUrl: string): void {
+  cache.delete(fileId);
+  cache.set(fileId, dataUrl);
+  if (cache.size > MAX_ENTRIES) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+}
+
 export function getThumbnail(fileId: string): string | null {
-  return cache.get(fileId) ?? null;
+  const hit = cache.get(fileId);
+  if (hit) touch(fileId, hit);
+  return hit ?? null;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -38,7 +54,7 @@ export async function generateThumbnail(
   client: Client,
   maxPx = 240,
 ): Promise<string | null> {
-  const cached = cache.get(fileId);
+  const cached = getThumbnail(fileId);
   if (cached) return cached;
 
   try {
@@ -46,7 +62,7 @@ export async function generateThumbnail(
     if (!blob.type.startsWith("image/")) return null;
 
     const dataUrl = await blobToThumbnail(blob, maxPx);
-    cache.set(fileId, dataUrl);
+    touch(fileId, dataUrl);
     return dataUrl;
   } catch {
     return null;

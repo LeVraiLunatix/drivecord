@@ -26,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { driveId, id } = await params;
   const result = await getAuthorizedWebhook(driveId);
   if (!result) return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+  const { webhook } = result;
 
   const body = (await req.json()) as {
     filename?: string;
@@ -37,6 +38,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     trashedAt?: number | null;
     chunks?: ChunkRef[];
   };
+
+  if (body.parentId !== undefined && body.parentId !== "") {
+    const parent = await prisma.driveFolder.findFirst({
+      where: { id: body.parentId, webhookId: webhook.id },
+      select: { id: true },
+    });
+    if (!parent) {
+      return NextResponse.json({ error: "Dossier de destination introuvable." }, { status: 400 });
+    }
+  }
 
   const data: Record<string, unknown> = { updatedAt: new Date() };
   if (body.filename !== undefined) data.filename = body.filename.trim();
@@ -51,10 +62,14 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
   if (body.chunks !== undefined) data.chunks = body.chunks;
 
-  const row = await prisma.driveFile.update({
-    where: { id },
+  const { count } = await prisma.driveFile.updateMany({
+    where: { id, webhookId: webhook.id },
     data,
   });
+  if (count === 0) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
+
+  const row = await prisma.driveFile.findFirst({ where: { id, webhookId: webhook.id } });
+  if (!row) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
   return NextResponse.json(toFileEntry(row));
 }
 
