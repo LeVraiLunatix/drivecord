@@ -35,7 +35,7 @@ export async function POST(
       driveId,
       parentId: body.parentId,
       filename: body.filename,
-      size: body.size,
+      size: BigInt(Math.max(0, Math.trunc(body.size))),
       mimeType: body.mimeType,
       chunkSize: body.chunkSize,
       chunks: body.chunks,

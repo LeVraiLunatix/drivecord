@@ -85,10 +85,11 @@ export default function SharesPage() {
 
   const revoke = async (token: string) => {
     try {
-      await authFetch(`/api/account/shares/${token}`, { method: "DELETE" });
+      const res = await authFetch(`/api/account/shares/${token}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
       toast.success("Lien révoqué");
       mutate();
-    } catch { toast.error("Échec"); }
+    } catch { toast.error("Échec de la révocation"); }
   };
 
   return (

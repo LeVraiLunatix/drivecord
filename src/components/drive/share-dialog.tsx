@@ -45,13 +45,15 @@ export function ShareDialog({
 
   React.useEffect(() => {
     if (!open || !fileId || !driveId) return;
+    let ignore = false;
     setShare(null); setPassword(""); setExpiryDays(0); setCopied(false);
     setLoading(true);
     authFetch(`/api/drive/${driveId}/files/${fileId}/share`)
       .then((r) => r.json())
-      .then((d) => setShare(d.share ?? null))
+      .then((d) => { if (!ignore) setShare(d.share ?? null); })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (!ignore) setLoading(false); });
+    return () => { ignore = true; };
   }, [open, fileId, driveId]);
 
   const shareUrl = share ? `${typeof window !== "undefined" ? window.location.origin : ""}/s/${share.token}` : "";
@@ -77,10 +79,11 @@ export function ShareDialog({
     if (!fileId || !driveId) return;
     setBusy(true);
     try {
-      await authFetch(`/api/drive/${driveId}/files/${fileId}/share`, { method: "DELETE" });
+      const res = await authFetch(`/api/drive/${driveId}/files/${fileId}/share`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
       setShare(null); setPassword(""); setExpiryDays(0);
       toast.success("Lien révoqué");
-    } catch { toast.error("Échec"); }
+    } catch { toast.error("Échec de la révocation"); }
     finally { setBusy(false); }
   };
 

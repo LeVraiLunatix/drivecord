@@ -9,11 +9,17 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user?.id || session.level !== "full") {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+  }
+
+  const rl = await rateLimit(`password:change:${session.user.id}`, 10, 10 * 60);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Trop de tentatives, réessaie plus tard." }, { status: 429 });
   }
 
   const { currentPassword, newPassword } = (await req.json()) as {

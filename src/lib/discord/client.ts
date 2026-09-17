@@ -223,14 +223,34 @@ export class DiscordClient {
     const workers = Array.from({ length: Math.min(parallel, plan.length) }, () =>
       worker(),
     );
-    await Promise.all(workers);
-    if (errors.length > 0) throw errors[0];
+    let abortErr: unknown;
+    try {
+      await Promise.all(workers);
+    } catch (err) {
+      abortErr = err;
+    }
+    const partialChunks = results.filter((c): c is ChunkRef => Boolean(c));
+    if (abortErr) {
+      throw new DiscordApiError((abortErr as Error).message ?? "Upload aborted", {
+        category: "permanent",
+        body: abortErr,
+        partialChunks,
+      });
+    }
+    if (errors.length > 0) {
+      const first = errors[0];
+      throw new DiscordApiError((first as Error)?.message ?? "Upload failed", {
+        category: (first as DiscordApiError)?.category ?? "transient",
+        body: first,
+        partialChunks,
+      });
+    }
 
-    const chunks = results.filter((c): c is ChunkRef => Boolean(c));
+    const chunks = partialChunks;
     if (chunks.length !== plan.length) {
       throw new DiscordApiError(
         `Upload incomplete: ${chunks.length}/${plan.length} chunks succeeded`,
-        { category: "transient" },
+        { category: "transient", partialChunks },
       );
     }
     return {
@@ -298,13 +318,21 @@ export class DiscordClient {
       opts.onProgress?.({ loaded: bytesDone, total: opts.totalSize ?? bytesDone, chunksDone: index, chunksTotal: -1 });
     };
 
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value && value.length) { pending.push(value); pendingLen += value.length; }
-      while (pendingLen >= chunkSize) await flush(take(chunkSize));
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value && value.length) { pending.push(value); pendingLen += value.length; }
+        while (pendingLen >= chunkSize) await flush(take(chunkSize));
+      }
+      if (pendingLen > 0) await flush(take(pendingLen));
+    } catch (err) {
+      throw new DiscordApiError((err as Error)?.message ?? "Stream upload failed", {
+        category: err instanceof DiscordApiError ? err.category : "transient",
+        body: err,
+        partialChunks: chunks,
+      });
     }
-    if (pendingLen > 0) await flush(take(pendingLen));
 
     return { size: bytesDone, mimeType, filename: opts.filename, chunkSize, chunks };
   }

@@ -14,6 +14,7 @@ import { authConfig } from "@/auth.config";
 import { evaluateUserLevel } from "@/lib/auth/auth-level";
 import { syncUserPatreonTier } from "@/lib/patreon";
 import { syncDiscordRoles } from "@/lib/discord-roles";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -144,10 +145,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Mot de passe", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const email = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
+
+        const ip = getClientIp(request);
+        const byIp = await rateLimit(`login:ip:${ip}`, 20, 10 * 60);
+        const byEmail = await rateLimit(`login:email:${email.toLowerCase()}`, 10, 10 * 60);
+        if (!byIp.ok || !byEmail.ok) return null;
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !user.password) return null;

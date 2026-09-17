@@ -247,6 +247,14 @@ export function DriveExplorer({
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
+      // A modal (rename/delete-confirm/move/…) is open and has focus — let it
+      // handle its own keys. Without this, Enter/Delete/F2 fire BOTH the
+      // dialog's own handler AND this explorer's action on the still-selected
+      // item behind it (e.g. Delete while a rename dialog is open also
+      // trashes the selection). Mirrors the same guard on the mousedown
+      // rubber-band-selection handler above.
+      if (target.closest('[role="dialog"]')) return;
+
       const inInput =
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||

@@ -224,6 +224,7 @@ export async function unlinkPatreon(userId: string): Promise<void> {
       patreonExpiresAt: null,
     },
   });
+  await syncDiscordRoles(userId, 0).catch(() => {});
 }
 
 // ── Gating (à utiliser côté serveur) ─────────────────────────────────────────
@@ -278,7 +279,10 @@ export function verifyWebhookSignature(
 
 type PatreonWebhookPayload = {
   data?: {
-    attributes?: { currently_entitled_amount_cents?: number };
+    attributes?: {
+      currently_entitled_amount_cents?: number;
+      patron_status?: string | null;
+    };
     relationships?: { user?: { data?: { id?: string } } };
   };
 };
@@ -309,9 +313,15 @@ export async function applyMembershipUpdate(
   });
   if (u?.patreonManual && !isExpired(u.patreonExpiresAt)) return false;
 
-  const cents = deleted
-    ? 0
-    : payload?.data?.attributes?.currently_entitled_amount_cents ?? 0;
+  // Same rule as fetchEntitledCents: only an ACTIVE patron's pledge counts.
+  // `currently_entitled_amount_cents` can lag behind (or persist through a
+  // grace period after) a decline/cancellation, so patron_status is what
+  // actually decides whether the pledge is still live.
+  const isActive = payload?.data?.attributes?.patron_status === "active_patron";
+  const cents =
+    deleted || !isActive
+      ? 0
+      : (payload?.data?.attributes?.currently_entitled_amount_cents ?? 0);
   const tier = centsToTier(cents);
 
   await prisma.user.update({

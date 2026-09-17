@@ -119,6 +119,13 @@ export class DiscordApiError extends Error {
   status?: number;
   retryAfterMs?: number;
   body?: unknown;
+  /**
+   * Chunks that finished uploading before this error occurred (abort, one
+   * failed chunk, etc.). The caller is responsible for deleting these from
+   * Discord if it gives up on the upload — otherwise they're orphaned
+   * attachments with no metadata anywhere referencing them.
+   */
+  partialChunks?: ChunkRef[];
 
   constructor(
     message: string,
@@ -127,6 +134,7 @@ export class DiscordApiError extends Error {
       status?: number;
       retryAfterMs?: number;
       body?: unknown;
+      partialChunks?: ChunkRef[];
     },
   ) {
     super(message);
@@ -135,5 +143,6 @@ export class DiscordApiError extends Error {
     this.status = opts.status;
     this.retryAfterMs = opts.retryAfterMs;
     this.body = opts.body;
+    this.partialChunks = opts.partialChunks;
   }
 }

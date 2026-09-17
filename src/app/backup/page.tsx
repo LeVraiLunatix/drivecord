@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useAllDrives } from "@/lib/storage";
 import { recordUploadedFile, createFolder, refreshDrive } from "@/lib/storage";
 import { DiscordClient } from "@/lib/discord/client";
+import { DiscordApiError } from "@/lib/discord/types";
 import {
   cameraRollAvailable,
   listCameraRoll,
@@ -191,6 +192,14 @@ export default function BackupPage() {
           } catch (streamErr) {
             if ((streamErr as Error).name === "AbortError") throw streamErr;
             if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
+            // Whatever chunks the failed ranged attempt already uploaded would
+            // otherwise be orphaned once we fall through to the whole-file path.
+            const partial = (streamErr as DiscordApiError)?.partialChunks;
+            if (partial?.length) {
+              await client
+                .deleteFile({ size: 0, mimeType: "", filename: it.identifier, chunkSize: 0, chunks: partial })
+                .catch(() => {});
+            }
           }
           // 2) Whole-file read → upload (the temp copy is deleted afterwards so
           //    the disk no longer fills up; only truly huge files are skipped).
@@ -201,9 +210,16 @@ export default function BackupPage() {
             const file = new File([r.blob], r.filename, { type: r.mimeType });
             manifest = await client.uploadFile(file, { signal });
           }
-          const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, silent: true });
-          markBackedUp(drive.id, it.identifier, fileId);
-          return "ok";
+          try {
+            const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, silent: true });
+            markBackedUp(drive.id, it.identifier, fileId);
+            return "ok";
+          } catch (err) {
+            // Metadata persistence failed after a successful upload — clean up
+            // the now-unreferenced chunks instead of leaving them orphaned.
+            await client.deleteFile(manifest).catch(() => {});
+            throw err;
+          }
         } finally {
           await deleteCameraTemp(tempPath);
         }

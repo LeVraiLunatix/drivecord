@@ -73,6 +73,11 @@ export function useNativeAnchorMenu({ id, items, onSelect, title, enabled = true
       window.removeEventListener("resize", post);
       window.removeEventListener("orientationchange", post);
       ro.disconnect();
+      // `active` can go true → false without the component unmounting (e.g.
+      // the caller passes `enabled: false`) — without this, the native shell
+      // would keep the previously-registered overlay/callback alive even
+      // though this hook now reports `active: false`.
+      removeAnchorMenu(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, id, title, itemsKey]);

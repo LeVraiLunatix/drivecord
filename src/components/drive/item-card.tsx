@@ -88,7 +88,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.id, isImage]);
+  }, [item.id, isImage, client]);
 
   // --- Long press → select ---
   const longPress = useLongPress(() => onItemClick?.({ shiftKey: false, ctrlKey: false, metaKey: false } as React.MouseEvent));

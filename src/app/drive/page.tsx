@@ -16,7 +16,7 @@ import { saveBlob } from "@/lib/native-save";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 import { getVaultKey, clearVaultKey } from "@/lib/crypto/vault-key-store";
 import { setDriveKey } from "@/lib/crypto/drive-key-store";
-import { importDriveKey } from "@/lib/crypto/drive-crypto";
+import { importDriveKey, unwrapDriveKeyFromLocalStorage } from "@/lib/crypto/drive-crypto";
 import { ensureDriveKey } from "@/lib/auth/sync";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
 import { NewFolderDialog } from "@/components/drive/new-folder-dialog";
@@ -44,6 +44,7 @@ import {
   setLocked,
   hardDeleteFile,
   hardDeleteFolderSubtree,
+  getFolderSubtreeFiles,
   trashFile,
   trashFolder,
   bulkTrash,
@@ -209,9 +210,11 @@ function DriveContent() {
   React.useEffect(() => {
     let cancelled = false;
     if (activeDrive?.encKey) {
-      importDriveKey(activeDrive.encKey).then((k) => {
-        if (!cancelled) setDriveKey(k);
-      });
+      unwrapDriveKeyFromLocalStorage(activeDrive.encKey)
+        .then((raw) => importDriveKey(raw))
+        .then((k) => {
+          if (!cancelled) setDriveKey(k);
+        });
     } else {
       setDriveKey(null);
     }
@@ -414,14 +417,13 @@ function DriveContent() {
       try {
         if (item.kind === "folder") {
           if (section === "trash") {
-            const { deletedFiles } = await hardDeleteFolderSubtree(driveId, item.id);
+            const files = await getFolderSubtreeFiles(driveId, item.id);
             if (client) {
-              for (const f of deletedFiles) {
-                await client.deleteFile(f).catch((err) =>
-                  toast.warning(`Métadonnées supprimées, Discord : ${(err as Error).message}`),
-                );
-              }
+              for (const f of files) await client.deleteFile(f);
             }
+            // Discord cleanup succeeded (or there was no client to attempt
+            // it with) — only now is it safe to drop the metadata.
+            const { deletedFiles } = await hardDeleteFolderSubtree(driveId, item.id);
             toast.success(`Dossier supprimé définitivement (${deletedFiles.length} fichier${deletedFiles.length > 1 ? "s" : ""})`);
           } else {
             await trashFolder(driveId, item.id);
@@ -429,11 +431,7 @@ function DriveContent() {
           }
         } else {
           if (section === "trash") {
-            if (client) {
-              await client.deleteFile(item).catch((err) =>
-                toast.warning(`Métadonnées supprimées, Discord : ${(err as Error).message}`),
-              );
-            }
+            if (client) await client.deleteFile(item);
             await hardDeleteFile(driveId, item.id);
             toast.success("Fichier supprimé définitivement");
           } else {
@@ -506,10 +504,12 @@ function DriveContent() {
       const tasks = items.map((item) => async () => {
         try {
           if (item.kind === "folder") {
-            const { deletedFiles } = await hardDeleteFolderSubtree(driveId, item.id);
-            if (client) await Promise.all(deletedFiles.map((f) => client.deleteFile(f).catch(() => {})));
+            const files = await getFolderSubtreeFiles(driveId, item.id);
+            if (client) await Promise.all(files.map((f) => client.deleteFile(f)));
+            // Only drop metadata once Discord cleanup is confirmed clean.
+            await hardDeleteFolderSubtree(driveId, item.id);
           } else {
-            if (client) await client.deleteFile(item).catch(() => {});
+            if (client) await client.deleteFile(item);
             await hardDeleteFile(driveId, item.id);
           }
           ok++;

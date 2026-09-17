@@ -59,9 +59,16 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     chunkSize: row.chunkSize,
     chunks: row.chunks as unknown as ChunkRef[],
   };
-  await client.deleteFile(manifest).catch(() => {
-    // Discord-side cleanup is best-effort — messages may already be gone.
-  });
+  try {
+    await client.deleteFile(manifest);
+  } catch {
+    // A real cleanup failure (not "already gone") must not drop metadata
+    // for messages that are still live on Discord — that would orphan them.
+    return corsJson(
+      { error: "Échec de nettoyage Discord — rien n'a été supprimé, réessaie." },
+      { status: 502 },
+    );
+  }
 
   await prisma.driveFile.deleteMany({ where: { id, webhookId: auth.webhook.id } });
   return new NextResponse(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*" } });

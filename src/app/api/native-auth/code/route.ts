@@ -11,7 +11,7 @@ import { mintNativeCode } from "@/lib/auth/native-code";
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user?.id || session.level !== "full") {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
   return NextResponse.json({ code: mintNativeCode(session.user.id) });

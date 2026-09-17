@@ -13,21 +13,42 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var _prisma: PrismaClient | undefined;
-}
-
-function createPrismaClient(): PrismaClient {
+function createPrismaClient() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL environment variable is not set.");
   const pool = new Pool({ connectionString: url });
   const adapter = new PrismaPg(pool);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return new PrismaClient({ adapter } as any);
+  const client = new PrismaClient({ adapter } as any);
+  // `DriveFile.size` is stored as BIGINT (files can exceed the ~2 GiB an Int
+  // column would overflow at), but every call site in the app treats it as a
+  // plain number (arithmetic, JSON responses, sorting). Converting once here
+  // — instead of at each of the dozen read sites — keeps the rest of the
+  // codebase working with `number` unchanged. Safe: JS's max safe integer is
+  // ~9 PB, far beyond any real file size. The return type is inferred (not
+  // annotated `PrismaClient`) so every caller sees `size: number`.
+  return client.$extends({
+    result: {
+      driveFile: {
+        size: {
+          needs: { size: true },
+          compute(driveFile: { size: bigint }) {
+            return Number(driveFile.size);
+          },
+        },
+      },
+    },
+  });
 }
 
-export const prisma: PrismaClient =
+type AppPrismaClient = ReturnType<typeof createPrismaClient>;
+
+declare global {
+  // eslint-disable-next-line no-var
+  var _prisma: AppPrismaClient | undefined;
+}
+
+export const prisma: AppPrismaClient =
   global._prisma ?? (global._prisma = createPrismaClient());
 
 if (process.env.NODE_ENV !== "production") {

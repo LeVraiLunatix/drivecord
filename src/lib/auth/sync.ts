@@ -12,7 +12,12 @@
 import { db } from "@/lib/storage/db";
 import { getActiveDriveId, setActiveDriveId, clearActiveDriveId } from "@/lib/storage/drives";
 import type { Drive } from "@/lib/storage/schema";
-import { generateDriveKeyB64, importDriveKey } from "@/lib/crypto/drive-crypto";
+import {
+  generateDriveKeyB64,
+  importDriveKey,
+  unwrapDriveKeyFromLocalStorage,
+  wrapDriveKeyForLocalStorage,
+} from "@/lib/crypto/drive-crypto";
 import { authFetch } from "@/lib/api-base";
 
 type ServerWebhook = {
@@ -52,7 +57,7 @@ export async function syncWebhooksFromServer(): Promise<number> {
       name: existing?.name ?? w.name,
       channelId: w.channelId,
       guildId: w.guildId,
-      encKey: w.encKey ?? existing?.encKey,
+      encKey: w.encKey ? await wrapDriveKeyForLocalStorage(w.encKey) : existing?.encKey,
       createdAt: existing?.createdAt ?? w.createdAt,
       lastOpenedAt: w.lastOpenedAt,
     };
@@ -110,7 +115,7 @@ export async function pushWebhookToServer(drive: Drive): Promise<void> {
     }),
   });
   if (res.ok && !drive.encKey) {
-    await db().drives.update(drive.id, { encKey });
+    await db().drives.update(drive.id, { encKey: await wrapDriveKeyForLocalStorage(encKey) });
   }
 }
 
@@ -127,7 +132,7 @@ export async function ensureDriveKey(drive: Drive): Promise<CryptoKey | null> {
     await pushWebhookToServer(drive);
     encKey = (await db().drives.get(drive.id))?.encKey;
   }
-  return encKey ? importDriveKey(encKey) : null;
+  return encKey ? importDriveKey(await unwrapDriveKeyFromLocalStorage(encKey)) : null;
 }
 
 /**
