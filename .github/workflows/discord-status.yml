@@ -1,0 +1,40 @@
+name: Statut → Discord
+
+# Met à jour les salons vocaux verrouillés du guild de stockage (stockage
+# utilisé, comptes, membres Discord, abonnés Patreon). Fréquence : une fois
+# par heure — Discord limite les renommages de salon à 2 par 10 min, et ce
+# dépôt privé partage un quota Actions limité avec les autres dépôts privés du
+# compte (voir cordsuite/.github/workflows/status.yml pour le même arbitrage).
+on:
+  schedule:
+    - cron: "22 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: statut-discord
+  cancel-in-progress: false
+
+jobs:
+  mettre-a-jour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Installer pg
+        run: npm install pg@^8 --no-save
+
+      - name: Mettre à jour les salons de statut
+        run: node scripts/update-discord-status.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_STORAGE_GUILD_ID: ${{ vars.DISCORD_STORAGE_GUILD_ID }}
+          CHANNEL_ID_STORAGE: ${{ vars.DISCORD_STATUS_CHANNEL_STORAGE }}
+          CHANNEL_ID_ACCOUNTS: ${{ vars.DISCORD_STATUS_CHANNEL_ACCOUNTS }}
+          CHANNEL_ID_DISCORD_MEMBERS: ${{ vars.DISCORD_STATUS_CHANNEL_DISCORD_MEMBERS }}
+          CHANNEL_ID_PATREON: ${{ vars.DISCORD_STATUS_CHANNEL_PATREON }}
