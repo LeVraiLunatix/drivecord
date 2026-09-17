@@ -32,10 +32,17 @@ import { fullSignOut } from "@/lib/auth/logout";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import { linkDiscord } from "@/lib/auth/oauth";
 
+type AutoDrive = {
+  driveId: string;
+  name: string;
+  channelId: string;
+  webhookUrl: string;
+};
+
 type AutoSetupState = {
   available: boolean;
   discordLinked: boolean;
-  alreadyConfigured: boolean;
+  drives: AutoDrive[];
 };
 
 export default function SetupPage() {
@@ -43,10 +50,11 @@ export default function SetupPage() {
   const drives = useAllDrives();
   const { status } = useSession();
   const [url, setUrl] = React.useState("");
+  const [autoName, setAutoName] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [autoBusy, setAutoBusy] = React.useState(false);
 
-  const { data: autoState } = useSWR<AutoSetupState>(
+  const { data: autoState, mutate: mutateAutoState } = useSWR<AutoSetupState>(
     status === "authenticated" ? "/api/webhooks/auto-setup" : null,
     fetcher,
     { revalidateOnFocus: false },
@@ -79,9 +87,15 @@ export default function SetupPage() {
   const autoSetup = async () => {
     setAutoBusy(true);
     try {
-      const res = await authFetch("/api/webhooks/auto-setup", { method: "POST" });
+      const res = await authFetch("/api/webhooks/auto-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: autoName.trim() || undefined }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Échec de la configuration automatique.");
+      void mutateAutoState();
+      setAutoName("");
       await finishSetup(data.webhookUrl as string);
     } catch (err) {
       toast.error((err as Error).message);
@@ -156,14 +170,60 @@ export default function SetupPage() {
                 <Badge variant="secondary" className="gap-1.5">
                   <CheckCircle2 className="size-3.5" /> Compte Discord détecté
                 </Badge>
+
+                {autoState.drives.length > 0 && (
+                  <div className="space-y-2">
+                    {autoState.drives.map((d) => (
+                      <div
+                        key={d.driveId}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => finishSetup(d.webhookUrl)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            finishSetup(d.webhookUrl);
+                          }
+                        }}
+                        className="flex w-full cursor-pointer items-center justify-between rounded-md border border-border/50 bg-card/40 px-3 py-2 text-left text-sm transition-colors hover:bg-card focus-visible:outline-2 focus-visible:outline-ring"
+                      >
+                        <p className="truncate font-medium">{d.name}</p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            finishSetup(d.webhookUrl);
+                          }}
+                        >
+                          Ouvrir
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="auto-drive-name">
+                    Nom du {autoState.drives.length > 0 ? "nouveau " : ""}drive
+                    (optionnel)
+                  </Label>
+                  <Input
+                    id="auto-drive-name"
+                    value={autoName}
+                    onChange={(e) => setAutoName(e.target.value)}
+                    placeholder="Mon drive Discord"
+                    maxLength={80}
+                  />
+                </div>
                 <Button onClick={autoSetup} disabled={autoBusy} className="w-full gap-2">
                   {autoBusy ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
                     <Sparkles className="size-4" />
                   )}
-                  {autoState.alreadyConfigured
-                    ? "Récupérer mon drive Discord"
+                  {autoState.drives.length > 0
+                    ? "Créer un nouveau drive Discord"
                     : "Configuration automatique"}
                 </Button>
               </div>
