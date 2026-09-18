@@ -1,4 +1,5 @@
 "use client";
+import { CordSignInButton } from "@/components/auth/cord-account";
 
 import * as React from "react";
 import Link from "next/link";
@@ -76,6 +77,9 @@ function LoginContent() {
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
+    if (params.get("error") === "OAuthAccountNotLinked") {
+      toast.error("Connecte-toi d’abord à ton compte Drivecord existant, puis associe ton compte Cord depuis les paramètres.");
+    }
     if (params.get("error") === "CredentialsSignin") {
       toast.error("Email ou mot de passe incorrect.");
     }
@@ -207,6 +211,7 @@ function LoginContent() {
             </div>
 
             <div className="space-y-2">
+              <CordSignInButton callbackUrl={callbackUrl} />
               <Button
                 variant="outline"
                 className="w-full"
