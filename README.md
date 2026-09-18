@@ -135,6 +135,8 @@ Ouvre **http://localhost:3000** 🎉
 | `ENCRYPTION_KEY` | ✅ | Clé de chiffrement serveur (données sensibles) |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | ⬜ | OAuth Google |
 | `AUTH_DISCORD_ID` / `AUTH_DISCORD_SECRET` | ⬜ | OAuth Discord |
+| `AUTH_CORD_ISSUER` / `AUTH_CORD_ID` / `AUTH_CORD_SECRET` | ⬜ | Connexion OIDC avec le Compte Cord |
+| `NEXT_PUBLIC_CORD_ACCOUNT_URL` | ⬜ | Portail de gestion du Compte Cord |
 | `ADMIN_EMAIL` | ⬜ | E-mail donnant accès à l'espace admin |
 | `AUTH_URL` | ⬜ | URL de base (utile en local / hors Vercel) |
 
