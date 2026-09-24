@@ -3,7 +3,7 @@
 import { signIn, signOut } from "next-auth/react";
 import { isNativeApp } from "@/lib/use-platform";
 
-export type OAuthProvider = "google" | "discord";
+export type OAuthProvider = "google" | "discord" | "cord";
 
 /**
  * Start an OAuth sign-in.

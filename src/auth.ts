@@ -15,6 +15,7 @@ import { evaluateUserLevel } from "@/lib/auth/auth-level";
 import { syncUserPatreonTier } from "@/lib/patreon";
 import { syncDiscordRoles } from "@/lib/discord-roles";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { cordProviders } from "@/lib/auth/cord-provider";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -110,6 +111,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   providers: [
+    ...cordProviders,
     // Force Google to always show the account chooser. Without this, the
     // in-app WebView silently re-signs in the last Google account, so trying
     // to switch accounts kept logging back into the first one.

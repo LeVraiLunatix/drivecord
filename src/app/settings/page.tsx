@@ -1,4 +1,5 @@
 "use client";
+import { CordAccountCard } from "@/components/auth/cord-account";
 
 import * as React from "react";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
@@ -135,6 +136,9 @@ export default function SettingsPage() {
     </motion.div>,
     <motion.div key="account-links" variants={v ?? item}>
       <AccountLinksSection />
+    </motion.div>,
+    <motion.div key="cord-account" variants={v ?? item}>
+      <CordAccountCard linked={account?.providers.includes("cord") ?? false} />
     </motion.div>,
     <motion.div key="danger" variants={v ?? item}>
       <DangerSection />
