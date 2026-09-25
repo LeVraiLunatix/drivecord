@@ -3,6 +3,7 @@
 import * as React from "react";
 import { signIn, signOut } from "next-auth/react";
 import { Loader2 } from "lucide-react";
+import { rememberOAuthProvider } from "@/lib/auth/oauth";
 
 /**
  * Opened in the SYSTEM BROWSER by the app. Immediately starts the OAuth flow
@@ -18,6 +19,7 @@ function NativeLoginInner() {
   React.useEffect(() => {
     const provider =
       new URLSearchParams(window.location.search).get("provider") ?? "discord";
+    rememberOAuthProvider(provider);
     (async () => {
       await signOut({ redirect: false }).catch(() => {});
       signIn(provider, { callbackUrl: "/native-handoff" });

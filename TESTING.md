@@ -82,6 +82,28 @@ Après **chaque** nouveau moyen de login (passkey, OAuth, cross-device, 2FA) :
 > (modèle inchangé), donc indépendante du facteur de login : aucun moyen de
 > connexion ne casse le déchiffrement.
 
+## 6. Compte Cord (OIDC)
+
+Variables : `AUTH_CORD_ISSUER`, `AUTH_CORD_ID`, `AUTH_CORD_SECRET`,
+`NEXT_PUBLIC_CORD_ACCOUNT_URL` (sans elles, le bouton et la carte Réglages sont masqués).
+En local, lancer `cordlauncher/account-service` (`CORD_ISSUER=http://localhost:4319`,
+`CORD_CLIENTS` avec le retour `http://localhost:3000/api/auth/callback/cord`).
+
+- [ ] **1re connexion Cord** : `/login` → « Continuer avec Cord » → consentement →
+  compte créé (nom + photo Cord, email déjà vérifié) → code de connexion (règle 24 h) → drive.
+- [ ] **Déjà consenti** : reconnexion sans écran de consentement, même compte (pas de doublon).
+- [ ] **Refus sur Cord** → `/login` : « Connexion avec Cord annulée ».
+- [ ] **Email déjà utilisé par un compte Drivecord** → `/login` : « Cet email a déjà un
+  compte Drivecord… associe Cord dans Réglages ». Aucune association silencieuse.
+- [ ] **Association** : connecté (session complète) → Réglages › Compte Cord › Associer →
+  retour `/settings` « Compte Cord associé ». Nom manuel conservé (proposition « Utiliser ce
+  nom »), avatar rempli seulement s'il était vide.
+- [ ] **Compte Cord déjà associé à un autre compte** → message dans la carte Cord.
+- [ ] **Dissocier** : possible seulement s'il reste mot de passe / passkey / Google / Discord.
+- [ ] **App iOS** : « Continuer avec Cord » ouvre Safari → retour `drivecord://auth` → connecté.
+- [ ] **Drivecord Desktop** : login Cord dans la fenêtre → bascule dans l'app (jeton desktop).
+- [ ] **Raccourcis** Sécurité / Appareils et Passcord / Apps connectées → bonnes ancres du portail.
+
 ## Limites connues / TODO
 
 - **Push iOS native** pour l'approbation cross-device : non implémentée ; le
@@ -97,5 +119,6 @@ Après **chaque** nouveau moyen de login (passkey, OAuth, cross-device, 2FA) :
 ```bash
 npx tsc --noEmit   # 0 erreur
 npm run lint       # 0 erreur (warnings préexistants tolérés)
+npm test           # tests unitaires (node --test)
 npm run build      # build de production OK
 ```

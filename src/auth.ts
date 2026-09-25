@@ -16,6 +16,7 @@ import { syncUserPatreonTier } from "@/lib/patreon";
 import { syncDiscordRoles } from "@/lib/discord-roles";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { cordProviders } from "@/lib/auth/cord-provider";
+import { cordSignInGuard, syncCordProfile } from "@/lib/auth/cord";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -24,6 +25,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   callbacks: {
     ...authConfig.callbacks,
+    // Cord: clear errors (unverified email, account linked elsewhere) instead
+    // of Auth.js' generic ones, and linking only from a fully open session.
+    async signIn({ account, profile }) {
+      if (account?.provider === "cord") return cordSignInGuard(account, profile);
+      return true;
+    },
     /**
      * Node-runtime jwt callback: computes the step-up level from DB state on
      * sign-in (and update), and slides the 24h window by stamping lastLoginAt
@@ -57,6 +64,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               .catch(() => {});
           }
         }
+      }
+
+      // Cord: fresh tokens for Settings, Cord photo only if no avatar yet,
+      // name only if empty (see syncCordProfile).
+      if (
+        (trigger === "signIn" || trigger === "signUp") &&
+        account?.provider === "cord" &&
+        uid
+      ) {
+        const changes = await syncCordProfile(uid, account, profile).catch(
+          () => ({}) as { image?: string | null; name?: string },
+        );
+        if (changes.image !== undefined) token.picture = changes.image;
+        if (changes.name !== undefined) token.name = changes.name;
       }
 
       if (

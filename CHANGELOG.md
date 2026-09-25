@@ -7,6 +7,19 @@
   à chaque changement notable.
 -->
 
+## Continuer avec Cord
+
+🟣 **Une identité pour toute la suite Cord**
+- Nouveau bouton **« Continuer avec Cord »** en tête de la connexion et de l'inscription (web, app iOS et Drivecord Desktop).
+- Première connexion avec Cord = compte Drivecord créé automatiquement, avec ton nom et ta **photo Cord**.
+
+⚙️ **Réglages › Compte Cord**
+- Vois le compte Cord associé (nom, email), **associe-le** à ton compte actuel ou **dissocie-le** (s'il te reste une autre méthode de connexion).
+- Reprends ton nom Cord en un clic (ton nom n'est jamais écrasé sans toi).
+- Raccourcis vers ton Compte Cord : **Sécurité** (2FA, passkeys), **Appareils et Passcord**, **Apps connectées**.
+
+💬 **Messages d'erreur clairs** : connexion refusée, email Cord non confirmé, ou email déjà utilisé par un compte Drivecord (→ connecte-toi comme d'habitude puis associe Cord dans Réglages).
+
 ## Onglet « Approuver » + réglages
 
 🔐 **Nouvel onglet « Approuver »** (à la place de « Partagés » dans la barre du bas)
