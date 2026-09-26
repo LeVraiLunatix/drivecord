@@ -33,6 +33,7 @@ import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
 import { Lock, Star, Tag, Trash2 } from "lucide-react";
 import { VaultGate } from "@/components/drive/vault-gate";
+import { CordLinkPrompt } from "@/components/auth/cord-link-prompt";
 
 import { useDiscordClient } from "@/lib/discord/context";
 import { useUploadQueue } from "@/lib/upload-queue";
@@ -583,6 +584,7 @@ function DriveContent() {
         />
 
         <main className="tabbar-pad flex flex-1 flex-col px-3 py-3 lg:min-h-0 lg:touch-pan-y lg:overflow-y-auto lg:overscroll-contain lg:[-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+          <CordLinkPrompt />
           {section === "vault" && !vaultUnlocked && (
             <VaultGate onUnlock={() => setVaultUnlocked(true)} />
           )}

@@ -25,6 +25,7 @@ import {
   clearTracker,
 } from "@/lib/camera-roll";
 import { DEFAULT_CHUNK_SIZE } from "@/lib/discord/constants";
+import { signalCordSync } from "@/lib/cord-signal";
 
 const FOLDER_KEY = (driveId: string) => `drivecord:camroll-folder:${driveId}`;
 
@@ -258,6 +259,8 @@ export default function BackupPage() {
         if (stuck) parts.push(`${stuck} bloqué(s)`);
         const extra = parts.length ? ` · ${parts.join(" · ")} ignoré(s)` : "";
         toast.success(`${ok} média(s) sauvegardé(s) dans « ${drive.name} » › Pellicule${extra}`);
+        // Compte Cord hub: « Sauvegarde terminée » + fresh numbers on the tile.
+        if (ok > 0) signalCordSync({ reason: "backup", count: ok });
       }
     } catch (e) {
       toast.error(`Échec : ${(e as Error).message}`);

@@ -7,6 +7,8 @@ import { KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { loginWithPasskey } from "@/lib/auth/passkey-client";
 import { rememberOAuthProvider } from "@/lib/auth/oauth";
+import { cordAuthParamsFromQuery } from "@/lib/auth/cord-shared";
+import { CordRedirecting } from "@/components/auth/cord-hero";
 
 /**
  * Opened in the SYSTEM BROWSER by the app. Immediately starts the OAuth flow
@@ -23,7 +25,12 @@ import { rememberOAuthProvider } from "@/lib/auth/oauth";
  * pour WebAuthn : d'où le bouton au lieu d'un lancement automatique.
  */
 function NativeLoginInner() {
-  const provider = useSearchParams().get("provider") ?? "discord";
+  const query = useSearchParams();
+  const provider = query.get("provider") ?? "discord";
+  // Cord: `prompt=create` (sign-up) and `login_hint` (pre-filled email), validated.
+  const cordParams = provider === "cord" ? cordAuthParamsFromQuery(query) : {};
+  const prompt = cordParams.prompt;
+  const loginHint = cordParams.login_hint;
 
   React.useEffect(() => {
     const p = provider;
@@ -31,11 +38,19 @@ function NativeLoginInner() {
     rememberOAuthProvider(p);
     (async () => {
       await signOut({ redirect: false }).catch(() => {});
-      signIn(p, { callbackUrl: "/native-handoff" });
+      signIn(
+        p,
+        { callbackUrl: "/native-handoff" },
+        {
+          ...(prompt ? { prompt } : {}),
+          ...(loginHint ? { login_hint: loginHint } : {}),
+        },
+      );
     })();
-  }, [provider]);
+  }, [provider, prompt, loginHint]);
 
   if (provider === "passkey") return <PasskeyStep />;
+  if (provider === "cord") return <CordRedirecting create={prompt === "create"} />;
 
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 bg-background px-6 text-center">

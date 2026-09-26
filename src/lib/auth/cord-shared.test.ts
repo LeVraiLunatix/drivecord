@@ -2,11 +2,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   canUnlinkCord,
+  cordAuthParams,
+  cordAuthParamsFromQuery,
+  cordLoginHint,
   cordIdentityFromIdToken,
   cordPortalUrl,
   isCordAvatar,
   loginErrorMessage,
   nextImageAfterCord,
+  shouldOpenOtherMethods,
 } from "./cord-shared.ts";
 
 const ISSUER = "https://compte.cordsuite.app";
@@ -16,6 +20,7 @@ const AV2 = `${ISSUER}/avatar/u1?v=bbb`;
 test("cordPortalUrl builds section deep links", () => {
   assert.equal(cordPortalUrl(undefined, "apps"), null);
   assert.equal(cordPortalUrl("https://compte.cordsuite.app", "security"), "https://compte.cordsuite.app/#securite");
+  assert.equal(cordPortalUrl("https://compte.cordsuite.app", "overview"), "https://compte.cordsuite.app/#apercu");
   assert.equal(cordPortalUrl("https://compte.cordsuite.app/", "devices"), "https://compte.cordsuite.app/#appareils");
   assert.equal(cordPortalUrl("https://compte.cordsuite.app/#x", "apps"), "https://compte.cordsuite.app/#apps");
   assert.equal(cordPortalUrl("https://compte.cordsuite.app"), "https://compte.cordsuite.app/");
@@ -63,4 +68,45 @@ test("loginErrorMessage explains Cord errors in French", () => {
   const unverified = loginErrorMessage("CordEmailNotVerified", "cord", "https://compte.cordsuite.app/");
   assert.equal(unverified!.action?.href, "https://compte.cordsuite.app/");
   assert.equal(loginErrorMessage("Configuration", "google")!.title, "Connexion impossible");
+});
+
+test("cordAuthParams: prompt=create and a valid login_hint only", () => {
+  assert.deepEqual(cordAuthParams({}), {});
+  assert.deepEqual(cordAuthParams({ create: true }), { prompt: "create" });
+  assert.deepEqual(cordAuthParams({ create: true, email: "  Toi@Example.com " }), {
+    prompt: "create",
+    login_hint: "Toi@Example.com",
+  });
+  assert.deepEqual(cordAuthParams({ email: "pas-un-email" }), {});
+  assert.deepEqual(cordAuthParams({ email: `${"a".repeat(250)}@b.fr` }), {});
+  assert.equal(cordLoginHint(null), null);
+});
+
+test("cordAuthParamsFromQuery ignores unknown prompts", () => {
+  const q = (s: string) => new URLSearchParams(s);
+  assert.deepEqual(cordAuthParamsFromQuery(q("provider=cord&prompt=create&login_hint=a%40b.fr")), {
+    prompt: "create",
+    login_hint: "a@b.fr",
+  });
+  assert.deepEqual(cordAuthParamsFromQuery(q("prompt=consent&login_hint=")), {});
+});
+
+test("shouldOpenOtherMethods", () => {
+  const open = (error: string | null, provider: string | null, lastMethod: string | null) =>
+    shouldOpenOtherMethods({ error, provider, lastMethod });
+  // Nothing special: Cord first, others folded.
+  assert.equal(open(null, null, null), false);
+  assert.equal(open(null, null, "cord"), false);
+  // Used another method last time.
+  for (const m of ["google", "discord", "passkey", "credentials"]) assert.equal(open(null, null, m), true);
+  // Errors about the other methods.
+  assert.equal(open("CredentialsSignin", null, null), true);
+  assert.equal(open("AccessDenied", "google", null), true);
+  assert.equal(open("OAuthCallbackError", "discord", "cord"), true);
+  // Cord says « use your usual method, then link Cord ».
+  assert.equal(open("OAuthAccountNotLinked", "cord", "cord"), true);
+  // Cord-only errors keep the focus on Cord.
+  assert.equal(open("CordEmailNotVerified", "cord", null), false);
+  assert.equal(open("AccessDenied", "cord", null), false);
+  assert.equal(open("Configuration", "cord", null), false);
 });

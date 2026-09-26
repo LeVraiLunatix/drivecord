@@ -7,6 +7,19 @@
   à chaque changement notable.
 -->
 
+## Cord d'abord
+
+🟣 **Le Compte Cord devient LA façon d'entrer dans Drivecord**
+- Nouvelle page de connexion et d'inscription : une grande carte Cord avec **« Continuer avec Cord »** (retour direct si tu es déjà connecté à Cord) et **« Créer mon compte avec Cord »** (inscription Cord, code à 6 chiffres par email, puis retour immédiat ici — ton email est prérempli si tu l'as tapé).
+- Discord, Google, passkey et email + mot de passe restent disponibles sous **« Autres méthodes »** (ouvert automatiquement si c'est ce que tu utilises d'habitude).
+- Même chose dans l'**app iOS** (via Safari) et dans **Drivecord Desktop**.
+- Tu n'as pas encore relié Cord ? Un petit bandeau te le propose une fois dans le drive (tu peux le fermer).
+
+🔗 **Drivecord branché sur la suite**
+- Le hub Cord affiche ton **espace Drivecord** (stockage utilisé, fichiers, drives, dernier envoi).
+- Notifications dans la cloche Cord : **sauvegarde de la pellicule terminée**, **lien de partage ouvert pour la première fois**.
+- Réglages › Compte Cord : nouveau lien **« Voir ma suite »**.
+
 ## Continuer avec Cord
 
 🟣 **Une identité pour toute la suite Cord**

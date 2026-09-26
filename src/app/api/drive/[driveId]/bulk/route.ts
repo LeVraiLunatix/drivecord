@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook } from "../../_helpers";
+import { afterCordStatus } from "@/lib/cord-sync";
 
 type RouteParams = { params: Promise<{ driveId: string }> };
 
@@ -50,5 +51,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }),
   ]);
 
+  if (files.count > 0) afterCordStatus(result.userId);
   return NextResponse.json({ files: files.count, folders: folders.count });
 }

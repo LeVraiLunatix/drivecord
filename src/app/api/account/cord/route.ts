@@ -5,6 +5,7 @@
  * (no password, no passkey, no Google/Discord). Linking goes through the
  * normal Auth.js flow from Settings (see cordSignInGuard).
  *
+ * The Drivecord tile status is taken off the Cord hub (DELETE /api/apps/status).
  * Only Drivecord's side is removed: the Cord tokens stay valid until they
  * expire (5 min) — revoking the app is done in Compte Cord › Apps connectées.
  */
@@ -12,6 +13,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canUnlinkCord } from "@/lib/auth/cord-shared";
+import { afterCordClear } from "@/lib/cord-sync";
 
 export async function DELETE() {
   const session = await auth();
@@ -24,12 +26,13 @@ export async function DELETE() {
     where: { id: userId },
     select: {
       password: true,
-      accounts: { select: { provider: true } },
+      accounts: { select: { provider: true, providerAccountId: true } },
       _count: { select: { authenticators: true } },
     },
   });
   if (!user) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
-  if (!user.accounts.some((a) => a.provider === "cord")) {
+  const cord = user.accounts.find((a) => a.provider === "cord");
+  if (!cord) {
     return new NextResponse(null, { status: 204 });
   }
 
@@ -49,5 +52,7 @@ export async function DELETE() {
   }
 
   await prisma.account.deleteMany({ where: { userId, provider: "cord" } });
+  // After the response, never blocking: a Cord outage doesn't stop the unlink.
+  afterCordClear(cord.providerAccountId);
   return new NextResponse(null, { status: 204 });
 }

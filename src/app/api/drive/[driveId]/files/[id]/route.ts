@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook, toFileEntry } from "../../../_helpers";
 import type { ChunkRef } from "@/lib/discord";
+import { afterCordStatus } from "@/lib/cord-sync";
 
 type RouteParams = { params: Promise<{ driveId: string; id: string }> };
 
@@ -67,6 +68,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     data,
   });
   if (count === 0) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
+  // Trash / restore changes the numbers shown on the Cord hub.
+  if (body.trashed !== undefined) afterCordStatus(result.userId);
 
   const row = await prisma.driveFile.findFirst({ where: { id, webhookId: webhook.id } });
   if (!row) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
@@ -78,8 +81,9 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const result = await getAuthorizedWebhook(driveId);
   if (!result) return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
 
-  await prisma.driveFile.deleteMany({
+  const { count } = await prisma.driveFile.deleteMany({
     where: { id, webhookId: result.webhook.id },
   });
+  if (count > 0) afterCordStatus(result.userId);
   return new NextResponse(null, { status: 204 });
 }

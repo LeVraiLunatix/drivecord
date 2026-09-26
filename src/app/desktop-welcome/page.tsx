@@ -7,6 +7,8 @@ import { CloudUpload, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { isDesktopApp } from "@/lib/use-platform";
+import { useCordEnabled } from "@/components/auth/cord-account";
+import { CordHero } from "@/components/auth/cord-hero";
 
 /**
  * First screen of the Tauri desktop app (no token yet). A branded welcome that
@@ -17,6 +19,7 @@ export default function DesktopWelcomePage() {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [desktop, setDesktop] = React.useState<boolean | null>(null);
+  const cordEnabled = useCordEnabled();
 
   React.useEffect(() => {
     setDesktop(isDesktopApp());
@@ -55,21 +58,48 @@ export default function DesktopWelcomePage() {
           transition={{ duration: 0.5, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
           className="flex flex-col gap-3"
         >
-          <Button
-            className="h-11 gap-2 text-sm"
-            onClick={() => router.push("/login?callbackUrl=%2Fdrive")}
-          >
-            <LogIn className="size-4" />
-            Se connecter
-          </Button>
-          <Button
-            variant="outline"
-            className="h-11 gap-2 text-sm"
-            onClick={() => router.push("/register")}
-          >
-            <UserPlus className="size-4" />
-            Créer un compte
-          </Button>
+          {cordEnabled !== false ? (
+            <>
+              {/* Compte Cord first, like /login: sign-in or sign-up, then the token handoff. */}
+              <CordHero mode="login" callbackUrl="/drive" />
+              <p className="pt-2 text-center text-xs text-muted-foreground">
+                Autres méthodes :{" "}
+                <button
+                  type="button"
+                  className="text-foreground underline-offset-4 hover:underline"
+                  onClick={() => router.push("/login?callbackUrl=%2Fdrive")}
+                >
+                  se connecter
+                </button>{" "}
+                ·{" "}
+                <button
+                  type="button"
+                  className="text-foreground underline-offset-4 hover:underline"
+                  onClick={() => router.push("/register")}
+                >
+                  créer un compte
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <Button
+                className="h-11 gap-2 text-sm"
+                onClick={() => router.push("/login?callbackUrl=%2Fdrive")}
+              >
+                <LogIn className="size-4" />
+                Se connecter
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11 gap-2 text-sm"
+                onClick={() => router.push("/register")}
+              >
+                <UserPlus className="size-4" />
+                Créer un compte
+              </Button>
+            </>
+          )}
         </motion.div>
       </div>
     </div>
