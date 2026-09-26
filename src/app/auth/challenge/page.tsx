@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { loadTwoFactor } from "@/lib/auth/two-factor";
 import { ChallengeForm } from "@/components/auth/challenge-form";
 import { TwoFactorChallenge } from "@/components/auth/two-factor-challenge";
+import { safeNext } from "@/lib/auth/next-url";
 
 /**
  * Step-up challenge screen. Reachable only with a *pending* session; routes to
@@ -11,10 +12,17 @@ import { TwoFactorChallenge } from "@/components/auth/two-factor-challenge";
  * L'approbation cross-device n'est PAS proposée ici : c'est désormais une
  * méthode 2FA explicite (opt-in), gérée via la branche `2fa`.
  */
-export default async function ChallengePage() {
+export default async function ChallengePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  if (session.level !== "pending") redirect("/drive");
+  // `next` : retour vers /native-handoff quand l'étape se fait dans Safari
+  // pour l'app iPhone (voir src/app/native-handoff).
+  const next = (await searchParams).next;
+  if (session.level !== "pending") redirect(safeNext(typeof next === "string" ? next : null));
 
   const email = session.user.email ?? "";
   const reason = session.pendingReason ?? "login_24h";

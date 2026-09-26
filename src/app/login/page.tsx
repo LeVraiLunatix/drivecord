@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
-import { isDesktopApp } from "@/lib/use-platform";
+import { isDesktopApp, isNativeApp } from "@/lib/use-platform";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { oauthSignIn } from "@/lib/auth/oauth";
 import { loginWithPasskey } from "@/lib/auth/passkey-client";
@@ -90,12 +90,18 @@ function LoginContent() {
     setBusy(true);
     try {
       const res = await signIn("credentials", {
-        email,
+        email: email.trim(),
         password,
         redirect: false,
       });
       if (res?.error) {
-        toast.error("Email ou mot de passe incorrect.");
+        toast.error(
+          res.code === "no_password"
+            ? "Ce compte n’a pas de mot de passe : connecte-toi avec Discord, Google ou ton Compte Cord."
+            : res.code === "rate_limited"
+              ? "Trop de tentatives. Réessaie dans quelques minutes."
+              : "Email ou mot de passe incorrect.",
+        );
       } else {
         router.push(callbackUrl);
         router.refresh();
@@ -110,6 +116,13 @@ function LoginContent() {
   };
 
   const handlePasskey = async () => {
+    // Dans l'app iPhone, la WebView ne peut pas utiliser les passkeys (l'app
+    // réinstallée par AltStore ou CordLauncher n'a pas le domaine associé) :
+    // on passe par Safari, comme Google et Discord, puis retour via /native-handoff.
+    if (isNativeApp()) {
+      window.open(`${window.location.origin}/native-login?provider=passkey`, "_system");
+      return;
+    }
     setBusy(true);
     const r = await loginWithPasskey();
     if (r.ok) {

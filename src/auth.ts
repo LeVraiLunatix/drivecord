@@ -2,7 +2,7 @@
  * Full Auth.js v5 configuration (Node.js runtime only).
  * Includes Prisma adapter, bcrypt, all providers, and the step-up jwt callback.
  */
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
@@ -16,6 +16,14 @@ import { syncUserPatreonTier } from "@/lib/patreon";
 import { syncDiscordRoles } from "@/lib/discord-roles";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { cordProviders } from "@/lib/auth/cord-provider";
+
+/** Erreurs de connexion par mot de passe dont la cause est montrée à l'utilisateur (`code`). */
+class NoPasswordSignin extends CredentialsSignin {
+  code = "no_password";
+}
+class RateLimitedSignin extends CredentialsSignin {
+  code = "rate_limited";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -154,17 +162,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Mot de passe", type: "password" },
       },
       async authorize(credentials, request) {
-        const email = credentials?.email as string | undefined;
+        // Le clavier de l'iPhone ajoute souvent une majuscule ou une espace
+        // finale à l'email : on compare sans casse et sans espaces autour.
+        const email = (credentials?.email as string | undefined)?.trim();
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
 
         const ip = getClientIp(request);
         const byIp = await rateLimit(`login:ip:${ip}`, 20, 10 * 60);
         const byEmail = await rateLimit(`login:email:${email.toLowerCase()}`, 10, 10 * 60);
-        if (!byIp.ok || !byEmail.ok) return null;
+        if (!byIp.ok || !byEmail.ok) throw new RateLimitedSignin();
 
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.password) return null;
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+        });
+        if (!user) return null;
+        // Compte créé avec Discord, Google ou Cord : pas de mot de passe à vérifier.
+        if (!user.password) throw new NoPasswordSignin();
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return null;
