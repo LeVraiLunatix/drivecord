@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { nextFromLocation } from "@/lib/auth/next-url";
 import { authFetch } from "@/lib/api-base";
 import { Loader2, MonitorSmartphone, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,7 @@ export function CrossDeviceWait({
           // Navigation DURE : session ouverte côté serveur (route custom) →
           // recharge pour que useSession + la sync des drives suivent (sinon
           // bascule vers /setup faute de drives synchronisés).
-          window.location.assign("/drive");
+          window.location.assign(nextFromLocation());
         } else if (d.status === "denied") {
           clearInterval(iv);
           setState("denied");
