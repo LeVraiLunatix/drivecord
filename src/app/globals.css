@@ -610,3 +610,46 @@ details[open] .faq-chevron { transform: rotate(180deg); }
    La topbar du drive est la zone de déplacement ([data-tauri-drag-region]) et
    laisse la place aux boutons fenêtre à droite. */
 html.is-desktop .drive-topbar-row { padding-right: 5.25rem; }
+
+/* ── Compte Cord (hero on /login and /register) ─────────────────────────────
+   Suite gradient #6E58F0 → #B842EC. A slowly turning conic halo draws the card
+   border; a light sweep crosses the main button. Both stop with reduced motion. */
+@property --cord-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.cord-halo {
+  background: conic-gradient(
+    from var(--cord-angle),
+    #6e58f0 0%,
+    #b842ec 25%,
+    rgba(184, 66, 236, 0.15) 45%,
+    #6e58f0 60%,
+    rgba(110, 88, 240, 0.15) 80%,
+    #6e58f0 100%
+  );
+  animation: cord-turn 9s linear infinite;
+}
+@keyframes cord-turn {
+  to { --cord-angle: 360deg; }
+}
+.cord-sheen {
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.35) 50%, transparent 80%);
+  transform: translateX(-120%);
+  animation: cord-sheen 4.8s cubic-bezier(0.16, 1, 0.3, 1) 1.2s infinite;
+}
+@keyframes cord-sheen {
+  0% { transform: translateX(-120%); }
+  35%, 100% { transform: translateX(120%); }
+}
+.cord-orbit {
+  animation: cord-orbit 1.6s cubic-bezier(0.6, 0.1, 0.4, 0.9) infinite;
+}
+@keyframes cord-orbit {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cord-halo, .cord-sheen, .cord-orbit { animation: none !important; }
+  .cord-sheen { opacity: 0; }
+}

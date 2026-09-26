@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { encryptUrl, decryptUrl } from "@/lib/auth/encrypt";
+import { afterCordStatus } from "@/lib/cord-sync";
 
 export async function GET() {
   const session = await auth();
@@ -77,6 +78,9 @@ export async function POST(req: NextRequest) {
       lastOpenedAt: new Date(),
     },
   });
+
+  // A brand-new drive (not a re-sync of an existing one) changes the Cord hub numbers.
+  if (Date.now() - row.createdAt.getTime() < 10_000) afterCordStatus(session.user.id);
 
   return NextResponse.json({ driveId: row.driveId }, { status: 201 });
 }

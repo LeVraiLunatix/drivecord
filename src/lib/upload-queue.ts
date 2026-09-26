@@ -11,6 +11,7 @@ import {
 import { recordUploadedFile } from "@/lib/storage";
 import type { ParentId } from "@/lib/storage";
 import { encryptBlob } from "@/lib/crypto/vault-crypto";
+import { signalCordSync } from "@/lib/cord-signal";
 
 /**
  * Global upload queue.
@@ -135,6 +136,7 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
     const pump = async () => {
       if (get()._pumping) return;
       set({ _pumping: true });
+      const startedAt = Date.now();
       try {
         while (true) {
           const map = get()._internal;
@@ -146,6 +148,11 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
         }
       } finally {
         set({ _pumping: false });
+        // Batch over: refresh the Compte Cord hub once, if anything landed.
+        const landed = Array.from(get()._internal.values()).some(
+          (i) => i.status === "done" && (i.endedAt ?? 0) >= startedAt,
+        );
+        if (landed) signalCordSync({ reason: "uploads" });
       }
     };
     pump();

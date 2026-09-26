@@ -11,6 +11,8 @@ import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
 import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
 import type { ChunkRef } from "@/lib/discord";
+import { auth } from "@/auth";
+import { afterCordNotify, DRIVECORD_URL } from "@/lib/cord-sync";
 
 export const runtime = "nodejs";
 
@@ -67,8 +69,26 @@ export async function POST(
     }),
   );
 
-  const countDownload = () =>
-    prisma.share.update({ where: { token }, data: { downloads: { increment: 1 } } }).catch(() => {});
+  const countDownload = async () => {
+    const counted = await prisma.share
+      .update({ where: { token }, data: { downloads: { increment: 1 } }, select: { downloads: true } })
+      .catch(() => null);
+    // First open of the link: tell the owner on the Cord hub (not when they open it themselves).
+    if (counted?.downloads === 1) {
+      const viewer = await auth().catch(() => null);
+      if (viewer?.user?.id !== share.webhook.userId) {
+        afterCordNotify(
+          share.webhook.userId,
+          {
+            title: "Ton lien de partage a été ouvert",
+            body: `« ${file.filename} » vient d’être téléchargé pour la première fois.`,
+            url: `${DRIVECORD_URL}/shares`,
+          },
+          { kind: { key: "share", limit: 10, windowSec: 3600 } },
+        );
+      }
+    }
+  };
 
   // Encrypted file → decrypt server-side and serve the plaintext bytes directly.
   // (Vault-locked files can't be served: the server doesn't hold the PIN key.)

@@ -6,6 +6,7 @@
 
 /** Sections of the Cord account portal we deep-link to from Settings. */
 export const CORD_PORTAL_SECTIONS = {
+  overview: "#apercu",
   security: "#securite",
   devices: "#appareils",
   apps: "#apps",
@@ -81,6 +82,51 @@ export function canUnlinkCord(input: {
     input.passkeyCount > 0 ||
     input.providers.some((p) => SIGN_IN_PROVIDERS.has(p))
   );
+}
+
+/** Extra OIDC params for Cord: `prompt=create` opens Cord sign-up, `login_hint` pre-fills the email. */
+export type CordAuthParams = { prompt?: "create"; login_hint?: string };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** A usable `login_hint`, or null (typos and junk are simply not sent). */
+export function cordLoginHint(email: string | null | undefined): string | null {
+  const e = email?.trim();
+  return e && e.length <= 254 && EMAIL_RE.test(e) ? e : null;
+}
+
+export function cordAuthParams(opts: { create?: boolean; email?: string | null }): CordAuthParams {
+  const hint = cordLoginHint(opts.email);
+  return {
+    ...(opts.create ? { prompt: "create" as const } : {}),
+    ...(hint ? { login_hint: hint } : {}),
+  };
+}
+
+/** Same params from a query string (`/native-login`, `/login?via=cord`): only known values pass. */
+export function cordAuthParamsFromQuery(q: { get(name: string): string | null }): CordAuthParams {
+  return cordAuthParams({ create: q.get("prompt") === "create", email: q.get("login_hint") });
+}
+
+/** Methods other than Cord, grouped under « Autres méthodes » on /login and /register. */
+export const OTHER_LOGIN_METHODS = new Set(["google", "discord", "passkey", "credentials"]);
+
+/**
+ * Open « Autres méthodes » right away when the user arrives with an error that
+ * concerns them (or tells them to use their usual method), or used one of them last time.
+ */
+export function shouldOpenOtherMethods(input: {
+  error: string | null | undefined;
+  provider: string | null | undefined;
+  lastMethod: string | null | undefined;
+}): boolean {
+  const { error, provider, lastMethod } = input;
+  if (error) {
+    // « Connecte-toi avec ta méthode habituelle, puis associe Cord »
+    if (error === "OAuthAccountNotLinked" || error === "CredentialsSignin") return true;
+    if (!error.startsWith("Cord") && provider !== "cord") return true;
+  }
+  return Boolean(lastMethod && OTHER_LOGIN_METHODS.has(lastMethod));
 }
 
 export type LoginErrorMessage = {

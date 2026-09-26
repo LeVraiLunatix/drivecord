@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { afterCordStatus } from "@/lib/cord-sync";
 
 export async function PATCH(
   req: NextRequest,
@@ -51,9 +52,10 @@ export async function DELETE(
   // Dissociation non destructive par design (voir copie UI dans
   // settings/page.tsx : "réajouté avec la même URL de webhook") — le salon
   // Discord n'est PAS supprimé ici, contrairement à la suppression de compte.
-  await prisma.webhook.deleteMany({
+  const { count } = await prisma.webhook.deleteMany({
     where: { userId: session.user.id, driveId },
   });
+  if (count > 0) afterCordStatus(session.user.id);
 
   return new NextResponse(null, { status: 204 });
 }

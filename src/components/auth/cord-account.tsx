@@ -9,6 +9,7 @@ import {
   AppWindow,
   ChevronRight,
   ExternalLink,
+  LayoutGrid,
   Loader2,
   ShieldCheck,
   Smartphone,
@@ -16,13 +17,12 @@ import {
   Unlink,
 } from "lucide-react";
 import { apiFetcher, apiUrl, authFetch, IS_DESKTOP } from "@/lib/api-base";
-import { lastOAuthProvider, oauthSignIn, rememberOAuthProvider } from "@/lib/auth/oauth";
+import { lastOAuthProvider, rememberOAuthProvider } from "@/lib/auth/oauth";
 import { cordPortalUrl, loginErrorMessage } from "@/lib/auth/cord-shared";
 import { isNativeApp } from "@/lib/use-platform";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -39,9 +39,11 @@ import {
 const PORTAL = process.env.NEXT_PUBLIC_CORD_ACCOUNT_URL;
 const noopSubscribe = () => () => {};
 
-function useCordEnabled() {
-  const { data } = useSWR<Record<string, unknown>>("/api/auth/providers", apiFetcher, { revalidateOnFocus: false });
-  return Boolean(data?.cord);
+/** `undefined` while the provider list loads, then whether Cord is configured on this deployment. */
+export function useCordEnabled(): boolean | undefined {
+  const { data, error } = useSWR<Record<string, unknown>>("/api/auth/providers", apiFetcher, { revalidateOnFocus: false });
+  if (error) return false;
+  return data ? Boolean(data.cord) : undefined;
 }
 
 /** Cord suite logo (copied from compte.cordsuite.app into /public). */
@@ -51,43 +53,18 @@ export function CordLogo({ className }: { className?: string }) {
 }
 
 /**
- * Primary « Continuer avec Cord » button (login + sign-up). Carries the Cord
- * suite gradient; `oauthSignIn` handles web, the iOS app (system browser →
- * drivecord:// handoff) and Drivecord Desktop (remote login page in Tauri).
+ * Link Cord to the account signed in right now (Settings, drive banner). The
+ * app shells have no web session to link to: finish in the browser.
  */
-export function CordSignInButton({ callbackUrl }: { callbackUrl: string }) {
-  const enabled = useCordEnabled();
-  if (!enabled) return null;
-  return (
-    <div className="space-y-1.5">
-      <Button
-        type="button"
-        onClick={() => oauthSignIn("cord", callbackUrl)}
-        className="h-11 w-full gap-2.5 border-0 bg-gradient-to-r from-[#6E58F0] to-[#B842EC] text-white shadow-lg shadow-[#8F4DEE]/25 transition hover:opacity-95 hover:shadow-[#8F4DEE]/40 focus-visible:ring-[#B842EC]/50"
-      >
-        <CordLogo className="ring-1 ring-white/30" />
-        Continuer avec Cord
-      </Button>
-      <p className="text-center text-xs text-muted-foreground">Une identité pour toute la suite Cord</p>
-    </div>
-  );
-}
-
-/** Cord button placed first on /login and /register, followed by an « ou » divider. */
-export function CordFirst({ callbackUrl }: { callbackUrl: string }) {
-  const enabled = useCordEnabled();
-  if (!enabled) return null;
-  return (
-    <>
-      <CordSignInButton callbackUrl={callbackUrl} />
-      <div className="relative">
-        <Separator />
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-          ou
-        </span>
-      </div>
-    </>
-  );
+export function linkCordAccount(callbackUrl = "/settings?cord=linked") {
+  if (isNativeApp() || IS_DESKTOP) {
+    window.open(apiUrl("/settings"), isNativeApp() ? "_system" : "_blank", "noopener,noreferrer");
+    return;
+  }
+  rememberOAuthProvider("cord");
+  // No sign-out first (unlike oauthSignIn): Auth.js links Cord to the
+  // account that is signed in right now.
+  void signIn("cord", { callbackUrl });
 }
 
 /**
@@ -158,17 +135,7 @@ export function CordAccountCard({
   const cord = account.cord;
   const linked = Boolean(cord);
 
-  const link = () => {
-    // The app shells have no web session to link to: finish in the browser.
-    if (isNativeApp() || IS_DESKTOP) {
-      window.open(apiUrl("/settings"), isNativeApp() ? "_system" : "_blank", "noopener,noreferrer");
-      return;
-    }
-    rememberOAuthProvider("cord");
-    // No sign-out first (unlike oauthSignIn): Auth.js links Cord to the
-    // account that is signed in right now.
-    void signIn("cord", { callbackUrl: "/settings?cord=linked" });
-  };
+  const link = () => linkCordAccount();
 
   const applyCordName = async () => {
     if (!cord?.name) return;
@@ -252,6 +219,24 @@ export function CordAccountCard({
                   Utiliser ce nom
                 </Button>
               </div>
+            )}
+
+            {PORTAL && (
+              <a
+                href={cordPortalUrl(PORTAL, "overview") ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 rounded-xl border border-[#8F4DEE]/30 bg-gradient-to-r from-[#6E58F0]/10 to-[#B842EC]/10 px-3 py-3 transition hover:border-[#8F4DEE]/55"
+              >
+                <LayoutGrid className="size-4 shrink-0 text-[#A58BF7]" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Voir ma suite</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    Ton espace Drivecord et tes notifications, dans le hub Cord
+                  </p>
+                </div>
+                <ExternalLink className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
+              </a>
             )}
 
             {PORTAL && (

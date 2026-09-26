@@ -13,6 +13,7 @@ import { isAdminEmail } from "@/lib/auth/admin";
 import { TIER_LABEL, type PatreonTier } from "@/lib/patreon";
 import { deleteStorageChannel } from "@/lib/discord/storage-guild";
 import { canUnlinkCord, cordIdentityFromIdToken } from "@/lib/auth/cord-shared";
+import { afterCordClear } from "@/lib/cord-sync";
 
 export async function GET() {
   const session = await auth();
@@ -109,10 +110,17 @@ export async function DELETE() {
       })
     : [];
 
+  // Compte Cord: its Account row goes with the cascade, keep the sub to clear the hub tile.
+  const cord = await prisma.account.findFirst({
+    where: { userId: session.user.id, provider: "cord" },
+    select: { providerAccountId: true },
+  });
+
   // Cascade: accounts, sessions, webhooks → DriveFile / DriveFolder.
   await prisma.user.delete({ where: { id: session.user.id } });
 
   await Promise.all(toCleanup.map((w) => deleteStorageChannel(w.channelId)));
+  afterCordClear(cord?.providerAccountId);
 
   return new NextResponse(null, { status: 204 });
 }

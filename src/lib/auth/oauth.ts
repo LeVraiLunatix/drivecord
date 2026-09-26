@@ -2,20 +2,47 @@
 
 import { signIn, signOut } from "next-auth/react";
 import { isNativeApp } from "@/lib/use-platform";
+import { cordAuthParams } from "@/lib/auth/cord-shared";
 
 export type OAuthProvider = "google" | "discord" | "cord";
 
+/** Cord only: open sign-up (`prompt=create`) and/or pre-fill the email (`login_hint`). */
+export type CordSignInOptions = { create?: boolean; email?: string | null };
+
 const LAST_PROVIDER_KEY = "drivecord:oauth-provider";
+const LAST_METHOD_KEY = "drivecord:login-method";
 
 /**
  * Auth.js' `?error=` doesn't say which provider failed; remember the one we
  * just started so /login can explain Cord-specific errors.
  */
 export function rememberOAuthProvider(provider: string): void {
+  rememberLoginMethod(provider);
   try {
     sessionStorage.setItem(LAST_PROVIDER_KEY, provider);
   } catch {
     /* private mode: the generic message is shown instead */
+  }
+}
+
+/**
+ * Method used for the last sign-in on this device ("cord", "google", "discord",
+ * "passkey", "credentials"), kept across visits: /login unfolds « Autres
+ * méthodes » for people who don't use Cord.
+ */
+export function rememberLoginMethod(method: string): void {
+  try {
+    localStorage.setItem(LAST_METHOD_KEY, method);
+  } catch {
+    /* private mode */
+  }
+}
+
+export function lastLoginMethod(): string | null {
+  try {
+    return localStorage.getItem(LAST_METHOD_KEY);
+  } catch {
+    return null;
   }
 }
 
@@ -36,13 +63,16 @@ export function lastOAuthProvider(): string | null {
  *  - Native app: open the flow in the SYSTEM browser (where passkeys/Google
  *    work), which deep-links back into the app via /native-handoff →
  *    drivecord://auth?code=… → session exchange.
+ *  - Cord accepts `cord` options: sign-up screen and pre-filled email, carried
+ *    through /native-login in the app.
  */
-export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive") {
+export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive", cord: CordSignInOptions = {}) {
+  const params = provider === "cord" ? cordAuthParams(cord) : {};
   if (isNativeApp()) {
     // Domaine courant du WebView (drivecord.app sur les builds récents) : le
     // navigateur système reste sur le même domaine que l'app → cookies et
     // redirect URIs OAuth cohérents.
-    const url = `${window.location.origin}/native-login?provider=${provider}`;
+    const url = `${window.location.origin}/native-login?${new URLSearchParams({ provider, ...params })}`;
     // Capacitor routes target "_system" to the external browser.
     window.open(url, "_system");
   } else {
@@ -51,7 +81,7 @@ export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive") {
     // switch to whatever account the user picks.
     signOut({ redirect: false })
       .catch(() => {})
-      .finally(() => signIn(provider, { callbackUrl }));
+      .finally(() => signIn(provider, { callbackUrl }, params));
   }
 }
 

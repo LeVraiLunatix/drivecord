@@ -17,6 +17,7 @@ import { syncDiscordRoles } from "@/lib/discord-roles";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { cordProviders } from "@/lib/auth/cord-provider";
 import { cordSignInGuard, syncCordProfile } from "@/lib/auth/cord";
+import { afterCordSignIn } from "@/lib/cord-sync";
 
 /** Erreurs de connexion par mot de passe dont la cause est montrée à l'utilisateur (`code`). */
 class NoPasswordSignin extends CredentialsSignin {
@@ -86,6 +87,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (changes.image !== undefined) token.picture = changes.image;
         if (changes.name !== undefined) token.name = changes.name;
+      }
+
+      // Compte Cord hub: refresh the Drivecord tile (after the response, never blocking).
+      if ((trigger === "signIn" || trigger === "signUp") && uid) {
+        afterCordSignIn(uid, account?.provider === "cord");
       }
 
       if (
