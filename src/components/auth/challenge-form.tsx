@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { nextFromLocation } from "@/lib/auth/next-url";
 import { authFetch } from "@/lib/api-base";
 import { signOut } from "next-auth/react";
 import { Loader2, MailCheck } from "lucide-react";
@@ -97,7 +98,7 @@ export function ChallengeForm({
         // Navigation DURE : la session vient d'être promue côté serveur (route
         // custom), donc on recharge pour que le SessionProvider + la sync des
         // drives prennent le relais (sinon possible bascule vers /setup).
-        window.location.assign("/drive");
+        window.location.assign(nextFromLocation());
         return;
       } else {
         setError(data.error ?? "Code invalide.");

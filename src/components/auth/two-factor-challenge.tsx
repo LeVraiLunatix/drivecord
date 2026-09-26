@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { nextFromLocation } from "@/lib/auth/next-url";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { OtpInput } from "@/components/auth/otp-input";
 import { CrossDeviceWait } from "@/components/auth/cross-device-wait";
@@ -125,7 +126,7 @@ export function TwoFactorChallenge({
         toast.success("Connexion confirmée !");
         // Navigation DURE : session promue via route custom → recharge pour que
         // useSession + la sync des drives suivent (sinon bascule vers /setup).
-        window.location.assign("/drive");
+        window.location.assign(nextFromLocation());
         return;
       } else {
         setError(data.error ?? "Code incorrect.");
