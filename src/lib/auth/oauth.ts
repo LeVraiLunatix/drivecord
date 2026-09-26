@@ -5,6 +5,28 @@ import { isNativeApp } from "@/lib/use-platform";
 
 export type OAuthProvider = "google" | "discord" | "cord";
 
+const LAST_PROVIDER_KEY = "drivecord:oauth-provider";
+
+/**
+ * Auth.js' `?error=` doesn't say which provider failed; remember the one we
+ * just started so /login can explain Cord-specific errors.
+ */
+export function rememberOAuthProvider(provider: string): void {
+  try {
+    sessionStorage.setItem(LAST_PROVIDER_KEY, provider);
+  } catch {
+    /* private mode: the generic message is shown instead */
+  }
+}
+
+export function lastOAuthProvider(): string | null {
+  try {
+    return sessionStorage.getItem(LAST_PROVIDER_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Start an OAuth sign-in.
  *  - Web: clear any current session FIRST, then run the normal NextAuth
@@ -24,6 +46,7 @@ export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive") {
     // Capacitor routes target "_system" to the external browser.
     window.open(url, "_system");
   } else {
+    rememberOAuthProvider(provider);
     // Sign out the current session, then start OAuth — guarantees a clean
     // switch to whatever account the user picks.
     signOut({ redirect: false })

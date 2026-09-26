@@ -6,6 +6,7 @@ import { signIn, signOut } from "next-auth/react";
 import { KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { loginWithPasskey } from "@/lib/auth/passkey-client";
+import { rememberOAuthProvider } from "@/lib/auth/oauth";
 
 /**
  * Opened in the SYSTEM BROWSER by the app. Immediately starts the OAuth flow
@@ -27,6 +28,7 @@ function NativeLoginInner() {
   React.useEffect(() => {
     const p = provider;
     if (p === "passkey") return;
+    rememberOAuthProvider(p);
     (async () => {
       await signOut({ redirect: false }).catch(() => {});
       signIn(p, { callbackUrl: "/native-handoff" });

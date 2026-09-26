@@ -88,6 +88,8 @@ type Account = {
   isAdmin: boolean;
   patreonTier: PatreonTier;
   patreonTierLabel: string;
+  cord: { name: string | null; email: string | null } | null;
+  canUnlinkCord: boolean;
 };
 
 
@@ -108,9 +110,24 @@ export default function SettingsPage() {
   });
   const columns = useResponsiveColumns();
 
+  // Back from Cord (Auth.js redirect): confirm the link, or show why it failed.
+  // (Only rendered once /api/account has loaded client-side: no hydration mismatch.)
+  const [cordError] = React.useState(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("cordError"),
+  );
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("cord") && !params.has("cordError")) return;
+    if (params.get("cord") === "linked") toast.success("Compte Cord associé ✨");
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
   const sections = [
     <motion.div key="profile" variants={v ?? item}>
       <ProfileSection account={account} onUpdate={mutate} />
+    </motion.div>,
+    <motion.div key="cord-account" variants={v ?? item}>
+      <CordAccountCard account={account} onUpdate={() => void mutate()} error={cordError} />
     </motion.div>,
     <motion.div key="security" variants={v ?? item}>
       <SecuritySection account={account} onUpdate={mutate} />
@@ -136,9 +153,6 @@ export default function SettingsPage() {
     </motion.div>,
     <motion.div key="account-links" variants={v ?? item}>
       <AccountLinksSection />
-    </motion.div>,
-    <motion.div key="cord-account" variants={v ?? item}>
-      <CordAccountCard linked={account?.providers.includes("cord") ?? false} />
     </motion.div>,
     <motion.div key="danger" variants={v ?? item}>
       <DangerSection />
@@ -290,6 +304,9 @@ function ProfileSection({ account, onUpdate }: { account?: Account; onUpdate: ()
           {account && account.patreonTier > 0 && (
             <TierBadge tier={account.patreonTier} />
           )}
+          {account?.providers.includes("cord") && (
+            <Badge variant="secondary" className="gap-1">Cord</Badge>
+          )}
           {account?.providers.includes("google") && (
             <Badge variant="secondary" className="gap-1">Google</Badge>
           )}
@@ -319,7 +336,7 @@ function SecuritySection({ account, onUpdate }: { account?: Account; onUpdate: (
 
   // Human-readable list of the OAuth providers this account uses.
   const providerLabel = (account?.providers ?? [])
-    .map((p) => (p === "google" ? "Google" : p === "discord" ? "Discord" : p))
+    .map((p) => (p === "google" ? "Google" : p === "discord" ? "Discord" : p === "cord" ? "Cord" : p === "patreon" ? "Patreon" : p))
     .join(" et ");
 
   const submit = async (e: React.FormEvent) => {

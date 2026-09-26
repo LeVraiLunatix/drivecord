@@ -8,6 +8,7 @@
     "build:desktop": "node scripts/build-desktop.mjs",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test \"src/**/*.test.ts\"",
     "postinstall": "prisma generate"
   },
   "dependencies": {

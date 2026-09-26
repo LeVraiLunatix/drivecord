@@ -1,5 +1,5 @@
 "use client";
-import { CordSignInButton } from "@/components/auth/cord-account";
+import { AuthErrorNotice, CordFirst } from "@/components/auth/cord-account";
 
 import * as React from "react";
 import Link from "next/link";
@@ -76,14 +76,7 @@ function LoginContent() {
   const [password, setPassword] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
-  React.useEffect(() => {
-    if (params.get("error") === "OAuthAccountNotLinked") {
-      toast.error("Connecte-toi d’abord à ton compte Drivecord existant, puis associe ton compte Cord depuis les paramètres.");
-    }
-    if (params.get("error") === "CredentialsSignin") {
-      toast.error("Email ou mot de passe incorrect.");
-    }
-  }, [params]);
+  const authError = params.get("error");
 
   const handleCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,12 +172,20 @@ function LoginContent() {
           </motion.div>
         )}
 
+        {authError && (
+          <motion.div variants={v ?? item}>
+            <AuthErrorNotice error={authError} />
+          </motion.div>
+        )}
+
         <motion.div variants={v ?? item}>
         <Card className="border-border/60 bg-card/70 backdrop-blur-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">Se connecter</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <CordFirst callbackUrl={callbackUrl} />
+
             <form onSubmit={handleCredentials} className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
@@ -224,7 +225,6 @@ function LoginContent() {
             </div>
 
             <div className="space-y-2">
-              <CordSignInButton callbackUrl={callbackUrl} />
               <Button
                 variant="outline"
                 className="w-full"

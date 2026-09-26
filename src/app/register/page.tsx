@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { oauthSignIn } from "@/lib/auth/oauth";
+import { CordFirst } from "@/components/auth/cord-account";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 const container: Variants = {
@@ -148,6 +149,8 @@ export default function RegisterPage() {
             <CardTitle className="text-base">Créer un compte</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <CordFirst callbackUrl="/drive" />
+
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="name">Nom (optionnel)</Label>

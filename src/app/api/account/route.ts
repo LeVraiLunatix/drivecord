@@ -1,7 +1,8 @@
 /**
  * /api/account — current user's account.
  *
- * GET    → { name, email, image, hasPassword, providers[], webhookCount, createdAt }
+ * GET    → { name, email, image, hasPassword, providers[], webhookCount, createdAt,
+ *            cord: { name, email } | null, canUnlinkCord }
  * PATCH  → update { name }
  * DELETE → delete the account (cascades to webhooks, files, folders, sessions)
  */
@@ -11,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth/admin";
 import { TIER_LABEL, type PatreonTier } from "@/lib/patreon";
 import { deleteStorageChannel } from "@/lib/discord/storage-guild";
+import { canUnlinkCord, cordIdentityFromIdToken } from "@/lib/auth/cord-shared";
 
 export async function GET() {
   const session = await auth();
@@ -28,8 +30,8 @@ export async function GET() {
       createdAt: true,
       patreonTier: true,
       hideFromSupporters: true,
-      accounts: { select: { provider: true } },
-      _count: { select: { webhooks: true } },
+      accounts: { select: { provider: true, id_token: true } },
+      _count: { select: { webhooks: true, authenticators: true } },
     },
   });
 
@@ -38,13 +40,23 @@ export async function GET() {
   }
 
   const patreonTier = (user.patreonTier ?? 0) as PatreonTier;
+  const providers = user.accounts.map((a) => a.provider);
+  const cordAccount = user.accounts.find((a) => a.provider === "cord");
 
   return NextResponse.json({
     name: user.name,
     email: user.email,
     image: user.image,
     hasPassword: Boolean(user.password),
-    providers: user.accounts.map((a) => a.provider),
+    providers,
+    cord: cordAccount
+      ? (cordIdentityFromIdToken(cordAccount.id_token) ?? { name: null, email: null })
+      : null,
+    canUnlinkCord: canUnlinkCord({
+      hasPassword: Boolean(user.password),
+      passkeyCount: user._count.authenticators,
+      providers: providers.filter((p) => p !== "cord"),
+    }),
     webhookCount: user._count.webhooks,
     createdAt: user.createdAt.getTime(),
     isAdmin: isAdminEmail(user.email),
