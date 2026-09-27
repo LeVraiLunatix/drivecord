@@ -14,7 +14,7 @@ Un clone moderne et amélioré de [Disbox](https://github.com/DisboxApp/disbox) 
 [![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-8b5cf6.svg)](LICENSE)
+[![Licence : AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-8b5cf6.svg)](LICENSE)
 
 [**🌐 Démo en ligne**](https://drivecord.vercel.app) · [**📲 Installer l'app iPhone**](https://drivecord.vercel.app/install)
 
@@ -159,9 +159,11 @@ Pensé pour **[Vercel](https://vercel.com)** : connecte le repo, ajoute les vari
 
 Projet **personnel et éducatif**, non affilié à Discord. Le stockage de fichiers arbitraires via les webhooks peut entrer en tension avec les Conditions d'utilisation de Discord — utilise-le de façon responsable et à tes propres risques. Inspiré du projet [Disbox](https://github.com/DisboxApp/disbox).
 
-## 📄 Licence
+## Licence
 
-Distribué sous licence **MIT**. Voir [`LICENSE`](LICENSE).
+Copyright © 2026 **Lunatix**.
+
+Le code est distribué sous licence **[GNU AGPL v3.0 ou ultérieure](LICENSE)** : tu peux le lire, l'utiliser, le modifier et le redistribuer, à condition de partager tes modifications sous la même licence, y compris si tu le fais tourner comme service en ligne. Les noms et logos de la suite Cord n'en font pas partie : voir [NOTICE.md](NOTICE.md). Envie de contribuer ? Lis [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
