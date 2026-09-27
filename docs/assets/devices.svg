@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 660" width="1200" height="660" role="img" aria-label="Drivecord dans le navigateur et dans l'app iPhone">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6D64F2"/><stop offset="1" stop-color="#C64BF1"/></linearGradient>
+    <radialGradient id="bgA"><stop offset="0" stop-color="#6D64F2" stop-opacity="0.55"/><stop offset="1" stop-color="#6D64F2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bgB"><stop offset="0" stop-color="#C64BF1" stop-opacity="0.45"/><stop offset="1" stop-color="#C64BF1" stop-opacity="0"/></radialGradient>
+    <linearGradient id="img1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8f6b"/><stop offset="1" stop-color="#d24bef"/></linearGradient>
+    <linearGradient id="img2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4bb8ff"/><stop offset="1" stop-color="#6D64F2"/></linearGradient>
+    <linearGradient id="img3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#37CC94"/><stop offset="1" stop-color="#1E8FDC"/></linearGradient>
+    <clipPath id="frame"><rect width="1200" height="660" rx="26"/></clipPath>
+    <clipPath id="win"><rect x="40" y="50" width="820" height="560" rx="20"/></clipPath>
+    <clipPath id="phone"><rect x="896" y="92" width="264" height="530" rx="42"/></clipPath>
+    <style>
+      text { font-family: "Segoe UI Variable Text", "Segoe UI", Inter, Arial, sans-serif; fill: #f7f5ff; }
+      .d { font-family: "Segoe UI Variable Display", "Segoe UI", Inter, Arial, sans-serif; font-weight: 700; }
+      .m { fill-opacity: 0.6; } .s { fill-opacity: 0.4; }
+      .bar { animation: bar 4.5s ease-in-out infinite; transform-origin: 262px 587px; }
+      @keyframes bar { 0% { transform: scaleX(0.05); } 80%, 100% { transform: scaleX(1); } }
+      .pct { animation: pct 4.5s steps(1) infinite; }
+      @keyframes pct { 0%, 80% { opacity: 1; } 81%, 100% { opacity: 0; } }
+      .ok { animation: ok 4.5s steps(1) infinite; }
+      @keyframes ok { 0%, 80% { opacity: 0; } 81%, 100% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+    </style>
+  </defs>
+  <g clip-path="url(#frame)">
+    <rect width="1200" height="660" fill="#08060f"/>
+    <ellipse cx="300" cy="200" rx="460" ry="320" fill="url(#bgA)"/>
+    <ellipse cx="1000" cy="460" rx="360" ry="300" fill="url(#bgB)"/>
+
+    <!-- Navigateur -->
+    <rect x="40" y="50" width="820" height="560" rx="20" fill="#0f0c18" stroke="#fff" stroke-opacity="0.12"/>
+    <g clip-path="url(#win)">
+      <rect x="40" y="50" width="820" height="44" fill="#fff" fill-opacity="0.05"/>
+      <circle cx="64" cy="72" r="6" fill="#ff6b82"/><circle cx="84" cy="72" r="6" fill="#fbc05a"/><circle cx="104" cy="72" r="6" fill="#5fe3a9"/>
+      <rect x="300" y="60" width="300" height="24" rx="12" fill="#fff" fill-opacity="0.07"/>
+      <text x="450" y="77" font-size="12.5" class="m" text-anchor="middle">drivecord.app/drive</text>
+
+      <!-- Barre latérale -->
+      <rect x="40" y="94" width="190" height="516" fill="#fff" fill-opacity="0.03"/>
+      <rect x="60" y="112" width="30" height="30" rx="8" fill="url(#brand)"/>
+      <text x="100" y="133" font-size="16" class="d">Drivecord</text>
+      <g font-size="13.5">
+        <rect x="54" y="160" width="162" height="34" rx="10" fill="#fff" fill-opacity="0.08"/>
+        <text x="72" y="182" font-weight="600">Mes fichiers</text>
+        <text x="72" y="220" class="m">Récents</text><text x="72" y="252" class="m">Favoris</text><text x="72" y="284" class="m">Partagés</text><text x="72" y="316" class="m">Coffre-fort 🔒</text><text x="72" y="348" class="m">Corbeille</text>
+      </g>
+      <rect x="54" y="540" width="162" height="54" rx="12" fill="#fff" fill-opacity="0.06"/>
+      <text x="68" y="562" font-size="12" class="m">Espace utilisé</text>
+      <text x="68" y="583" font-size="14" font-weight="700">128 Go · ∞</text>
+
+      <!-- Contenu -->
+      <text x="258" y="136" font-size="24" class="d">Mes fichiers</text>
+      <rect x="600" y="114" width="236" height="34" rx="17" fill="url(#brand)"/>
+      <text x="718" y="136" font-size="13.5" font-weight="700" text-anchor="middle">+ Importer des fichiers</text>
+      <g font-size="13">
+        <rect x="258" y="170" width="180" height="140" rx="16" fill="#fff" fill-opacity="0.05" stroke="#fff" stroke-opacity="0.08"/>
+        <rect x="270" y="182" width="156" height="86" rx="10" fill="url(#img1)"/>
+        <text x="270" y="290" font-weight="600">Vacances.heic</text>
+        <rect x="452" y="170" width="180" height="140" rx="16" fill="#fff" fill-opacity="0.05" stroke="#fff" stroke-opacity="0.08"/>
+        <rect x="464" y="182" width="156" height="86" rx="10" fill="url(#img2)"/>
+        <path d="M534 212l20 13-20 13z" fill="#fff" fill-opacity="0.9"/>
+        <text x="464" y="290" font-weight="600">Clip.mov</text>
+        <rect x="646" y="170" width="190" height="140" rx="16" fill="#fff" fill-opacity="0.05" stroke="#fff" stroke-opacity="0.08"/>
+        <rect x="658" y="182" width="166" height="86" rx="10" fill="url(#img3)"/>
+        <text x="658" y="290" font-weight="600">Projet.zip</text>
+
+        <rect x="258" y="326" width="578" height="46" rx="12" fill="#fff" fill-opacity="0.04"/>
+        <rect x="272" y="338" width="22" height="22" rx="5" fill="#fbc05a"/><text x="306" y="354" font-weight="600">Factures</text><text x="560" y="354" class="m">12 fichiers</text>
+        <rect x="690" y="340" width="64" height="18" rx="9" fill="#5fe3a9" fill-opacity="0.18"/><text x="722" y="353" font-size="11" text-anchor="middle" style="fill:#5fe3a9">Perso</text>
+        <rect x="258" y="380" width="578" height="46" rx="12" fill="#fff" fill-opacity="0.04"/>
+        <rect x="272" y="392" width="22" height="22" rx="5" fill="#a78bff"/><text x="306" y="408" font-weight="600">Rapport.pdf</text><text x="560" y="408" class="m">2,4 Mo</text>
+        <text x="690" y="408" font-size="12" style="fill:#c9b8ff">🔗 lien · mot de passe</text>
+        <rect x="258" y="434" width="578" height="46" rx="12" fill="#fff" fill-opacity="0.04"/>
+        <rect x="272" y="446" width="22" height="22" rx="5" fill="#4bb8ff"/><text x="306" y="462" font-weight="600">Musique</text><text x="560" y="462" class="m">340 fichiers</text>
+      </g>
+
+      <!-- Envoi en cours -->
+      <rect x="248" y="548" width="598" height="52" rx="14" fill="#1a1528" stroke="#fff" stroke-opacity="0.1"/>
+      <text x="262" y="570" font-size="13" font-weight="600">Film de famille.mp4</text>
+      <text class="pct m" x="832" y="570" font-size="12.5" text-anchor="end">chiffrement et envoi…</text>
+      <text class="ok" x="832" y="570" font-size="12.5" text-anchor="end" style="fill:#5fe3a9">✓ envoyé, chiffré</text>
+      <rect x="262" y="582" width="570" height="6" rx="3" fill="#fff" fill-opacity="0.08"/>
+      <rect class="bar" x="262" y="582" width="570" height="6" rx="3" fill="url(#brand)"/>
+    </g>
+
+    <!-- iPhone -->
+    <rect x="890" y="86" width="276" height="542" rx="48" fill="#1c1a26"/>
+    <g clip-path="url(#phone)">
+      <rect x="896" y="92" width="264" height="530" fill="#0f0c18"/>
+      <rect x="982" y="102" width="92" height="26" rx="13" fill="#000"/>
+      <text x="918" y="120" font-size="13" font-weight="600">9:41</text>
+      <text x="916" y="174" font-size="26" class="d">Mes fichiers</text>
+      <g>
+        <rect x="916" y="190" width="108" height="108" rx="16" fill="url(#img1)"/>
+        <rect x="1032" y="190" width="108" height="108" rx="16" fill="url(#img2)"/>
+        <rect x="916" y="306" width="108" height="108" rx="16" fill="url(#img3)"/>
+        <rect x="1032" y="306" width="108" height="108" rx="16" fill="#fff" fill-opacity="0.06"/>
+        <text x="1086" y="366" font-size="26" text-anchor="middle" class="m">+</text>
+      </g>
+      <rect x="916" y="428" width="224" height="58" rx="16" fill="#fff" fill-opacity="0.06"/>
+      <circle cx="942" cy="457" r="14" fill="#5fe3a9" fill-opacity="0.18"/>
+      <path d="M936 457l4 4 8-9" stroke="#5fe3a9" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="964" y="452" font-size="13" font-weight="600">Pellicule sauvegardée</text>
+      <text x="964" y="470" font-size="11.5" class="m">1 284 photos · Face ID</text>
+      <rect x="916" y="500" width="224" height="46" rx="23" fill="url(#brand)"/>
+      <text x="1028" y="528" font-size="14" font-weight="700" text-anchor="middle">Importer</text>
+      <rect x="936" y="566" width="184" height="40" rx="20" fill="#fff" fill-opacity="0.1"/>
+      <text x="966" y="591" font-size="11.5" font-weight="700" style="fill:#c9b8ff">Fichiers</text><text x="1028" y="591" font-size="11.5" class="m">Partages</text><text x="1086" y="591" font-size="11.5" class="m">Réglages</text>
+    </g>
+  </g>
+  <rect x="0.5" y="0.5" width="1199" height="659" rx="26" fill="none" stroke="#fff" stroke-opacity="0.1"/>
+</svg>

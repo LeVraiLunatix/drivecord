@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 460" width="1280" height="460" role="img" aria-label="Drivecord — ton cloud illimité, chiffré et gratuit">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6D64F2"/><stop offset="1" stop-color="#C64BF1"/></linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#e5ddff"/><stop offset="1" stop-color="#f1c2ff"/></linearGradient>
+    <radialGradient id="blobA"><stop offset="0" stop-color="#6D64F2" stop-opacity="0.85"/><stop offset="1" stop-color="#6D64F2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="blobB"><stop offset="0" stop-color="#C64BF1" stop-opacity="0.7"/><stop offset="1" stop-color="#C64BF1" stop-opacity="0"/></radialGradient>
+    <radialGradient id="blobC"><stop offset="0" stop-color="#ff8f6b" stop-opacity="0.45"/><stop offset="1" stop-color="#ff8f6b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#a78bff" stop-opacity="0.6"/><stop offset="1" stop-color="#a78bff" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M34 0H0V34" fill="none" stroke="#fff" stroke-opacity="0.045"/></pattern>
+    <clipPath id="frame"><rect width="1280" height="460" rx="28"/></clipPath>
+    <style>
+      text { font-family: "Segoe UI Variable Display", "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif; fill: #f7f5ff; }
+      .mono { font-family: "Cascadia Code", "SF Mono", Consolas, monospace; }
+      .da { animation: da 15s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+      .db { animation: db 18s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+      @keyframes da { to { transform: translate(90px, 40px) scale(1.15); } }
+      @keyframes db { to { transform: translate(-80px, 60px) scale(0.9); } }
+      .breathe { animation: breathe 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      @keyframes breathe { 50% { transform: scale(1.12); opacity: 0.7; } }
+      .chunk { animation: chunk 3.2s cubic-bezier(.45,0,.2,1) infinite; opacity: 0; }
+      .c2 { animation-delay: .4s; } .c3 { animation-delay: .8s; } .c4 { animation-delay: 1.2s; } .c5 { animation-delay: 1.6s; } .c6 { animation-delay: 2s; }
+      @keyframes chunk { 0% { transform: translate(0, 0); opacity: 0; } 12% { opacity: 1; } 78% { opacity: 1; } 100% { transform: translate(250px, 0); opacity: 0; } }
+      .float { animation: float 5s ease-in-out infinite; }
+      @keyframes float { 50% { transform: translateY(-7px); } }
+      .rise { animation: rise 1s cubic-bezier(.22,1,.36,1) both; }
+      .rise2 { animation: rise 1s .15s cubic-bezier(.22,1,.36,1) both; }
+      .rise3 { animation: rise 1s .3s cubic-bezier(.22,1,.36,1) both; }
+      @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+      .fill { animation: fill 6s ease-in-out infinite; transform-origin: 1110px 312px; }
+      @keyframes fill { 0% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } 100% { transform: scaleY(0.25); } }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; } .chunk { opacity: 1; } }
+    </style>
+  </defs>
+  <g clip-path="url(#frame)">
+    <rect width="1280" height="460" fill="#08060f"/>
+    <ellipse class="da" cx="180" cy="60" rx="380" ry="300" fill="url(#blobA)"/>
+    <ellipse class="db" cx="1120" cy="120" rx="340" ry="300" fill="url(#blobB)"/>
+    <ellipse cx="700" cy="520" rx="420" ry="220" fill="url(#blobC)"/>
+    <rect width="1280" height="460" fill="url(#grid)"/>
+
+    <g transform="translate(88 0)">
+      <g class="rise">
+        <rect x="0" y="112" width="252" height="30" rx="15" fill="#fff" fill-opacity="0.08" stroke="#fff" stroke-opacity="0.14"/>
+        <circle cx="18" cy="127" r="4.5" fill="#5fe3a9"/>
+        <text x="32" y="132" fill-opacity="0.85" font-size="14" font-weight="600">Gratuit · illimité · chiffré de bout en bout</text>
+      </g>
+      <text class="rise2" x="-4" y="232" fill="url(#title)" font-size="96" font-weight="700" letter-spacing="-3.5">Drivecord</text>
+      <g class="rise3">
+        <text x="0" y="286" fill-opacity="0.75" font-size="25" font-weight="500">Ton cloud illimité, sans facture.</text>
+        <text x="0" y="322" fill-opacity="0.5" font-size="18">Sur le web, sur ton iPhone et sur Windows.</text>
+      </g>
+    </g>
+
+    <!-- Un fichier chiffré, découpé en morceaux qui partent vers le stockage -->
+    <circle class="breathe" cx="820" cy="230" r="110" fill="url(#glow)"/>
+    <g class="float">
+      <path d="M760 150h70l40 40v110a14 14 0 0 1-14 14h-96a14 14 0 0 1-14-14V164a14 14 0 0 1 14-14z" fill="url(#brand)"/>
+      <path d="M830 150v26a14 14 0 0 0 14 14h26" fill="#fff" fill-opacity="0.3"/>
+      <rect x="792" y="222" width="52" height="42" rx="9" fill="#fff" fill-opacity="0.95"/>
+      <path d="M801 222v-10a17 17 0 0 1 34 0v10" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="818" cy="240" r="6" fill="#7a4fe0"/><rect x="815.5" y="242" width="5" height="12" rx="2.5" fill="#7a4fe0"/>
+      <text class="mono" x="772" y="298" font-size="12" fill-opacity="0.85">AES-256-GCM</text>
+    </g>
+    <g>
+      <rect class="chunk" x="880" y="186" width="30" height="18" rx="5" fill="#a78bff"/>
+      <rect class="chunk c2" x="880" y="216" width="30" height="18" rx="5" fill="#C64BF1"/>
+      <rect class="chunk c3" x="880" y="246" width="30" height="18" rx="5" fill="#8a7dff"/>
+      <rect class="chunk c4" x="880" y="200" width="30" height="18" rx="5" fill="#e07cff"/>
+      <rect class="chunk c5" x="880" y="232" width="30" height="18" rx="5" fill="#a78bff"/>
+      <rect class="chunk c6" x="880" y="262" width="30" height="18" rx="5" fill="#C64BF1"/>
+    </g>
+
+    <!-- Stockage infini -->
+    <g transform="translate(0 0)">
+      <ellipse cx="1110" cy="150" rx="70" ry="22" fill="#fff" fill-opacity="0.12" stroke="#fff" stroke-opacity="0.3"/>
+      <path d="M1040 150v162c0 12 31 22 70 22s70-10 70-22V150" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.3"/>
+      <rect class="fill" x="1044" y="170" width="132" height="142" rx="4" fill="url(#brand)" fill-opacity="0.55"/>
+      <ellipse cx="1110" cy="208" rx="70" ry="22" fill="none" stroke="#fff" stroke-opacity="0.18"/>
+      <ellipse cx="1110" cy="264" rx="70" ry="22" fill="none" stroke="#fff" stroke-opacity="0.18"/>
+      <text x="1110" y="252" font-size="54" font-weight="700" text-anchor="middle" fill-opacity="0.95">∞</text>
+      <text x="1110" y="370" font-size="13" font-weight="600" text-anchor="middle" fill-opacity="0.55">stockage sans limite</text>
+    </g>
+    <rect width="1280" height="460" rx="28" fill="none" stroke="#fff" stroke-opacity="0.08"/>
+  </g>
+</svg>
