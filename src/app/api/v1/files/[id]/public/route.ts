@@ -58,8 +58,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   const auth = await authenticateApiKey(req);
   if (!auth) return corsJson({ error: "Clé API invalide ou manquante." }, { status: 401 });
-  if (!hasScope(auth.apiKey, "read")) {
-    return corsJson({ error: "Cette clé n'a pas la permission de lecture." }, { status: 403 });
+  // Revoking a public link is mutative (it deletes a Share row), not a read —
+  // require the "write" scope like every other mutating v1 route.
+  if (!hasScope(auth.apiKey, "write")) {
+    return corsJson({ error: "Cette clé n'a pas la permission d'écriture." }, { status: 403 });
   }
   const limited = await checkRateLimit(auth.apiKey);
   if (limited) return limited;

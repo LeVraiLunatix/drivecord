@@ -9,6 +9,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { encryptUrl, decryptUrl } from "@/lib/auth/encrypt";
 import { afterCordStatus } from "@/lib/cord-sync";
+import { parseWebhookUrl } from "@/lib/discord";
 
 export async function GET() {
   const session = await auth();
@@ -53,6 +54,14 @@ export async function POST(req: NextRequest) {
 
   if (!body.driveId || !body.webhookUrl || !body.name || !body.channelId) {
     return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
+  }
+
+  // Reject anything that isn't a genuine Discord webhook URL — the server
+  // later fetches this exact string (message/CDN refresh), so an unvalidated
+  // value here is a straight SSRF vector.
+  const ref = parseWebhookUrl(body.webhookUrl);
+  if (!ref) {
+    return NextResponse.json({ error: "URL de webhook Discord invalide." }, { status: 400 });
   }
 
   const encryptedUrl = encryptUrl(body.webhookUrl);

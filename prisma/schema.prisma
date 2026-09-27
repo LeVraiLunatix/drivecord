@@ -31,6 +31,11 @@ model User {
   vaultKeyWrapped String?
   /// base64 IV used for the `vaultKeyWrapped` AES-GCM wrapping
   vaultKeyIv      String?
+  /// Horodatage du dernier changement de mot de passe. Comparé à l'`iat` du
+  /// JWT de session dans le callback `jwt` (src/auth.ts) : tout JWT émis
+  /// avant cette date est invalidé, ce qui force une reconnexion partout où
+  /// l'ancien mot de passe était utilisé.
+  passwordChangedAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -377,6 +382,21 @@ model PushToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// Code de handoff natif (voir src/lib/auth/native-code.ts) déjà consommé.
+/// Rangée courte durée de vie : une contrainte unique sur `codeHash` fait de
+/// l'insertion la primitive "consommer une fois" (la 2e insertion du même
+/// code échoue avec P2002). `expiresAt` sert uniquement au nettoyage
+/// opportuniste (`deleteMany` best-effort) — aucun job cron nécessaire, la
+/// fenêtre de vie du code est de 2 minutes.
+model UsedNativeCode {
+  /// SHA-256 hex du code brut — jamais le code lui-même.
+  codeHash  String   @id
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
 }
 
 /// Annonce affichée en popup sur le site (configurée par l'admin).

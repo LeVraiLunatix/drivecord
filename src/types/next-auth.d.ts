@@ -11,6 +11,13 @@ declare module "next-auth/jwt" {
     pendingReason?: PendingReason;
     /** Revision of the one-off name/avatar backfill from DB (see auth.ts). */
     picRev?: number;
+    /**
+     * `User.passwordChangedAt` (ms epoch, or null) as last observed by the
+     * `jwt` callback. A mismatch against the current DB value means the
+     * password changed after this JWT was minted — the callback returns
+     * `null` to invalidate it (see auth.ts).
+     */
+    pwdChangedAt?: number | null;
   }
 }
 

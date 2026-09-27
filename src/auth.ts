@@ -110,6 +110,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
+      // Revoke every JWT minted before the account's last password change
+      // (JWT sessions are stateless, so this is the only hook we have — see
+      // PATCH /api/account/password, which stamps `passwordChangedAt`).
+      // Legacy tokens that have never seen this field just adopt the current
+      // DB value without being logged out; only a later, *different* value
+      // (i.e. an actual password change since) invalidates the session.
+      if (uid) {
+        const dbUser = await prisma.user
+          .findUnique({ where: { id: uid }, select: { passwordChangedAt: true } })
+          .catch(() => null);
+        if (dbUser) {
+          const dbPwdChangedAt = dbUser.passwordChangedAt?.getTime() ?? null;
+          if (token.pwdChangedAt === undefined) {
+            token.pwdChangedAt = dbPwdChangedAt;
+          } else if (token.pwdChangedAt !== dbPwdChangedAt) {
+            return null;
+          }
+        }
+      }
+
       // One-off: pull name/avatar from the DB into stale existing tokens
       // (they're only set at sign-in, so an avatar change never propagated to
       // long-lived sessions). Runs once per token, then the flag skips it.

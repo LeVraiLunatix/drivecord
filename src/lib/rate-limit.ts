@@ -6,6 +6,7 @@
  * on the next hit. Best-effort under serverless concurrency (a rare double-spend
  * at the window edge is acceptable for abuse protection).
  */
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 export type RateLimitResult = {
@@ -19,6 +20,14 @@ export type RateLimitResult = {
 
 /**
  * Consume one unit against `key`. Allows up to `limit` hits per `windowSec`.
+ *
+ * Single atomic statement (no read-then-write race): `INSERT ... ON CONFLICT`
+ * either creates a fresh window (count = 1) or, if the existing row's window
+ * already expired, resets it to count = 1 with a new expiry — and otherwise
+ * increments the existing count, all inside one round-trip so concurrent
+ * requests can't all read the same "under limit" count and each write their
+ * own increment on top of it (the read-then-`update`/`upsert` this replaced
+ * could allow a burst to slip a few requests past `limit` under load).
  */
 export async function rateLimit(
   key: string,
@@ -26,35 +35,35 @@ export async function rateLimit(
   windowSec: number,
 ): Promise<RateLimitResult> {
   const now = new Date();
-  const existing = await prisma.rateLimit.findUnique({ where: { key } });
+  const expiresAt = new Date(now.getTime() + windowSec * 1000);
 
-  // Fresh window: no row, or the previous window already expired.
-  if (!existing || existing.expiresAt <= now) {
-    const expiresAt = new Date(now.getTime() + windowSec * 1000);
-    await prisma.rateLimit.upsert({
-      where: { key },
-      create: { key, count: 1, expiresAt },
-      update: { count: 1, expiresAt },
-    });
-    return { ok: true, remaining: limit - 1, retryAfterSec: 0 };
-  }
+  const rows = await prisma.$queryRaw<{ count: number; expiresAt: Date }[]>`
+    INSERT INTO "RateLimit" ("id", "key", "count", "expiresAt", "createdAt")
+    VALUES (${randomUUID()}, ${key}, 1, ${expiresAt}, ${now})
+    ON CONFLICT ("key") DO UPDATE SET
+      "count" = CASE
+        WHEN "RateLimit"."expiresAt" <= ${now} THEN 1
+        ELSE "RateLimit"."count" + 1
+      END,
+      "expiresAt" = CASE
+        WHEN "RateLimit"."expiresAt" <= ${now} THEN ${expiresAt}
+        ELSE "RateLimit"."expiresAt"
+      END
+    RETURNING "count", "expiresAt"
+  `;
+  const row = rows[0]!;
 
-  // Within an active window but over the limit.
-  if (existing.count >= limit) {
+  if (row.count > limit) {
     const retryAfterSec = Math.max(
       1,
-      Math.ceil((existing.expiresAt.getTime() - now.getTime()) / 1000),
+      Math.ceil((row.expiresAt.getTime() - now.getTime()) / 1000),
     );
     return { ok: false, remaining: 0, retryAfterSec };
   }
 
-  const updated = await prisma.rateLimit.update({
-    where: { key },
-    data: { count: { increment: 1 } },
-  });
   return {
     ok: true,
-    remaining: Math.max(0, limit - updated.count),
+    remaining: Math.max(0, limit - row.count),
     retryAfterSec: 0,
   };
 }

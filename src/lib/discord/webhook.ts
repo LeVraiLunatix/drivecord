@@ -24,6 +24,16 @@ export function parseWebhookUrl(input: string): WebhookRef | null {
 }
 
 /**
+ * Rebuild the canonical Discord API URL for a webhook (or one of its
+ * messages) from a parsed `WebhookRef`, instead of trusting a stored/raw
+ * string. Every server-side fetch against Discord should go through this so
+ * a malformed or attacker-controlled stored URL can never reach `fetch()`.
+ */
+export function webhookApiUrl(ref: WebhookRef, path = ""): string {
+  return `${DISCORD_API_BASE}/webhooks/${ref.id}/${ref.token}${path}`;
+}
+
+/**
  * Validate a webhook URL against the Discord API by GET-ing the webhook.
  * Returns the webhook info if valid, throws DiscordApiError otherwise.
  */

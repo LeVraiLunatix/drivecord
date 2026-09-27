@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=NativeAuth", req.url));
   }
 
-  const userId = verifyNativeCode(code);
+  const userId = await verifyNativeCode(code);
   if (!userId) {
     return NextResponse.redirect(new URL("/login?error=NativeAuthExpired", req.url));
   }

@@ -34,7 +34,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    // Login compares emails case-insensitively (`mode: "insensitive"` in
+    // src/auth.ts) — normalize to lowercase here too, or "User@x.com" and
+    // "user@x.com" would both pass this uniqueness check as distinct rows.
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json(
         { error: "Cet email est déjà utilisé." },
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const hash = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { name: name?.trim() || null, email, password: hash },
+      data: { name: name?.trim() || null, email: normalizedEmail, password: hash },
       select: { id: true, email: true, name: true },
     });
 

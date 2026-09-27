@@ -28,3 +28,18 @@ export function needsProxy(url: string): boolean {
     return false;
   }
 }
+
+/**
+ * True if `url` points at a genuine Discord CDN host. Server-side code must
+ * check this before ever `fetch()`-ing a chunk's stored attachment URL — that
+ * URL ultimately comes from client-submitted data (`DriveFile.chunks`), so an
+ * unchecked value is an SSRF vector.
+ */
+export function isDiscordCdnUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && PROXIED_HOSTS.has(u.host);
+  } catch {
+    return false;
+  }
+}

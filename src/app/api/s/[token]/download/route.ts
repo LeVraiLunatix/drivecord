@@ -10,9 +10,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
 import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
+import { parseWebhookUrl, webhookApiUrl } from "@/lib/discord";
+import { isDiscordCdnUrl } from "@/lib/discord/proxy";
 import type { ChunkRef } from "@/lib/discord";
 import { auth } from "@/auth";
 import { afterCordNotify, DRIVECORD_URL } from "@/lib/cord-sync";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -35,6 +38,17 @@ export async function POST(
     return NextResponse.json({ error: "Ce lien a expiré." }, { status: 410 });
   }
   if (share.passwordHash) {
+    const ip = getClientIp(req);
+    const [byToken, byIp] = await Promise.all([
+      rateLimit(`share:pwd:token:${token}`, 10, 10 * 60),
+      rateLimit(`share:pwd:ip:${ip}`, 30, 10 * 60),
+    ]);
+    if (!byToken.ok || !byIp.ok) {
+      return NextResponse.json(
+        { error: "Trop de tentatives, réessaie plus tard." },
+        { status: 429 },
+      );
+    }
     if (!password || !(await bcrypt.compare(password, share.passwordHash))) {
       return NextResponse.json({ error: "Mot de passe incorrect." }, { status: 403 });
     }
@@ -46,6 +60,16 @@ export async function POST(
   if (!file) return NextResponse.json({ error: "Fichier supprimé." }, { status: 404 });
 
   const webhookUrl = decryptUrl(share.webhook.encryptedUrl);
+  // Re-parse into {id, token} and rebuild the real Discord API URL — never
+  // hand the raw decrypted string to `fetch()` (see serve-file.ts for the
+  // same fix in the sibling code path).
+  const ref = parseWebhookUrl(webhookUrl);
+  if (!ref) {
+    return NextResponse.json(
+      { error: "Configuration du webhook invalide." },
+      { status: 502 },
+    );
+  }
   const chunks = file.chunks as unknown as ChunkRef[];
 
   // Refresh each chunk's CDN URL (signed Discord URLs expire). One message
@@ -56,7 +80,7 @@ export async function POST(
       try {
         let msg = cache.get(c.messageId);
         if (msg === undefined) {
-          const res = await fetch(`${webhookUrl}/messages/${c.messageId}`);
+          const res = await fetch(webhookApiUrl(ref, `/messages/${c.messageId}`));
           msg = res.ok ? ((await res.json()) as DiscordMessage) : null;
           cache.set(c.messageId, msg);
         }
@@ -102,6 +126,14 @@ export async function POST(
     const ordered = [...fresh].sort((a, b) => a.index - b.index);
     const parts: Buffer[] = [];
     for (const c of ordered) {
+      // `c.url` may trace back to client-submitted chunk data — only fetch it
+      // if it actually points at Discord's CDN (SSRF guard).
+      if (!isDiscordCdnUrl(c.url)) {
+        return NextResponse.json(
+          { error: "URL de pièce jointe invalide." },
+          { status: 502 },
+        );
+      }
       const r = await fetch(c.url);
       if (!r.ok) {
         return NextResponse.json(

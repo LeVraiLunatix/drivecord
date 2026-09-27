@@ -62,7 +62,9 @@ export async function PATCH(req: NextRequest) {
   const hash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { password: hash },
+    // `passwordChangedAt` is checked in the `jwt` callback (src/auth.ts) —
+    // bumping it invalidates every JWT session minted before this change.
+    data: { password: hash, passwordChangedAt: new Date() },
   });
 
   return NextResponse.json({ ok: true });

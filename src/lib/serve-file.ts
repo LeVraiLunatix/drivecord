@@ -6,9 +6,10 @@
  */
 import { decryptUrl } from "@/lib/auth/encrypt";
 import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
-import { parseWebhookUrl, withRetry } from "@/lib/discord";
+import { parseWebhookUrl, webhookApiUrl, withRetry } from "@/lib/discord";
 import { getWebhookLimiter } from "@/lib/discord/rate-limit";
 import { parseDiscordError } from "@/lib/discord/errors";
+import { isDiscordCdnUrl } from "@/lib/discord/proxy";
 import { DiscordApiError } from "@/lib/discord/types";
 import type { ChunkRef } from "@/lib/discord";
 
@@ -38,13 +39,24 @@ export async function fetchAndDecryptFile(params: {
   }
 
   const webhookUrl = decryptUrl(params.encryptedWebhookUrl);
+  // Never trust the decrypted string for an outbound fetch — re-parse it into
+  // {id, token} and rebuild the real Discord API URL from that. A stored
+  // value that doesn't match the expected webhook format is rejected outright
+  // instead of being handed to `fetch()` (SSRF).
+  const ref = parseWebhookUrl(webhookUrl);
+  if (!ref) {
+    return {
+      ok: false,
+      status: 502,
+      error: "Configuration du webhook invalide.",
+    };
+  }
   const chunks = [...params.chunks].sort((a, b) => a.index - b.index);
   // Same webhook = same Discord rate-limit bucket as the client-side
   // uploader/downloader — pace + retry through it instead of firing bare
   // fetches, or a burst of downloads can trip a 429 (or worse, a longer
   // Cloudflare throttle) that degrades the whole drive.
-  const webhookId = parseWebhookUrl(webhookUrl)?.id ?? webhookUrl;
-  const limiter = getWebhookLimiter(webhookId);
+  const limiter = getWebhookLimiter(ref.id);
 
   const cache = new Map<string, DiscordMessage | null>();
   const parts: Buffer[] = [];
@@ -59,7 +71,7 @@ export async function fetchAndDecryptFile(params: {
           msg = await withRetry(async () => {
             const release = await limiter.acquire();
             try {
-              const res = await fetch(`${webhookUrl}/messages/${c.messageId}`);
+              const res = await fetch(webhookApiUrl(ref, `/messages/${c.messageId}`));
               limiter.noteResponse(res);
               if (res.status === 404) return null; // message gone — fall back to stored URL
               if (!res.ok) throw await parseDiscordError(res);
@@ -75,6 +87,12 @@ export async function fetchAndDecryptFile(params: {
       } catch {
         // fall back to the stored URL
       }
+    }
+    // `url` traces back to client-submitted chunk data (or Discord's own
+    // response above) — only ever fetch it if it actually points at Discord's
+    // CDN, never an arbitrary attacker-chosen host.
+    if (!isDiscordCdnUrl(url)) {
+      return { ok: false, status: 502, error: "URL de pièce jointe invalide." };
     }
     let r: Response;
     try {

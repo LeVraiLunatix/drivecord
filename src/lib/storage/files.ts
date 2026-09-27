@@ -1,6 +1,5 @@
 "use client";
 
-import { nanoid } from "nanoid";
 import { mutate } from "swr";
 import type { FileManifest } from "@/lib/discord";
 import type { FileEntry, ParentId } from "./schema";
@@ -38,11 +37,9 @@ export async function recordUploadedFile(args: {
   /** Skip SWR revalidation (batch uploads call refreshDrive once at the end). */
   silent?: boolean;
 }): Promise<string> {
-  const id = nanoid(12);
-  await apiFetch(`/api/drive/${args.driveId}/files`, {
+  const res = await apiFetch(`/api/drive/${args.driveId}/files`, {
     method: "POST",
     body: JSON.stringify({
-      id,
       parentId: args.parentId ?? ROOT_PARENT,
       filename: args.manifest.filename,
       size: args.manifest.size,
@@ -54,8 +51,10 @@ export async function recordUploadedFile(args: {
       encIv: args.encIv ?? null,
     }),
   });
+  // The id is generated server-side now — read it back from the created row.
+  const created = (await res.json()) as { id: string };
   if (!args.silent) invalidateDrive(args.driveId);
-  return id;
+  return created.id;
 }
 
 export async function getFile(driveId: string, id: string): Promise<FileEntry | undefined> {

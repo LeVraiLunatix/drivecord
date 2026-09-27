@@ -2,6 +2,7 @@
  * POST /api/drive/[driveId]/files — record an uploaded file.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook, toFileEntry } from "../../_helpers";
 import type { ChunkRef } from "@/lib/discord";
@@ -16,7 +17,6 @@ export async function POST(
   const { webhook } = result;
 
   const body = (await req.json()) as {
-    id: string;
     parentId: string;
     filename: string;
     size: number;
@@ -30,7 +30,10 @@ export async function POST(
 
   const row = await prisma.driveFile.create({
     data: {
-      id: body.id,
+      // Generated server-side, never trust a client-supplied id: `DriveFile.id`
+      // is a global (not per-drive) primary key, so an attacker-chosen value
+      // could collide with — or be guessed to target — another drive's file.
+      id: nanoid(12),
       webhookId: webhook.id,
       driveId,
       parentId: body.parentId,
