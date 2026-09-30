@@ -4,9 +4,9 @@
  */
 export type ApiErrorCode =
   | "unauthorized"
-  | "key_expired"
-  | "ip_not_allowed"
+  | "token_expired"
   | "insufficient_scope"
+  | "origin_not_allowed"
   | "rate_limited"
   | "invalid_request"
   | "invalid_json"
@@ -15,13 +15,20 @@ export type ApiErrorCode =
   | "unsupported_media_type"
   | "payload_too_large"
   | "not_found"
-  | "conflict"
+  | "file_not_found"
+  | "folder_not_found"
+  | "upload_not_found"
+  | "share_not_found"
   | "parent_not_found"
   | "parent_trashed"
-  | "cycle"
-  | "max_depth"
-  | "locked_items"
-  | "file_too_large"
+  | "conflict"
+  | "upload_expired"
+  | "upload_incomplete"
+  | "chunk_mismatch"
+  | "quota_exceeded"
+  | "idempotency_key_reuse"
+  | "idempotency_in_progress"
+  | "unsupported_operation"
   | "upstream_error"
   | "internal_error";
 
@@ -52,7 +59,11 @@ export class ApiError extends Error {
 export const badRequest = (message: string, code: ApiErrorCode = "invalid_request") =>
   new ApiError(400, code, message);
 
-export const notFound = (what: "Fichier" | "Dossier" | "Lien") =>
-  new ApiError(404, "not_found", `${what} introuvable.`);
+export const notFound = (what: "Fichier" | "Dossier" | "Lien" | "Upload") =>
+  new ApiError(
+    404,
+    what === "Fichier" ? "file_not_found" : what === "Dossier" ? "folder_not_found" : what === "Upload" ? "upload_not_found" : "share_not_found",
+    `${what} introuvable.`,
+  );
 
 export const conflict = (code: ApiErrorCode, message: string) => new ApiError(409, code, message);

@@ -20,7 +20,7 @@ const challengeOf = (v: string) => crypto.createHash("sha256").update(v).digest(
 
 describe("tokens", () => {
   it("are prefixed, 256-bit, distinct, and hash deterministically", () => {
-    for (const [kind, prefix] of [["at", "dvc_at_"], ["rt", "dvc_rt_"], ["cs", "dvc_cs_"], ["code", "dvc_ac_"]] as const) {
+    for (const [kind, prefix] of [["at", "dvc_at_"], ["rt", "dvc_rt_"], ["cs", "dvc_cs_"], ["code", "dvc_ac_"], ["pat", "dvc_pat_"]] as const) {
       const a = generateToken(kind);
       expect(a.raw.startsWith(prefix)).toBe(true);
       expect(a.raw.length).toBe(prefix.length + 43);

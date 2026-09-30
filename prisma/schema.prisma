@@ -229,6 +229,10 @@ model UploadSession {
   parentId       String   @default("")
   /// Optional chunk count announced up front; enforced at finalize when set.
   expectedChunks Int?
+  /// API v2: client-generated file id (bound into every AAD), declared ciphertext size, and kind.
+  fileId         String?
+  cipherSize     BigInt?
+  visibility     String   @default("private")
   /// "open" | "completed" | "aborted"
   status         String   @default("open")
   createdAt      DateTime @default(now())
@@ -250,6 +254,8 @@ model UploadChunk {
   url          String
   /// Unix ms expiry parsed from the CDN URL; null when unknown.
   urlExpiresAt DateTime?
+  /// SHA-256 (hex) of the bytes relayed for this chunk — lets `complete` verify client-supplied hashes.
+  sha256       String?
 
   session UploadSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -507,6 +513,8 @@ model DriveFile {
   cryptoVersion Int       @default(0)
   /// base64 7-byte nonce prefix of the chunked format.
   noncePrefix   String?
+  /// "private" (default: E2EE) | "public" (deliberately stored in clear, for hotlinks — API v2).
+  visibility    String    @default("private")
   trashed       Boolean   @default(false)
   trashedAt     DateTime?
   createdAt     DateTime  @default(now())

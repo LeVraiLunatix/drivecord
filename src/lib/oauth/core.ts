@@ -24,8 +24,8 @@ export const SCOPE_LABELS_FR: Record<AppScope, string> = {
   "profile:basic": "Connaître ton identifiant et ton nom d'affichage",
 };
 
-export type TokenKind = "at" | "rt" | "cs" | "code";
-const PREFIX: Record<TokenKind, string> = { at: "dvc_at_", rt: "dvc_rt_", cs: "dvc_cs_", code: "dvc_ac_" };
+export type TokenKind = "at" | "rt" | "cs" | "code" | "pat";
+const PREFIX: Record<TokenKind, string> = { at: "dvc_at_", rt: "dvc_rt_", cs: "dvc_cs_", code: "dvc_ac_", pat: "dvc_pat_" };
 
 export function generateToken(kind: TokenKind): { raw: string; hash: string } {
   const raw = `${PREFIX[kind]}${crypto.randomBytes(32).toString("base64url")}`;
@@ -36,7 +36,7 @@ export function hashToken(raw: string): string {
   return crypto.createHash("sha256").update(raw).digest("hex");
 }
 
-const TOKEN_FORMAT = /^dvc_(at|rt|cs|ac)_[A-Za-z0-9_-]{43}$/;
+const TOKEN_FORMAT = /^dvc_(at|rt|cs|ac|pat)_[A-Za-z0-9_-]{43}$/;
 /** Cheap structural check before any database lookup. */
 export function tokenKindOf(raw: string): TokenKind | null {
   const m = TOKEN_FORMAT.exec(raw);

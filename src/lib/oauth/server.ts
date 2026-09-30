@@ -234,6 +234,7 @@ export async function revokeGrant(grantId: string, userId: string): Promise<bool
 
 export type AppPrincipal = {
   kind: "app";
+  allowedOrigins: string[];
   grantId: string;
   appId: string;
   userId: string;
@@ -248,12 +249,13 @@ export async function authenticateAppToken(raw: string): Promise<AppPrincipal | 
   if (tokenKindOf(raw) !== "at") return null;
   const row = await prisma.oAuthToken.findUnique({
     where: { accessTokenHash: hashToken(raw) },
-    include: { grant: { include: { app: { select: { revokedAt: true } } } } },
+    include: { grant: { include: { app: { select: { revokedAt: true, allowedOrigins: true } } } } },
   });
   if (!row || row.revokedAt || row.accessExpiresAt.getTime() <= Date.now()) return null;
   if (row.grant.revokedAt || row.grant.app.revokedAt) return null;
   return {
     kind: "app",
+    allowedOrigins: row.grant.app.allowedOrigins,
     grantId: row.grantId,
     appId: row.appId,
     userId: row.userId,

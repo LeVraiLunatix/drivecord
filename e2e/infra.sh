@@ -15,16 +15,17 @@ case "${1:-up}" in
     psql -h /tmp -p 5433 -U postgres -qc "create database drivecord"
     npx prisma migrate deploy >/dev/null
     export ENCRYPTION_KEY="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+    echo "$ENCRYPTION_KEY" > /tmp/e2e-enc-key
     export AUTH_SECRET="e2e-secret-e2e-secret-e2e-secret"
     echo "$AUTH_SECRET" > /tmp/e2e-auth-secret
-    (AUTH_TRUST_HOST=true npx next dev -p 3100 > /tmp/e2e-next.log 2>&1 &)
+    (AUTH_TRUST_HOST=true NODE_OPTIONS="--require $(pwd)/e2e/server-fake-discord.cjs" npx next dev -p 3100 > /tmp/e2e-next.log 2>&1 &)
     for i in $(seq 1 60); do sleep 2; curl -s -o /dev/null http://localhost:3100/api/v2/none && break; done
     echo "up"
     ;;
   down)
     fuser -k 3100/tcp >/dev/null 2>&1 || true
     su postgres -c "$PGB/pg_ctl -D $PGDATA stop -m fast" >/dev/null 2>&1 || true
-    rm -rf "$PGDATA" /tmp/e2e-auth-secret
+    rm -rf "$PGDATA" /tmp/e2e-auth-secret /tmp/e2e-enc-key
     echo "down"
     ;;
 esac
