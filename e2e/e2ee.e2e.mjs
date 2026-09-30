@@ -54,6 +54,8 @@ try {
   step("A. onboarding (first visit)");
   const ctx1 = await newContext(browser, discord, cookie);
   const page = await ctx1.newPage();
+  page.on("crash", () => console.log("  [PAGE CRASH]"));
+  page.on("close", () => console.log("  [page closed]"));
   page.on("pageerror", (e) => console.log("  [pageerror]", e.message));
   page.on("console", (m) => { if (m.type() === "error" && !/DevTools|HMR|Fast Refresh|Password field/.test(m.text())) console.log("  [console.error]", m.text().slice(0, 300)); });
   page.on("requestfailed", (r) => console.log("  [requestfailed]", r.method(), r.url().slice(0, 120), r.failure()?.errorText));
