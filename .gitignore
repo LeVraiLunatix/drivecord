@@ -54,3 +54,6 @@ next.config.ts.bak
 
 # Claude Code local tooling
 .claude/
+
+# SDK build output
+packages/*/dist

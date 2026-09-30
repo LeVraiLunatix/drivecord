@@ -40,7 +40,7 @@ const TABS: Tab[] = [
 ];
 
 // Pages where the tab bar should NOT appear (auth / public / onboarding).
-const HIDDEN_PREFIXES = ["/login", "/register", "/setup", "/s/", "/install", "/conditions", "/native"];
+const HIDDEN_PREFIXES = ["/login", "/register", "/setup", "/s/", "/install", "/conditions", "/native", "/embed"];
 
 function TabBarInner() {
   const native = useIsNativeApp();

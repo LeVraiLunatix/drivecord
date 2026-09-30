@@ -1,0 +1,12 @@
+{
+  "name": "@drivecord/node",
+  "version": "1.0.0",
+  "description": "Server-side Drivecord API v2 client (personal access token) with end-to-end encryption.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "engines": { "node": ">=20" },
+  "scripts": { "build": "node build.mjs" }
+}

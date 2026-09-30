@@ -44,6 +44,23 @@ const CORS_OPTIONS: Record<string, string> = {
   "Access-Control-Max-Age": "86400",
 };
 
+async function embedResponse(req: NextRequest): Promise<NextResponse> {
+  const clientId = req.nextUrl.searchParams.get("client_id") ?? "";
+  let origins: string[] = [];
+  if (/^app_[A-Za-z0-9_-]{8,64}$/.test(clientId)) {
+    try {
+      const r = await fetch(new URL(`/api/embed/origins?client_id=${clientId}`, req.nextUrl.origin));
+      if (r.ok) origins = ((await r.json()) as { origins?: string[] }).origins ?? [];
+    } catch {
+      /* no origins → nobody may frame it */
+    }
+  }
+  const res = NextResponse.next();
+  res.headers.set("Content-Security-Policy", `frame-ancestors ${origins.length ? origins.join(" ") : "'none'"}`);
+  res.headers.set("Referrer-Policy", "no-referrer");
+  return res;
+}
+
 export async function proxy(
   req: NextRequest,
   event: unknown,
@@ -54,6 +71,11 @@ export async function proxy(
   // nothing else (no app, no session, no API) there. No-op when it's unset.
   if (routeForOrigin(req.headers.get("host") ?? req.nextUrl.host, pathname) === "not-found") {
     return new NextResponse("Not found", { status: 404 });
+  }
+
+  // Embeds may only be framed by the origins the app registered (clickjacking defence).
+  if (pathname.startsWith("/embed/") && !pathname.startsWith("/embed/connect")) {
+    return embedResponse(req);
   }
 
   if (pathname.startsWith("/api/")) {

@@ -1,0 +1,14 @@
+{
+  "name": "@drivecord/sdk",
+  "version": "1.0.0",
+  "description": "Browser SDK for Drivecord: OAuth 2.1 + PKCE sign-in, end-to-end encrypted upload/viewer iframes, API v2 client.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "unpkg": "dist/drivecord.min.js",
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": { "build": "node build.mjs" }
+}
