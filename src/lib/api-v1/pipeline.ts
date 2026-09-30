@@ -146,6 +146,10 @@ export function v1Route<P extends Record<string, string> = Record<string, never>
       if (rl) for (const [k, v] of Object.entries(rateLimitHeaders(rl))) res.headers.set(k, v);
       if (!res.headers.has("Cache-Control")) res.headers.set("Cache-Control", "no-store");
       res.headers.set("X-Content-Type-Options", "nosniff");
+      // Phase 1.6: v1 is frozen — announce its retirement (RFC 9745 Deprecation, RFC 8594 Sunset).
+      res.headers.set("Deprecation", "true");
+      res.headers.set("Sunset", "Wed, 30 Sep 2027 00:00:00 GMT");
+      res.headers.set("Link", '</api/v2>; rel="successor-version", </docs/api-v2>; rel="deprecation"');
       after(() =>
         recordAudit({
           apiKeyId: keyRef?.id ?? null,
