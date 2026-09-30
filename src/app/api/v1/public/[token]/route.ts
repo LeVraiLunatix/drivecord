@@ -115,6 +115,15 @@ async function servePublicFile(
     return NextResponse.json({ error: "Fichier supprimé." }, { status: 404, headers: CORS_HEADERS });
   }
 
+  // Hotlinks serve plaintext only. An end-to-end encrypted file can't be shown by an <img>,
+  // and the server can't decrypt it — the link is dead until the owner publishes a plaintext copy.
+  if (file.cryptoVersion >= 1 || (file.encIv && share.webhook.e2eeVersion >= 1)) {
+    return NextResponse.json(
+      { error: "Ce fichier est chiffré de bout en bout : il ne peut pas être servi en lien public." },
+      { status: 410, headers: CORS_HEADERS },
+    );
+  }
+
   const baseHeaders = fileHeaders(file);
   if (headOnly) {
     return new NextResponse(null, { status: 200, headers: baseHeaders });
@@ -126,6 +135,8 @@ async function servePublicFile(
     chunks: file.chunks as unknown as ChunkRef[],
     encIv: file.encIv,
     locked: file.locked,
+    cryptoVersion: file.cryptoVersion,
+    e2eeVersion: share.webhook.e2eeVersion,
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status, headers: CORS_HEADERS });

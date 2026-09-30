@@ -70,6 +70,8 @@ model User {
   loginRequests  LoginRequest[]
   pushTokens     PushToken[]
   apiKeys        ApiKey[]
+  userKeys       UserKeys?
+  keyTransfers   KeyTransferRequest[]
 }
 
 model Account {
@@ -124,6 +126,11 @@ model Webhook {
   /// AES-256-GCM encrypted per-drive file key (base64) — null until set.
   /// Encrypts all of this drive's regular (non-vault) file uploads.
   encKey       String?
+  /// E2EE (phase 2): the drive key wrapped by the user's Master Key (`v1.<iv>.<ct>`).
+  /// The server cannot open it. Replaces `encKey`, which is nulled at migration.
+  dkWrapped    String?
+  /// 0 = legacy (server-held `encKey`), 1 = end-to-end (`dkWrapped`).
+  e2eeVersion  Int      @default(0)
   name         String
   channelId    String
   guildId      String?
@@ -150,6 +157,11 @@ model Share {
   passwordHash String?
   expiresAt    DateTime?
   downloads    Int       @default(0)
+  /// Password-protected E2EE share: the file key wrapped by Argon2id(password).
+  /// The server never sees the password (no bcrypt for these shares).
+  fkWrappedForShare String?
+  /// Argon2id parameters + salt for `fkWrappedForShare`.
+  shareKdf     Json?
   /// Set by an admin after an abuse report: the link stops serving anything.
   disabledAt   DateTime?
   createdAt    DateTime  @default(now())
@@ -269,6 +281,55 @@ model LinkReport {
   @@index([handledAt, createdAt])
 }
 
+// ── End-to-end encryption (phase 2) ──────────────────────────────────────────
+
+/// Key material the server stores but CANNOT open: every blob is wrapped by a
+/// key that only the user's devices hold (passkey PRF, passphrase, recovery key).
+model UserKeys {
+  userId            String   @id
+  version           Int      @default(1)
+  /// Master Key wrapped by the recovery key.
+  mkWrappedRecovery String
+  /// Master Key wrapped by Argon2id(passphrase), and the KDF parameters.
+  mkWrappedPhrase   String?
+  phraseKdf         Json?
+  /// credentialId (base64url) → Master Key wrapped by the passkey's PRF output.
+  mkWrappedPasskey  Json     @default("{}")
+  /// X25519 public key (base64) and its private key wrapped by the Master Key.
+  publicKeyX25519   String
+  privateKeyWrapped String
+  /// Vault key wrapped by the Master Key (so recovery doesn't lose the vault).
+  vaultKeyWrapped   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A signed-in device without the Master Key asks an unlocked device for it.
+/// The server relays two public keys and one sealed blob — nothing it can read.
+model KeyTransferRequest {
+  id                 String   @id @default(cuid())
+  userId             String
+  label              String
+  /// Commit-reveal SAS (see lib/crypto/e2ee/keys.ts): H(K_req ‖ r1), then r2, then K_req + r1.
+  commitment         String
+  approverNonce      String?
+  requesterPublicKey String?
+  requesterNonce     String?
+  /// "pending" | "approved" | "denied"
+  status             String   @default("pending")
+  /// Approver's ephemeral public key and the Master Key sealed to the shared secret.
+  approverPublicKey  String?
+  sealedMk           String?
+  expiresAt          DateTime
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
 // ── Drive content (files + folders) ──────────────────────────────────────────
 
 /// A file uploaded via a webhook. `chunks` is a JSON array of ChunkRef objects.
@@ -291,7 +352,16 @@ model DriveFile {
   favorite  Boolean   @default(false)
   locked    Boolean   @default(false)
   /// base64 AES-GCM IV — present iff the file content is E2EE encrypted
+  /// (legacy single-IV format, `cryptoVersion` 0)
   encIv     String?
+  /// File key wrapped by the drive key (`v1.<iv>.<ct>`). cryptoVersion >= 1 only.
+  fkWrapped String?
+  /// Encrypted metadata `{name, mime, size, mtime}` (`v1.<iv>.<ct>`). cryptoVersion >= 1 only.
+  encMeta   String?
+  /// 0 = plaintext or legacy single-IV, 1 = chunked E2EE format v1.
+  cryptoVersion Int   @default(0)
+  /// base64 7-byte nonce prefix of the chunked format.
+  noncePrefix String?
   trashed   Boolean   @default(false)
   trashedAt DateTime?
   createdAt DateTime  @default(now())
@@ -311,6 +381,8 @@ model DriveFolder {
   driveId   String
   parentId  String    @default("")
   name      String
+  /// Encrypted name (`v1.<iv>.<ct>`, by the drive key). When set, `name` is "".
+  encName   String?
   color     String?
   trashed   Boolean   @default(false)
   trashedAt DateTime?

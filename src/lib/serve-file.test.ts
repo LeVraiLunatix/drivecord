@@ -73,4 +73,27 @@ describe("fetchAndDecryptFile — SSRF defence in depth", () => {
     const res = await fetchAndDecryptFile({ ...base, locked: true, chunks: [chunk()] as never });
     expect(res).toMatchObject({ ok: false, status: 403 });
   });
+
+  describe("end-to-end encrypted files are never decrypted server-side", () => {
+    const ok = () => vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("CIPHERTEXT", { status: 200 })));
+
+    it("cryptoVersion 1 → ciphertext returned as-is, even if a legacy key exists", async () => {
+      ok();
+      const res = await fetchAndDecryptFile({ ...base, encKeyEncrypted: "legacy-key-blob", cryptoVersion: 1, chunks: [chunk()] as never });
+      expect(res).toMatchObject({ ok: true, encrypted: true });
+      if (res.ok) expect(res.body.toString()).toBe("CIPHERTEXT");
+    });
+
+    it("legacy single-IV file on a drive migrated to E2EE → ciphertext, no 403, no decrypt attempt", async () => {
+      ok();
+      const res = await fetchAndDecryptFile({ ...base, encIv: "AAAAAAAAAAAAAAAA", encKeyEncrypted: null, e2eeVersion: 1, chunks: [chunk()] as never });
+      expect(res).toMatchObject({ ok: true, encrypted: true });
+    });
+
+    it("a plaintext file is served as plaintext", async () => {
+      ok();
+      const res = await fetchAndDecryptFile({ ...base, chunks: [chunk()] as never });
+      expect(res).toMatchObject({ ok: true, encrypted: false });
+    });
+  });
 });

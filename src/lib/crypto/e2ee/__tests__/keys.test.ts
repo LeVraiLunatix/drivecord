@@ -32,7 +32,10 @@ import {
   unwrapForDevice,
   unwrapPrivateKey,
   unwrapVaultKey,
-  verificationCode,
+  approvalCommitment,
+  createApproverNonce,
+  sasCode,
+  verifyApprovalCommitment,
   wrapDriveKey,
   wrapFileKey,
   wrapFileKeyForShare,
@@ -194,28 +197,52 @@ describe("password-protected share", () => {
   }, 60_000);
 });
 
-describe("new-device approval (X25519)", () => {
+describe("new-device approval (X25519 + commit-reveal SAS)", () => {
   it("delivers MK, and both screens show the same code", async () => {
     const mk = randomBytes(32);
     const req = createApprovalRequest();
+    const commitment = await approvalCommitment(req.publicKey, req.nonce);
+    const r2 = createApproverNonce();
+    // approver side: verify the reveal against the commitment, then compute the code
+    expect(await verifyApprovalCommitment(commitment, req.publicKey, req.nonce)).toBe(true);
+    const codeApprover = await sasCode(req.nonce, r2, req.publicKey);
+    const codeRequester = await sasCode(req.nonce, r2, req.publicKey);
+    expect(codeApprover).toMatch(/^\d{6}$/);
+    expect(codeApprover).toBe(codeRequester);
     const { approverPublicKey, sealedMk } = await approveDevice(USER, mk, req.publicKey);
     expect(await completeApproval(USER, req.secretKey, req.publicKey, approverPublicKey, sealedMk)).toEqual(mk);
-    const codeNew = await verificationCode(req.publicKey, approverPublicKey);
-    const codeOld = await verificationCode(approverPublicKey, req.publicKey);
-    expect(codeNew).toMatch(/^\d{6}$/);
-    expect(codeNew).toBe(codeOld);
   });
 
-  it("a server swapping keys makes the codes differ — and the MK undecryptable", async () => {
+  it("a revealed key that doesn't match the commitment is rejected", async () => {
+    const req = createApprovalRequest();
+    const other = createApprovalRequest();
+    const commitment = await approvalCommitment(req.publicKey, req.nonce);
+    expect(await verifyApprovalCommitment(commitment, other.publicKey, req.nonce)).toBe(false);
+    expect(await verifyApprovalCommitment(commitment, req.publicKey, other.nonce)).toBe(false);
+  });
+
+  it("a server that swaps the requester's key cannot make the screens agree", async () => {
+    // The code depends on (r1, r2, K). The server must fix its own (K_m, r1_m) BEFORE r2 exists
+    // and never learns the real r1 before the requester reveals — so it can't steer the digits.
+    // Statistically: over many forged attempts the codes match ~1 time in 10^6.
+    const real = createApprovalRequest();
+    const r2 = createApproverNonce();
+    const realCode = await sasCode(real.nonce, r2, real.publicKey);
+    let collisions = 0;
+    const attempts = 300;
+    for (let i = 0; i < attempts; i++) {
+      const forged = createApprovalRequest();
+      if ((await sasCode(forged.nonce, r2, forged.publicKey)) === realCode) collisions++;
+    }
+    expect(collisions).toBeLessThanOrEqual(1);
+  });
+
+  it("the sealed MK is useless to a swapped key", async () => {
     const mk = randomBytes(32);
     const req = createApprovalRequest();
-    const mitm = createApprovalRequest(); // server's own key pair
-    // The approver is told the MITM's key instead of the real requester's.
+    const mitm = createApprovalRequest();
     const { approverPublicKey, sealedMk } = await approveDevice(USER, mk, mitm.publicKey);
-    // The real requester can't open it…
     await expect(completeApproval(USER, req.secretKey, req.publicKey, approverPublicKey, sealedMk)).rejects.toThrow();
-    // …and the two screens disagree on the code.
-    expect(await verificationCode(req.publicKey, approverPublicKey)).not.toBe(await verificationCode(mitm.publicKey, approverPublicKey));
   });
 
   it("bound to the user id; bad public keys refused", async () => {

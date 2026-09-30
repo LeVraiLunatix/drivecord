@@ -58,6 +58,8 @@ export type FolderEntry = {
   trashedAt?: number;
   /** Optional display color key (see FOLDER_COLOR_PRESETS in lib/folder-colors.ts). */
   color?: string;
+  /** Encrypted name (by the drive key). When set, `name` is "" on the wire. */
+  encName?: string;
 };
 
 /** A file is a manifest pointing at one or more Discord messages. */
@@ -86,6 +88,14 @@ export type FileEntry = {
   locked?: boolean;
   /** base64 AES-GCM IV — present iff the file content is E2EE encrypted. */
   encIv?: string;
+  /** E2EE format v1 (see lib/crypto/e2ee). 0/undefined = plaintext or legacy single-IV. */
+  cryptoVersion?: number;
+  /** File key wrapped by the drive key. */
+  fkWrapped?: string;
+  /** Encrypted `{name, mime, size, mtime}`. */
+  encMeta?: string;
+  /** base64 7-byte nonce prefix. */
+  noncePrefix?: string;
   /** Soft delete flag. */
   trashed: boolean;
   trashedAt?: number;

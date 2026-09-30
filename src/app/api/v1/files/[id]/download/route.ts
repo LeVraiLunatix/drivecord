@@ -34,14 +34,18 @@ export const GET = v1Route<{ id: string }>(
       chunks: file.chunks as unknown as ChunkRef[],
       encIv: file.encIv,
       locked: file.locked,
+      cryptoVersion: file.cryptoVersion,
+      e2eeVersion: auth.webhook.e2eeVersion,
     });
     if (!result.ok) throw new HttpError(result.status, result.error);
 
-    return new NextResponse(new Uint8Array(result.body), {
-      headers: buildSafeFileHeaders(
-        { filename: file.filename, mimeType: file.mimeType, size: result.body.length },
-        { disposition: "attachment", cacheControl: "private, no-store" },
-      ),
-    });
+    // Encrypted files come back as ciphertext (octet-stream) plus a marker header: the server
+    // holds no key, so only the client that owns the drive key can make sense of them.
+    const headers = buildSafeFileHeaders(
+      { filename: file.filename, mimeType: file.mimeType, size: result.body.length },
+      { disposition: "attachment", cacheControl: "private, no-store" },
+    );
+    if (result.encrypted) headers["X-Drivecord-Encrypted"] = "1";
+    return new NextResponse(new Uint8Array(result.body), { headers });
   },
 );

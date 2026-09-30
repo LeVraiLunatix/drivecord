@@ -22,7 +22,8 @@ import {
   hexEncode,
   hkdf,
   importAesKey,
-  verificationCode,
+  approvalCommitment,
+  sasCode,
   wrap,
   type PhraseKdf,
 } from "..";
@@ -39,7 +40,6 @@ async function compute() {
   const kdf: PhraseKdf = { alg: "argon2id", m: 64, t: 2, p: 1, salt: b64encode(seq(0x10, 16)) };
   const kek = await importAesKey(seq(0x40, 32));
   const secretA = seq(0x50, 32);
-  const secretB = seq(0x70, 32);
 
   return {
     _comment: "Frozen vectors for e2ee format v1. See vectors.test.ts.",
@@ -80,9 +80,11 @@ async function compute() {
     },
     base32: { in: hexEncode(seq(0, 32)), out: base32Encode(seq(0, 32)) },
     sas: {
-      a: hexEncode(nacl.box.keyPair.fromSecretKey(secretA).publicKey),
-      b: hexEncode(nacl.box.keyPair.fromSecretKey(secretB).publicKey),
-      code: await verificationCode(nacl.box.keyPair.fromSecretKey(secretA).publicKey, nacl.box.keyPair.fromSecretKey(secretB).publicKey),
+      pub: hexEncode(nacl.box.keyPair.fromSecretKey(secretA).publicKey),
+      r1: hexEncode(seq(0xc0, 16)),
+      r2: hexEncode(seq(0xd0, 16)),
+      commitment: await approvalCommitment(nacl.box.keyPair.fromSecretKey(secretA).publicKey, seq(0xc0, 16)),
+      code: await sasCode(seq(0xc0, 16), seq(0xd0, 16), nacl.box.keyPair.fromSecretKey(secretA).publicKey),
     },
   };
 }

@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook, toFileEntry } from "../../../_helpers";
 import type { ChunkRef } from "@/lib/discord";
 import { afterCordStatus } from "@/lib/cord-sync";
+import { chunkRefsSchema, wrappedBlob } from "@/lib/e2ee-server";
 
 type RouteParams = { params: Promise<{ driveId: string; id: string }> };
 
@@ -30,6 +31,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { webhook } = result;
 
   const body = (await req.json()) as {
+    /** Encrypted metadata (rename of an E2EE file). */
+    encMeta?: string;
     filename?: string;
     parentId?: string;
     favorite?: boolean;
@@ -50,8 +53,22 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     }
   }
 
+  const existing = await prisma.driveFile.findFirst({ where: { id, webhookId: webhook.id }, select: { cryptoVersion: true } });
+  if (!existing) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
+  const e2ee = existing.cryptoVersion >= 1;
+  if (e2ee && body.filename !== undefined) {
+    return NextResponse.json({ error: "Le nom d'un fichier chiffré se modifie via `encMeta`." }, { status: 400 });
+  }
+  if (body.encMeta !== undefined && (!e2ee || !wrappedBlob.safeParse(body.encMeta).success)) {
+    return NextResponse.json({ error: "Métadonnées chiffrées invalides." }, { status: 400 });
+  }
+  if (body.chunks !== undefined && !chunkRefsSchema.safeParse(body.chunks).success) {
+    return NextResponse.json({ error: "Liste de morceaux invalide." }, { status: 400 });
+  }
+
   const data: Record<string, unknown> = { updatedAt: new Date() };
   if (body.filename !== undefined) data.filename = body.filename.trim();
+  if (body.encMeta !== undefined) data.encMeta = body.encMeta;
   if (body.parentId !== undefined) data.parentId = body.parentId;
   if (body.favorite !== undefined) data.favorite = body.favorite;
   if (body.locked !== undefined) data.locked = body.locked;

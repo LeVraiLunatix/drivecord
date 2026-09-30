@@ -19,7 +19,8 @@ type DiscordMessage = { attachments: DiscordAttachment[] };
 const URL_REFRESH_MARGIN_MS = 5 * 60 * 1000;
 
 export type ServeFileResult =
-  | { ok: true; body: Buffer }
+  /** `encrypted: true` = the bytes are CIPHERTEXT the server cannot (and must not) open. */
+  | { ok: true; body: Buffer; encrypted: boolean }
   | { ok: false; status: number; error: string };
 
 export async function fetchAndDecryptFile(params: {
@@ -28,7 +29,12 @@ export async function fetchAndDecryptFile(params: {
   chunks: ChunkRef[];
   encIv: string | null;
   locked: boolean;
+  /** Chunked E2EE format (v1): never decryptable here. */
+  cryptoVersion?: number;
+  /** Drive migrated to end-to-end encryption: the server no longer holds any drive key. */
+  e2eeVersion?: number;
 }): Promise<ServeFileResult> {
+  // (Vault-locked files are ciphertext under a PIN-derived key the server never had.)
   if (params.locked) {
     return {
       ok: false,
@@ -103,17 +109,16 @@ export async function fetchAndDecryptFile(params: {
   }
 
   let body: Buffer = Buffer.concat(parts);
+
+  // End-to-end encrypted: no key exists on this server. Hand back the ciphertext as-is.
+  const e2ee = (params.cryptoVersion ?? 0) >= 1 || (params.encIv && ((params.e2eeVersion ?? 0) >= 1 || !params.encKeyEncrypted));
+  if (e2ee) return { ok: true, body, encrypted: true };
+
+  // Legacy (server-held key, drive not migrated yet).
   if (params.encIv) {
-    if (!params.encKeyEncrypted) {
-      return {
-        ok: false,
-        status: 403,
-        error: "Ce fichier chiffré ne peut pas être servi (clé de drive absente).",
-      };
-    }
-    const keyB64 = decryptUrl(params.encKeyEncrypted);
+    const keyB64 = decryptUrl(params.encKeyEncrypted!);
     body = decryptFileBuffer(body, keyB64, params.encIv);
   }
 
-  return { ok: true, body };
+  return { ok: true, body, encrypted: false };
 }

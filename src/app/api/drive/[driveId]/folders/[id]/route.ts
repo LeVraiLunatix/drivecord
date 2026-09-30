@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook, toFileEntry, toFolderEntry } from "../../../_helpers";
+import { wrappedBlob } from "@/lib/e2ee-server";
 
 type RouteParams = { params: Promise<{ driveId: string; id: string }> };
 
@@ -39,6 +40,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { webhook } = result;
 
   const body = (await req.json()) as {
+    /** Encrypted name (rename of an E2EE folder). */
+    encName?: string;
     name?: string;
     color?: string | null;
     parentId?: string;
@@ -71,7 +74,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 
   const data: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.name !== undefined) data.name = body.name.trim();
+  if (body.encName !== undefined) {
+    if (webhook.e2eeVersion < 1 || !wrappedBlob.safeParse(body.encName).success) {
+      return NextResponse.json({ error: "Nom chiffré invalide." }, { status: 400 });
+    }
+    data.encName = body.encName;
+    data.name = "";
+  } else if (body.name !== undefined) data.name = body.name.trim();
   if ("color" in body) data.color = body.color ?? null;
   if (body.parentId !== undefined) data.parentId = body.parentId;
   if (body.trashed !== undefined) {

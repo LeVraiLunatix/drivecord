@@ -9,6 +9,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { encryptUrl, decryptUrl } from "@/lib/auth/encrypt";
 import { afterCordStatus } from "@/lib/cord-sync";
+import { wrappedBlob } from "@/lib/e2ee-server";
+import { parseWebhookUrl } from "@/lib/discord";
+
+function isValidWebhookUrl(url: unknown): url is string {
+  return typeof url === "string" && url.length < 512 && parseWebhookUrl(url) !== null;
+}
 
 export async function GET() {
   const session = await auth();
@@ -28,7 +34,11 @@ export async function GET() {
       name: r.name,
       channelId: r.channelId,
       guildId: r.guildId,
-      encKey: r.encKey ? decryptUrl(r.encKey) : null,
+      // Legacy server-held key: handed out only while the drive hasn't been migrated
+      // to end-to-end encryption (once, so the client can re-wrap it). Then it's gone.
+      encKey: r.e2eeVersion === 0 && r.encKey ? decryptUrl(r.encKey) : null,
+      dkWrapped: r.dkWrapped,
+      e2eeVersion: r.e2eeVersion,
       createdAt: r.createdAt.getTime(),
       lastOpenedAt: r.lastOpenedAt.getTime(),
     })),
@@ -47,16 +57,37 @@ export async function POST(req: NextRequest) {
     name: string;
     channelId: string;
     guildId?: string;
-    /** base64 raw per-drive file key — encrypted here before storage. */
+    /** LEGACY: base64 raw per-drive key, server-encrypted. Refused for E2EE accounts. */
     encKey?: string;
+    /** E2EE: the drive key wrapped by the user's Master Key (opaque to the server). */
+    dkWrapped?: string;
   };
 
   if (!body.driveId || !body.webhookUrl || !body.name || !body.channelId) {
     return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
   }
 
+  if (!isValidWebhookUrl(body.webhookUrl)) {
+    return NextResponse.json({ error: "URL de webhook Discord invalide." }, { status: 400 });
+  }
+  if (body.dkWrapped !== undefined && !wrappedBlob.safeParse(body.dkWrapped).success) {
+    return NextResponse.json({ error: "Clé de drive chiffrée invalide." }, { status: 400 });
+  }
+
+  // Once an account uses end-to-end encryption the server must never hold a drive key:
+  // an old client still sending `encKey` is ignored rather than stored.
+  const hasE2ee = Boolean(
+    await prisma.userKeys.findUnique({ where: { userId: session.user.id }, select: { userId: true } }),
+  );
+  const existing = await prisma.webhook.findUnique({
+    where: { userId_driveId: { userId: session.user.id, driveId: body.driveId } },
+    select: { e2eeVersion: true },
+  });
   const encryptedUrl = encryptUrl(body.webhookUrl);
-  const encKey = body.encKey ? encryptUrl(body.encKey) : undefined;
+  const legacyKey = body.encKey && !hasE2ee && (existing?.e2eeVersion ?? 0) === 0 ? encryptUrl(body.encKey) : undefined;
+  // A drive key may be set only while the drive has none (finalize/rotate endpoints do later changes).
+  const dkWrapped = body.dkWrapped && hasE2ee && !existing ? body.dkWrapped : undefined;
+  const encKey = legacyKey;
   const row = await prisma.webhook.upsert({
     where: { userId_driveId: { userId: session.user.id, driveId: body.driveId } },
     create: {
@@ -64,6 +95,7 @@ export async function POST(req: NextRequest) {
       driveId: body.driveId,
       encryptedUrl,
       encKey,
+      ...(dkWrapped ? { dkWrapped, e2eeVersion: 1 } : {}),
       name: body.name,
       channelId: body.channelId,
       guildId: body.guildId,

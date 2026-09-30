@@ -26,10 +26,14 @@ export const POST = v1Route<Params>({ route: "/api/v1/files/[id]/public", scope:
   const id = parse(idSchema, params.id);
   const file = await prisma.driveFile.findFirst({
     where: { id, webhookId: auth.webhook.id, trashed: false },
-    select: { id: true, locked: true },
+    select: { id: true, locked: true, cryptoVersion: true, encIv: true },
   });
   if (!file) throw new HttpError(404, "Fichier introuvable.");
   if (file.locked) throw new HttpError(400, "Les fichiers du coffre-fort ne peuvent pas être rendus publics.");
+
+  if (file.cryptoVersion >= 1 || file.encIv) {
+    throw new HttpError(409, "Ce fichier est chiffré de bout en bout : il ne peut pas être publié en clair. Envoie-le via l'API v1 (non chiffré) pour en faire un lien public.");
+  }
 
   // Replace any existing share for this file (web UI or API alike).
   const token = nanoid(16);

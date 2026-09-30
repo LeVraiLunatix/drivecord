@@ -53,8 +53,10 @@
     "out": "AAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPQ"
   },
   "sas": {
-    "a": "392d174a38b3b1beafaf1fe824870841c5fa531bc6eafdb6402c124664488c1c",
-    "b": "23b7bb8c91ae008711fb12846780bcdf1e065f821bdfec49f57e7c7dcd4c4823",
-    "code": "378589"
+    "pub": "392d174a38b3b1beafaf1fe824870841c5fa531bc6eafdb6402c124664488c1c",
+    "r1": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+    "r2": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+    "commitment": "cXCpB5KmkMIMGyy8KU0GZDB3raNkUD/kmmhJox5k320=",
+    "code": "683608"
   }
 }

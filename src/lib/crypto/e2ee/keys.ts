@@ -12,7 +12,7 @@
  * The server only ever stores wrapped blobs it cannot open.
  */
 import nacl from "tweetnacl";
-import { b64decode, b64encode, bs, concat, enc, randomBytes } from "./encoding";
+import { b64decode, b64encode, bs, bytesEqual, concat, enc, randomBytes } from "./encoding";
 import { hkdf, newPhraseKdf, deriveKekFromPhrase, passkeyKek, recoveryKek, generateRecoveryKey, parseRecoveryKey, type PhraseKdf } from "./kdf";
 import { aad, importAesKey, unwrap, wrap } from "./wrap";
 import { NONCE_PREFIX_LEN } from "./file-cipher";
@@ -125,17 +125,46 @@ export async function unwrapFileKeyFromShare(blob: string, kdf: PhraseKdf, token
   return unwrap(await deriveKekFromPhrase(password, kdf), blob, aad.share(token));
 }
 
-// ── New-device approval: X25519 ECDH + HKDF + AES-GCM ────────────────────────
+// ── New-device approval: X25519 ECDH + HKDF + AES-GCM, with a commit-reveal SAS ──
 //
-// The new device posts an ephemeral public key. An already-unlocked device
-// replies with its own ephemeral public key and MK sealed to the shared secret.
-// The server relays only those public keys and the sealed blob. Both screens
-// show the same 6-digit code derived from the two public keys, so a server
-// that swapped keys in the middle would make the codes differ.
+// A signed-in device that lacks MK asks an unlocked device for it. The server
+// only relays public keys, nonces and one sealed blob.
+//
+// A plain "show a code derived from the public key" is NOT enough against a
+// server that swaps keys: it can grind key pairs until the 6 digits collide
+// (~10^6 tries, seconds). So the code is a short authentication string agreed
+// by commit-reveal, which leaves an active attacker a 1-in-10^6 guess per try:
+//
+//   1. requester → server : C = H(K_req ‖ r1)            (commitment; K_req, r1 stay secret)
+//   2. approver  → server : r2 (random)                  (after seeing C)
+//   3. requester → server : K_req, r1                    (reveal, after seeing r2)
+//   4. both compute  SAS = H(r1 ‖ r2 ‖ K_req) mod 10^6 ; approver also checks H(K_req ‖ r1) = C
+//   5. the USER compares the two screens; only then does the approver seal MK to K_req.
+//
+// The attacker must fix (K, r1) before r2 exists, and r1 stays hidden from the
+// server until step 3 — it can't steer the digits.
 
 export function createApprovalRequest() {
   const pair = nacl.box.keyPair();
-  return { publicKey: pair.publicKey, secretKey: pair.secretKey };
+  return { publicKey: pair.publicKey, secretKey: pair.secretKey, nonce: randomBytes(16) };
+}
+
+const sha256 = async (...parts: Uint8Array[]) => new Uint8Array(await crypto.subtle.digest("SHA-256", bs(concat(...parts))));
+
+export async function approvalCommitment(requesterPublicKey: Uint8Array, requesterNonce: Uint8Array): Promise<string> {
+  return b64encode(await sha256(enc.encode("drivecord:commit:v1"), requesterPublicKey, requesterNonce));
+}
+
+export async function verifyApprovalCommitment(commitment: string, requesterPublicKey: Uint8Array, requesterNonce: Uint8Array): Promise<boolean> {
+  return bytesEqual(b64decode(commitment), b64decode(await approvalCommitment(requesterPublicKey, requesterNonce)));
+}
+
+export const createApproverNonce = () => randomBytes(16);
+
+/** The 6 digits both screens show. */
+export async function sasCode(requesterNonce: Uint8Array, approverNonce: Uint8Array, requesterPublicKey: Uint8Array): Promise<string> {
+  const digest = await sha256(enc.encode("drivecord:sas:v1"), requesterNonce, approverNonce, requesterPublicKey);
+  return String(new DataView(digest.buffer).getUint32(0, false) % 1_000_000).padStart(6, "0");
 }
 
 async function sharedKek(secret: Uint8Array, theirPublic: Uint8Array, pubA: Uint8Array, pubB: Uint8Array): Promise<CryptoKey> {
@@ -147,6 +176,7 @@ async function sharedKek(secret: Uint8Array, theirPublic: Uint8Array, pubA: Uint
 
 const approvalContext = (userId: string) => `drivecord:approval:v1:${userId}`;
 
+/** Only call this AFTER the user confirmed the SAS and the commitment verified. */
 export async function approveDevice(userId: string, mk: Uint8Array, requesterPublicKey: Uint8Array) {
   if (requesterPublicKey.length !== 32) throw new Error("Clé publique invalide.");
   const eph = nacl.box.keyPair();
@@ -158,14 +188,6 @@ export async function completeApproval(userId: string, secretKey: Uint8Array, re
   if (approverPublicKey.length !== 32) throw new Error("Clé publique invalide.");
   const kek = await sharedKek(secretKey, approverPublicKey, approverPublicKey, requesterPublicKey);
   return unwrap(kek, sealedMk, approvalContext(userId));
-}
-
-/** 6-digit code both devices display; derived from both public keys. */
-export async function verificationCode(requesterPublicKey: Uint8Array, approverPublicKey: Uint8Array): Promise<string> {
-  const sorted = [requesterPublicKey, approverPublicKey].sort((x, y) => b64encode(x).localeCompare(b64encode(y)));
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bs(concat(enc.encode("drivecord:sas:v1"), ...sorted))));
-  const n = new DataView(digest.buffer).getUint32(0, false) % 1_000_000;
-  return String(n).padStart(6, "0");
 }
 
 export { b64decode };

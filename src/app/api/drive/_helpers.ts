@@ -29,13 +29,14 @@ type PrismaFile = {
   filename: string; size: number; mimeType: string; chunkSize: number;
   chunks: unknown; tags: string[]; favorite: boolean; locked: boolean;
   encIv: string | null;
+  cryptoVersion: number; fkWrapped: string | null; encMeta: string | null; noncePrefix: string | null;
   trashed: boolean; trashedAt: Date | null;
   createdAt: Date; updatedAt: Date;
 };
 
 type PrismaFolder = {
   id: string; webhookId: string; driveId: string; parentId: string;
-  name: string; color: string | null; trashed: boolean; trashedAt: Date | null;
+  name: string; encName: string | null; color: string | null; trashed: boolean; trashedAt: Date | null;
   createdAt: Date; updatedAt: Date;
 };
 
@@ -53,6 +54,10 @@ export function toFileEntry(row: PrismaFile): FileEntry {
     favorite: row.favorite,
     locked: row.locked,
     encIv: row.encIv ?? undefined,
+    cryptoVersion: row.cryptoVersion || undefined,
+    fkWrapped: row.fkWrapped ?? undefined,
+    encMeta: row.encMeta ?? undefined,
+    noncePrefix: row.noncePrefix ?? undefined,
     trashed: row.trashed,
     trashedAt: row.trashedAt?.getTime(),
     createdAt: row.createdAt.getTime(),
@@ -66,6 +71,7 @@ export function toFolderEntry(row: PrismaFolder): FolderEntry {
     driveId: row.driveId,
     parentId: row.parentId,
     name: row.name,
+    encName: row.encName ?? undefined,
     color: row.color ?? undefined,
     trashed: row.trashed,
     trashedAt: row.trashedAt?.getTime(),
