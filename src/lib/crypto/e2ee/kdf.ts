@@ -22,12 +22,13 @@ export function normalizePhrase(phrase: string): string {
   return phrase.normalize("NFKC").trim().replace(/\s+/g, " ");
 }
 
-export async function deriveKekFromPhrase(phrase: string, kdf: PhraseKdf): Promise<CryptoKey> {
+/** Raw Argon2id output (32 bytes) for a secret + stored parameters. */
+export async function deriveRawFromSecret(secret: string, kdf: PhraseKdf): Promise<Uint8Array> {
   if (kdf.alg !== "argon2id") throw new Error("KDF inconnue.");
   // Refuse absurd parameters coming from a (possibly hostile) server: a DoS by memory.
   if (kdf.m > 1024 * 1024 || kdf.t > 20 || kdf.p > 8 || kdf.m < 8) throw new Error("Paramètres KDF refusés.");
-  const raw = await argon2id({
-    password: normalizePhrase(phrase),
+  return argon2id({
+    password: normalizePhrase(secret),
     salt: b64decode(kdf.salt),
     parallelism: kdf.p,
     iterations: kdf.t,
@@ -35,7 +36,10 @@ export async function deriveKekFromPhrase(phrase: string, kdf: PhraseKdf): Promi
     hashLength: 32,
     outputType: "binary",
   });
-  return importAesKey(raw);
+}
+
+export async function deriveKekFromPhrase(phrase: string, kdf: PhraseKdf): Promise<CryptoKey> {
+  return importAesKey(await deriveRawFromSecret(phrase, kdf));
 }
 
 export async function hkdf(ikm: Uint8Array, info: string, salt: Uint8Array = new Uint8Array(32), length = 32): Promise<Uint8Array> {

@@ -115,6 +115,16 @@ export async function unwrapMasterKey(
   return importMasterKey(new Uint8Array(plain));
 }
 
+/** Unwrap a wrapped master key to its raw bytes (needed to re-wrap it under another key). */
+export async function unwrapMasterKeyRaw(wrappedB64: string, ivB64: string, kek: CryptoKey): Promise<Uint8Array> {
+  const plain = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: b64decode(ivB64) },
+    kek,
+    b64decode(wrappedB64),
+  );
+  return new Uint8Array(plain);
+}
+
 /** Encrypt a blob. Returns the ciphertext blob and the base64 IV to store. */
 export async function encryptBlob(blob: Blob, key: CryptoKey): Promise<{ blob: Blob; iv: string }> {
   const iv = crypto.getRandomValues(new Uint8Array(12));

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
+import { E2eeProvider } from "@/components/e2ee/e2ee-provider";
 import { LoginApprovalWatcher } from "@/components/auth/login-approval-watcher";
 import { BfcacheAuthGuard } from "@/components/auth/bfcache-guard";
 import { NativeDeepLink } from "@/components/native-deep-link";
@@ -201,7 +202,7 @@ export default function RootLayout({
             themes={["light", "dark", "system", "aurora", "or-nocturne"]}
           >
             <TooltipProvider delayDuration={200}>
-              {children}
+              <E2eeProvider>{children}</E2eeProvider>
 
               <AppTabBar />
 

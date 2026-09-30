@@ -3,6 +3,9 @@ ALTER TABLE "Webhook" ADD COLUMN "dkWrapped" TEXT,
 ADD COLUMN "e2eeVersion" INTEGER NOT NULL DEFAULT 0;
 
 -- AlterTable
+ALTER TABLE "User" ADD COLUMN "vaultKdf" JSONB;
+
+-- AlterTable
 ALTER TABLE "DriveFile" ADD COLUMN "fkWrapped" TEXT,
 ADD COLUMN "encMeta" TEXT,
 ADD COLUMN "cryptoVersion" INTEGER NOT NULL DEFAULT 0,

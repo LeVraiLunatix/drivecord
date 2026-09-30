@@ -11,6 +11,7 @@ export type ItemAction =
   | "open"
   | "download"
   | "share"
+  | "encrypt"
   | "rename"
   | "favorite"
   | "lock"
@@ -35,6 +36,10 @@ export function buildItemMenu(item: DriveItem): MenuEntry[] {
   if (!isFolder) {
     if (!item.locked) {
       entries.push({ kind: "item", label: "Partager par lien…", action: "share" });
+    }
+    if (!item.locked && !item.cryptoVersion) {
+      // Plaintext (API upload) or legacy single-IV file → re-upload in the end-to-end format.
+      entries.push({ kind: "item", label: "Chiffrer maintenant", action: "encrypt" });
     }
     entries.push({
       kind: "item",

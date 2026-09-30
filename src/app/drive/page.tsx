@@ -10,13 +10,12 @@ import { DriveTopbar } from "@/components/drive/topbar";
 import { CommandPalette } from "@/components/drive/command-palette";
 import { ShareDialog } from "@/components/drive/share-dialog";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
-import { createFolder } from "@/lib/storage";
+import { createFolder, refreshDrive } from "@/lib/storage";
+import { convertFileToE2ee } from "@/lib/e2ee-client/convert";
 import { downloadItemsAsZip } from "@/lib/download-zip";
 import { saveBlob } from "@/lib/native-save";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 import { getVaultKey, clearVaultKey } from "@/lib/crypto/vault-key-store";
-import { setDriveKey } from "@/lib/crypto/drive-key-store";
-import { importDriveKey, unwrapDriveKeyFromLocalStorage } from "@/lib/crypto/drive-crypto";
 import { ensureDriveKey } from "@/lib/auth/sync";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
 import { NewFolderDialog } from "@/components/drive/new-folder-dialog";
@@ -205,24 +204,6 @@ function DriveContent() {
   const driveId = activeDrive?.id ?? null;
   const [vaultUnlocked, setVaultUnlocked] = React.useState(false);
 
-  // Keep the active drive's file key in memory so reads (download, preview, ZIP)
-  // decrypt transparently. Regular files use this key; the vault uses its own
-  // PIN-derived key.
-  React.useEffect(() => {
-    let cancelled = false;
-    if (activeDrive?.encKey) {
-      unwrapDriveKeyFromLocalStorage(activeDrive.encKey)
-        .then((raw) => importDriveKey(raw))
-        .then((k) => {
-          if (!cancelled) setDriveKey(k);
-        });
-    } else {
-      setDriveKey(null);
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [activeDrive?.encKey]);
   const items      = useDriveItems(driveId, currentFolderId);
   const favorites  = useFavorites(driveId);
   const trashed    = useTrashedItems(driveId);
@@ -291,7 +272,10 @@ function DriveContent() {
 
       // Non-vault uploads are encrypted with the drive's key (when signed in;
       // null otherwise → uploaded in clear, exactly as before).
-      const driveKey = await ensureDriveKey(activeDrive);
+      // End-to-end encrypt with the drive key. If it isn't available (storage locked, migration
+      // failed) we refuse to upload rather than silently sending the file in clear.
+      const driveKey = await ensureDriveKey(activeDrive).catch(() => null);
+      if (!driveKey) { toast.error("Déverrouille ton stockage chiffré pour envoyer des fichiers."); return; }
 
       // Flat upload (no folders) — keep the simple path.
       const hasFolders = entries.some((e) => e.path !== "");
@@ -299,7 +283,7 @@ function DriveContent() {
         enqueue({
           files: entries.map((e) => e.file),
           driveId, parentId: base, client,
-          encryptKey: driveKey ?? undefined,
+          e2eeKey: driveKey,
           locked: false,
           onUploaded,
         });
@@ -321,7 +305,7 @@ function DriveContent() {
         for (const [pid, files] of groups) {
           enqueue({
             files, driveId, parentId: pid, client,
-            encryptKey: driveKey ?? undefined,
+            e2eeKey: driveKey,
             locked: false,
             onUploaded,
           });
@@ -393,6 +377,15 @@ function DriveContent() {
       if (action === "tag") { setTagTarget(item); return; }
       if (action === "color") { setColorTarget(item); return; }
       if (action === "share") { setShareTarget(item); return; }
+      if (action === "encrypt" && item.kind === "file") {
+        if (!client) { toast.error("Drive non prêt"); return; }
+        toast.promise(convertFileToE2ee(client, item.driveId, item).then(() => refreshDrive(item.driveId)), {
+          loading: `Chiffrement de « ${item.filename} »…`,
+          success: "Fichier chiffré de bout en bout 🔒",
+          error: (e) => `Chiffrement impossible : ${(e as Error).message}`,
+        });
+        return;
+      }
       if (action === "favorite" && item.kind === "file") {
         try { await setFavorite(item.driveId, item.id, !item.favorite); }
         catch (err) { toast.error((err as Error).message); }

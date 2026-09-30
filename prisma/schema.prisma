@@ -29,8 +29,12 @@ model User {
   /// actually encrypts vault files, so changing the PIN only re-wraps this
   /// blob — it never touches already-encrypted file content.
   vaultKeyWrapped String?
-  /// base64 IV used for the `vaultKeyWrapped` AES-GCM wrapping
+  /// base64 IV used for the `vaultKeyWrapped` AES-GCM wrapping (legacy PBKDF2 vaults only)
   vaultKeyIv      String?
+  /// Vault v2 (phase 2): Argon2id parameters + salt of the PIN stretching. When set, the PIN never
+  /// reaches the server: `vaultPin` holds bcrypt(verifier) where verifier = HKDF(Argon2id(PIN)),
+  /// and `vaultKeyWrapped` is `v1.<iv>.<ct>` wrapped by a PIN-derived key. Null = legacy vault.
+  vaultKdf        Json?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

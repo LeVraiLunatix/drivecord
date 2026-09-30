@@ -49,7 +49,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const { password, expiresInDays, fkWrappedForShare, shareKdf } = (await req.json()) as {
+  const { password, expiresInDays, fkWrappedForShare, shareKdf, token: clientToken } = (await req.json()) as {
+    /** E2EE shares: chosen by the client so it can be bound into the password-wrapping AAD. */
+    token?: string;
     password?: string;
     expiresInDays?: number | null;
     /** E2EE password share: FK wrapped by Argon2id(password) — the server never sees the password. */
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   // Replace any existing share for this file.
   await prisma.share.deleteMany({ where: { fileId: id, webhookId: result.webhook.id } });
-  const token = nanoid(16);
+  const token = e2ee && typeof clientToken === "string" && /^[A-Za-z0-9_-]{24}$/.test(clientToken) ? clientToken : nanoid(16);
   await prisma.share.create({
     data: {
       token, webhookId: result.webhook.id, fileId: id, passwordHash, expiresAt,

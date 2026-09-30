@@ -5,6 +5,9 @@ import { mutate } from "swr";
 import type { FolderEntry, FileEntry, ParentId } from "./schema";
 import { ROOT_PARENT } from "./schema";
 import { authFetch } from "@/lib/api-base";
+import { decryptFile, decryptFolder } from "@/lib/e2ee-client/decrypt-items";
+import { encryptFolderName } from "@/lib/crypto/e2ee";
+import { tryGetDriveKeyMaterial } from "@/lib/e2ee-client/drive-keys";
 
 function invalidateDrive(driveId: string) {
   mutate((key) => typeof key === "string" && key.includes(`/api/drive/${driveId}`));
@@ -25,18 +28,26 @@ export async function createFolder(args: {
   name: string;
 }): Promise<string> {
   const id = nanoid(12);
+  // On an end-to-end encrypted drive the server gets only the encrypted name.
+  const dk = await tryGetDriveKeyMaterial(args.driveId);
   await apiFetch(`/api/drive/${args.driveId}/folders`, {
     method: "POST",
-    body: JSON.stringify({ id, parentId: args.parentId ?? ROOT_PARENT, name: args.name }),
+    body: JSON.stringify({
+      id,
+      parentId: args.parentId ?? ROOT_PARENT,
+      ...(dk ? { name: "", encName: await encryptFolderName(dk.key, id, args.name) } : { name: args.name }),
+    }),
   });
   invalidateDrive(args.driveId);
   return id;
 }
 
 export async function renameFolder(driveId: string, id: string, name: string): Promise<void> {
+  const dk = await tryGetDriveKeyMaterial(driveId);
+  const current = dk ? await getFolderRaw(driveId, id) : undefined;
   await apiFetch(`/api/drive/${driveId}/folders/${id}`, {
     method: "PATCH",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(current?.encName && dk ? { encName: await encryptFolderName(dk.key, id, name) } : { name }),
   });
   invalidateDrive(driveId);
 }
@@ -81,7 +92,8 @@ export async function restoreFolder(driveId: string, id: string): Promise<void> 
 export async function getFolderSubtreeFiles(driveId: string, id: string): Promise<FileEntry[]> {
   const res = await apiFetch(`/api/drive/${driveId}/folders/${id}?subtree=1`);
   const data = await res.json();
-  return data.files as FileEntry[];
+  const dk = await tryGetDriveKeyMaterial(driveId);
+  return Promise.all((data.files as FileEntry[]).map((f) => decryptFile(dk, f)));
 }
 
 export async function hardDeleteFolderSubtree(
@@ -102,15 +114,21 @@ export async function hardDeleteFolder(driveId: string, id: string): Promise<voi
   await hardDeleteFolderSubtree(driveId, id);
 }
 
-export async function getFolder(driveId: string, id: string): Promise<FolderEntry | undefined> {
+async function getFolderRaw(driveId: string, id: string): Promise<FolderEntry | undefined> {
   const res = await authFetch(`/api/drive/${driveId}/folders/${id}`);
   if (!res.ok) return undefined;
   return res.json();
+}
+
+export async function getFolder(driveId: string, id: string): Promise<FolderEntry | undefined> {
+  const raw = await getFolderRaw(driveId, id);
+  return raw ? decryptFolder(await tryGetDriveKeyMaterial(driveId), raw) : undefined;
 }
 
 export async function listAllFolders(driveId: string): Promise<FolderEntry[]> {
   const res = await authFetch(`/api/drive/${driveId}/folders`);
   if (!res.ok) return [];
   const data = await res.json();
-  return data.folders;
+  const dk = await tryGetDriveKeyMaterial(driveId);
+  return Promise.all((data.folders as FolderEntry[]).map((f) => decryptFolder(dk, f)));
 }

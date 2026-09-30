@@ -9,6 +9,8 @@
  * decrypt without a second round-trip per file.
  *
  * Query params:
+ *  - all=1 — include trashed items too (non-locked files only). Needed by the web app to
+ *    re-encrypt a whole drive (key rotation, folder-name migration).
  *  - since (number, Unix ms) — incremental mode: only rows with
  *    `updatedAt > since`, plus `trashedFileIds` / `trashedFolderIds` listing
  *    items trashed since then (so the client can drop their placeholders).
@@ -30,14 +32,16 @@ export async function GET(
   const since = sinceRaw ? Number(sinceRaw) : null;
   const incremental = since !== null && Number.isFinite(since);
   const after = incremental ? { updatedAt: { gt: new Date(since) } } : {};
+  const includeTrashed = req.nextUrl.searchParams.get("all") === "1";
+  const trashedFilter = includeTrashed ? {} : { trashed: false };
 
   const [folders, files] = await Promise.all([
     prisma.driveFolder.findMany({
-      where: { webhookId, trashed: false, ...after },
+      where: { webhookId, ...trashedFilter, ...after },
       orderBy: { name: "asc" },
     }),
     prisma.driveFile.findMany({
-      where: { webhookId, trashed: false, locked: false, ...after },
+      where: { webhookId, ...trashedFilter, locked: false, ...after },
       orderBy: { filename: "asc" },
     }),
   ]);

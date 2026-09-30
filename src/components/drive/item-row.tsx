@@ -214,6 +214,15 @@ export const DriveItemRow = React.memo(function DriveItemRow({
               {favorite && (
                 <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" />
               )}
+              {!isFolder && !item.locked && !item.cryptoVersion && (
+                <span
+                  className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-500"
+                  title="Ce fichier n'est pas chiffré de bout en bout (menu › Chiffrer maintenant)"
+                  data-testid="plain-badge"
+                >
+                  Non chiffré
+                </span>
+              )}
             </div>
 
             {/* Kind label */}

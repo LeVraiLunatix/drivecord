@@ -18,7 +18,19 @@ import {
   type FolderEntry,
   type ParentId,
 } from "./schema";
-import { apiFetcher as fetcher } from "@/lib/api-base";
+import { apiFetcher } from "@/lib/api-base";
+import { decryptPayload } from "@/lib/e2ee-client/decrypt-items";
+
+/**
+ * SWR fetcher for `/api/drive/:id/…`: end-to-end encrypted names/types are opened here
+ * (in memory, client-side), so components keep using plain `filename` / `name`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const fetcher = async (url: string): Promise<any> => {
+  const data = await apiFetcher(url);
+  const m = /^\/api\/drive\/([^/]+)\//.exec(url);
+  return m ? decryptPayload(decodeURIComponent(m[1]!), url, data) : data;
+};
 
 // ── Active drive (stays in IndexedDB / localStorage) ──────────────────────────
 

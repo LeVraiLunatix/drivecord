@@ -6,6 +6,10 @@ import type { FileManifest } from "@/lib/discord";
 import type { FileEntry, ParentId } from "./schema";
 import { ROOT_PARENT } from "./schema";
 import { authFetch } from "@/lib/api-base";
+import { decryptFile } from "@/lib/e2ee-client/decrypt-items";
+import { getFileCipher, isE2eeFile } from "@/lib/e2ee-client/file-crypto";
+import { tryGetDriveKeyMaterial } from "@/lib/e2ee-client/drive-keys";
+import { decryptMeta, encryptMeta } from "@/lib/crypto/e2ee";
 
 /** Invalidate all SWR caches for a drive. */
 function invalidateDrive(driveId: string) {
@@ -35,18 +39,29 @@ export async function recordUploadedFile(args: {
   /** Set when the file was E2EE-encrypted before upload (vault). */
   locked?: boolean;
   encIv?: string;
+  /** End-to-end encrypted (format v1): client-generated id + wrapped file key + sealed metadata. */
+  e2ee?: { fileId: string; fkWrapped: string; encMeta: string; noncePrefix: string };
   /** Skip SWR revalidation (batch uploads call refreshDrive once at the end). */
   silent?: boolean;
 }): Promise<string> {
-  const id = nanoid(12);
+  const id = args.e2ee?.fileId ?? nanoid(12);
   await apiFetch(`/api/drive/${args.driveId}/files`, {
     method: "POST",
     body: JSON.stringify({
       id,
       parentId: args.parentId ?? ROOT_PARENT,
-      filename: args.manifest.filename,
+      ...(args.e2ee
+        ? {
+            // The server learns neither the name nor the type: both live in `encMeta`.
+            filename: "",
+            mimeType: "application/octet-stream",
+            cryptoVersion: 1,
+            fkWrapped: args.e2ee.fkWrapped,
+            encMeta: args.e2ee.encMeta,
+            noncePrefix: args.e2ee.noncePrefix,
+          }
+        : { filename: args.manifest.filename, mimeType: args.manifest.mimeType }),
       size: args.manifest.size,
-      mimeType: args.manifest.mimeType,
       chunkSize: args.manifest.chunkSize,
       chunks: args.manifest.chunks,
       tags: args.tags ?? [],
@@ -58,17 +73,34 @@ export async function recordUploadedFile(args: {
   return id;
 }
 
-export async function getFile(driveId: string, id: string): Promise<FileEntry | undefined> {
+async function getFileRaw(driveId: string, id: string): Promise<FileEntry | undefined> {
   const res = await authFetch(`/api/drive/${driveId}/files/${id}`);
   if (!res.ok) return undefined;
   return res.json();
 }
 
+export async function getFile(driveId: string, id: string): Promise<FileEntry | undefined> {
+  const raw = await getFileRaw(driveId, id);
+  return raw ? decryptFile(await tryGetDriveKeyMaterial(driveId), raw) : undefined;
+}
+
 export async function renameFile(driveId: string, id: string, filename: string): Promise<void> {
-  await apiFetch(`/api/drive/${driveId}/files/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ filename }),
-  });
+  const raw = await getFileRaw(driveId, id);
+  const dk = raw && isE2eeFile(raw) ? await tryGetDriveKeyMaterial(driveId) : null;
+  if (raw && isE2eeFile(raw)) {
+    if (!dk || !raw.encMeta) throw new Error("Déverrouille ton stockage pour renommer ce fichier.");
+    const p = await getFileCipher(dk, raw);
+    const meta = await decryptMeta(p.fk, id, raw.encMeta);
+    await apiFetch(`/api/drive/${driveId}/files/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ encMeta: await encryptMeta(p.fk, id, { ...meta, name: filename }) }),
+    });
+  } else {
+    await apiFetch(`/api/drive/${driveId}/files/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ filename }),
+    });
+  }
   invalidateDrive(driveId);
 }
 

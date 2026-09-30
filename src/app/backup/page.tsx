@@ -10,6 +10,8 @@ import { BackButton } from "@/components/back-button";
 import { cn } from "@/lib/utils";
 import { useAllDrives } from "@/lib/storage";
 import { recordUploadedFile, createFolder, refreshDrive } from "@/lib/storage";
+import { ensureDriveKey } from "@/lib/auth/sync";
+import { prepareEncryptedUpload } from "@/lib/e2ee-client/file-crypto";
 import { DiscordClient } from "@/lib/discord/client";
 import { DiscordApiError } from "@/lib/discord/types";
 import {
@@ -146,6 +148,10 @@ export default function BackupPage() {
       const todo = all.filter((m) => !done.has(m.identifier));
       if (todo.length === 0) { toast.success("Pellicule déjà à jour ✅"); return; }
 
+      // Backups are end-to-end encrypted: no key → no backup (never upload the camera roll in clear).
+      const dk = await ensureDriveKey(drive).catch(() => null);
+      if (!dk) { toast.error("Déverrouille ton stockage chiffré pour sauvegarder la pellicule."); return; }
+
       const client = DiscordClient.fromUrl(drive.webhookUrl);
       const rootId = await ensureRoot(drive.id, existingFolders);
       const folderCache = new Map<string, string>(); // album → folderId
@@ -177,6 +183,8 @@ export default function BackupPage() {
         let tempPath = "";
         try {
           let manifest = null;
+          // Camera-roll items are end-to-end encrypted like every other file (format v1).
+          let e2ee: { fileId: string; fkWrapped: string; encMeta: string; noncePrefix: string } | undefined;
           // 1) If the file server honors Range, stream chunk-by-chunk (lowest
           //    memory). Otherwise we DON'T skip — we just read the whole file.
           try {
@@ -184,9 +192,14 @@ export default function BackupPage() {
             tempPath = s.path;
             if (s.size && s.size > MAX_BYTES) { await s.stream.cancel().catch(() => {}); return "skipped"; }
             if (s.ranged) {
-              manifest = await client.uploadStream(s.stream, {
-                filename: s.filename, mimeType: s.mimeType, totalSize: s.size, chunkSize: CHUNK, signal,
+              const prep = await prepareEncryptedUpload(dk, {
+                stream: () => s.stream, size: s.size ?? 0, name: s.filename, type: s.mimeType,
               });
+              manifest = await client.uploadStream(prep.stream, {
+                filename: prep.discordName, mimeType: "application/octet-stream",
+                totalSize: s.size ? prep.cipherSize : undefined, chunkSize: prep.chunkSize, signal,
+              });
+              e2ee = { fileId: prep.fileId, ...(await prep.finalize(manifest.size)) };
             } else {
               await s.stream.cancel().catch(() => {}); // fall through to whole-file read
             }
@@ -209,10 +222,15 @@ export default function BackupPage() {
             tempPath = r.path;
             if (r.blob.size > MAX_BYTES) return "skipped";
             const file = new File([r.blob], r.filename, { type: r.mimeType });
-            manifest = await client.uploadFile(file, { signal });
+            const prep = await prepareEncryptedUpload(dk, file);
+            manifest = await client.uploadStream(prep.stream, {
+              filename: prep.discordName, mimeType: "application/octet-stream",
+              totalSize: prep.cipherSize, chunkSize: prep.chunkSize, signal,
+            });
+            e2ee = { fileId: prep.fileId, ...(await prep.finalize(manifest.size)) };
           }
           try {
-            const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, silent: true });
+            const fileId = await recordUploadedFile({ driveId: drive.id, parentId, manifest, e2ee, silent: true });
             markBackedUp(drive.id, it.identifier, fileId);
             return "ok";
           } catch (err) {

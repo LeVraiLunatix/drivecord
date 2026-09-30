@@ -22,6 +22,10 @@ import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { formatBytes } from "@/lib/utils/format";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
+import { b64urlEncode } from "@/lib/crypto/e2ee";
+import { getDriveKeyMaterialById } from "@/lib/e2ee-client/drive-keys";
+import { getFileCipher, readFileMeta } from "@/lib/e2ee-client/file-crypto";
+import { useKeyring } from "@/components/e2ee/use-keyring";
 
 type Share = {
   token: string;
@@ -34,7 +38,18 @@ type Share = {
   expired: boolean;
   downloads: number;
   createdAt: number;
+  driveId: string | null;
+  fileId: string;
+  disabled?: boolean;
+  cryptoVersion?: number;
+  fkWrapped?: string | null;
+  noncePrefix?: string | null;
+  encMeta?: string | null;
+  needsRegenerate?: boolean;
 };
+
+/** Decrypted name and `#k=` fragment of an end-to-end encrypted share (empty while locked). */
+type E2eeView = { name?: string; fragment?: string };
 
 
 /** "N'expire jamais" / "Expire dans X jour(s)" / "Expire bientôt". */
@@ -68,8 +83,35 @@ export default function SharesPage() {
     { revalidateOnFocus: false },
   );
   const [copied, setCopied] = React.useState<string | null>(null);
+  const { status: keyStatus } = useKeyring();
+  const [e2ee, setE2ee] = React.useState<Record<string, E2eeView>>({});
 
   const shares = data?.shares ?? [];
+
+  // Names and keys of end-to-end encrypted files only exist in the browser: open them here.
+  React.useEffect(() => {
+    if (keyStatus !== "unlocked") return;
+    let cancelled = false;
+    (async () => {
+      const out: Record<string, E2eeView> = {};
+      for (const s of data?.shares ?? []) {
+        if (!s.cryptoVersion || !s.driveId || !s.fkWrapped || !s.noncePrefix || !s.encMeta) continue;
+        try {
+          const dk = await getDriveKeyMaterialById(s.driveId);
+          const file = { id: s.fileId, fkWrapped: s.fkWrapped, noncePrefix: s.noncePrefix, encMeta: s.encMeta, cryptoVersion: s.cryptoVersion };
+          out[s.token] = { name: (await readFileMeta(dk, file)).name, fragment: b64urlEncode((await getFileCipher(dk, file)).raw) };
+        } catch { /* leave as locked */ }
+      }
+      if (!cancelled) setE2ee(out);
+    })();
+    return () => { cancelled = true; };
+  }, [data, keyStatus]);
+
+  // A password share has no key in its URL: the password unwraps it.
+  const linkFor = (s: Share) => {
+    const frag = e2ee[s.token]?.fragment;
+    return `${origin}/s/${s.token}${frag && !s.hasPassword ? `#k=${frag}` : ""}`;
+  };
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   const totalDownloads = shares.reduce((a, s) => a + s.downloads, 0);
@@ -77,7 +119,12 @@ export default function SharesPage() {
 
   const copy = async (token: string) => {
     try {
-      await navigator.clipboard.writeText(`${origin}/s/${token}`);
+      const s = shares.find((x) => x.token === token);
+      if (s?.cryptoVersion && !e2ee[token]?.fragment && !s.hasPassword) {
+        toast.error("Déverrouille ton stockage pour copier ce lien chiffré.");
+        return;
+      }
+      await navigator.clipboard.writeText(s ? linkFor(s) : `${origin}/s/${token}`);
       setCopied(token);
       setTimeout(() => setCopied(null), 1800);
     } catch { toast.error("Copie impossible"); }
@@ -127,6 +174,13 @@ export default function SharesPage() {
         </motion.div>
       )}
 
+      {shares.some((s) => s.needsRegenerate) && (
+        <motion.div variants={v ?? item} className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          <strong>{shares.filter((s) => s.needsRegenerate).length} lien(s) à régénérer.</strong>{" "}
+          Le chiffrement de ces fichiers a été renforcé : leurs anciens liens ne fonctionnent plus. Ouvre le fichier dans ton drive, puis « Partager par lien » pour en créer un nouveau.
+        </motion.div>
+      )}
+
       <div className="space-y-3">
         {shares.map((s) => (
           <motion.div key={s.token} variants={v ?? item}>
@@ -136,7 +190,7 @@ export default function SharesPage() {
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-1.5 truncate font-medium">
                       {s.missing && <FileWarning className="size-4 shrink-0 text-destructive" />}
-                      {s.filename}
+                      {s.cryptoVersion ? (e2ee[s.token]?.name ?? "Fichier chiffré") : s.filename}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {s.driveName ? `${s.driveName} · ` : ""}{formatBytes(s.size)}
@@ -147,6 +201,8 @@ export default function SharesPage() {
                       <Download className="size-3" /> {s.downloads}
                     </Badge>
                     {s.hasPassword && <Badge variant="secondary" className="gap-1"><Lock className="size-3" /></Badge>}
+                    {s.needsRegenerate && <Badge variant="outline" className="text-amber-500">À régénérer</Badge>}
+                    {s.disabled && <Badge variant="outline" className="text-destructive">Désactivé</Badge>}
                     {s.expired ? (
                       <Badge variant="outline" className="text-destructive">Expiré</Badge>
                     ) : (
@@ -159,12 +215,12 @@ export default function SharesPage() {
                 </div>
 
                 <div className="flex items-center gap-2 overflow-hidden rounded-md border border-border/60 bg-background/60 px-2 py-1.5">
-                  <code className="block min-w-0 flex-1 truncate font-mono text-xs">{origin}/s/{s.token}</code>
+                  <code className="block min-w-0 flex-1 truncate font-mono text-xs">{origin}/s/{s.token}{e2ee[s.token]?.fragment && !s.hasPassword ? "#k=…" : ""}</code>
                   <Button size="icon" variant="ghost" className="size-7 shrink-0" onClick={() => copy(s.token)} title="Copier">
                     {copied === s.token ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                   </Button>
                   <Button asChild size="icon" variant="ghost" className="size-7 shrink-0" title="Ouvrir">
-                    <a href={`/s/${s.token}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="size-3.5" /></a>
+                    <a href={linkFor(s).replace(origin, "")} target="_blank" rel="noopener noreferrer"><ExternalLink className="size-3.5" /></a>
                   </Button>
                   <Button size="icon" variant="ghost" className="size-7 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => revoke(s.token)} title="Révoquer">
                     <Trash2 className="size-3.5" />

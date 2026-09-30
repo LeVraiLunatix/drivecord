@@ -12,13 +12,10 @@
 import { db } from "@/lib/storage/db";
 import { getActiveDriveId, setActiveDriveId, clearActiveDriveId } from "@/lib/storage/drives";
 import type { Drive } from "@/lib/storage/schema";
-import {
-  generateDriveKeyB64,
-  importDriveKey,
-  unwrapDriveKeyFromLocalStorage,
-  wrapDriveKeyForLocalStorage,
-} from "@/lib/crypto/drive-crypto";
+import { wrapDriveKeyForLocalStorage } from "@/lib/crypto/drive-crypto";
 import { authFetch } from "@/lib/api-base";
+import { isUnlocked } from "@/lib/e2ee-client/keyring";
+import { createDriveKeyForNewDrive, getDriveKeyMaterial, migrateDrive, type DriveKeyMaterial } from "@/lib/e2ee-client/drive-keys";
 
 type ServerWebhook = {
   driveId: string;
@@ -26,8 +23,11 @@ type ServerWebhook = {
   name: string;
   channelId: string;
   guildId?: string;
-  /** base64 raw per-drive file key (decrypted server-side), or null if unset. */
+  /** LEGACY base64 raw per-drive key — only returned while the drive is not yet end-to-end (e2eeVersion 0). */
   encKey?: string | null;
+  /** E2EE drive key wrapped by the user's Master Key. */
+  dkWrapped?: string | null;
+  e2eeVersion?: number;
   createdAt: number;
   lastOpenedAt: number;
 };
@@ -57,7 +57,10 @@ export async function syncWebhooksFromServer(): Promise<number> {
       name: existing?.name ?? w.name,
       channelId: w.channelId,
       guildId: w.guildId,
-      encKey: w.encKey ? await wrapDriveKeyForLocalStorage(w.encKey) : existing?.encKey,
+      // Legacy key is cached locally (wrapped) only until the drive is migrated; then it's gone for good.
+      encKey: (w.e2eeVersion ?? 0) >= 1 ? undefined : w.encKey ? await wrapDriveKeyForLocalStorage(w.encKey) : existing?.encKey,
+      dkWrapped: w.dkWrapped ?? undefined,
+      e2eeVersion: w.e2eeVersion ?? 0,
       createdAt: existing?.createdAt ?? w.createdAt,
       lastOpenedAt: w.lastOpenedAt,
     };
@@ -96,12 +99,13 @@ export async function syncWebhooksFromServer(): Promise<number> {
 /**
  * Save a newly-added drive to the server.
  * Called after addDriveFromWebhook() succeeds locally.
+ *
+ * With the keyring unlocked, the drive gets an end-to-end key right away: generated here,
+ * wrapped by the Master Key, and only the wrapped blob is sent. (If the keyring is somehow
+ * locked, the drive is created keyless and migrated at the next unlock.)
  */
 export async function pushWebhookToServer(drive: Drive): Promise<void> {
-  // Ensure the drive has an encryption key, but persist it LOCALLY only after
-  // the server confirms storage — so a key never exists unless it's safely
-  // backed up on the account (losing the only copy = files unreadable forever).
-  const encKey = drive.encKey ?? generateDriveKeyB64();
+  const fresh = isUnlocked() && (drive.e2eeVersion ?? 0) < 1 && !drive.encKey ? await createDriveKeyForNewDrive(drive.id) : null;
   const res = await authFetch("/api/webhooks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -111,28 +115,24 @@ export async function pushWebhookToServer(drive: Drive): Promise<void> {
       name: drive.name,
       channelId: drive.channelId,
       guildId: drive.guildId,
-      encKey,
+      ...(fresh ? { dkWrapped: fresh.dkWrapped } : {}),
     }),
   });
-  if (res.ok && !drive.encKey) {
-    await db().drives.update(drive.id, { encKey: await wrapDriveKeyForLocalStorage(encKey) });
+  if (res.ok && fresh) {
+    // The key exists only once the server has confirmed it (losing the only copy = files unreadable).
+    await db().drives.update(drive.id, { dkWrapped: fresh.dkWrapped, e2eeVersion: 1 });
   }
 }
 
 /**
- * Resolve the AES-GCM key that encrypts a drive's regular files.
- *
- * If the drive has no key yet, try to create one (pushWebhookToServer generates
- * + persists it — but only when signed in). Returns null when no key is
- * available (e.g. not signed in), in which case uploads stay unencrypted.
+ * The key that end-to-end encrypts a drive's regular files (format v1), or null when the drive
+ * isn't migrated / the keyring is locked — in which case uploads must wait rather than go out in clear.
  */
-export async function ensureDriveKey(drive: Drive): Promise<CryptoKey | null> {
-  let encKey = drive.encKey;
-  if (!encKey) {
-    await pushWebhookToServer(drive);
-    encKey = (await db().drives.get(drive.id))?.encKey;
-  }
-  return encKey ? importDriveKey(await unwrapDriveKeyFromLocalStorage(encKey)) : null;
+export async function ensureDriveKey(drive: Drive): Promise<DriveKeyMaterial | null> {
+  if (!isUnlocked()) return null;
+  let current = (await db().drives.get(drive.id)) ?? drive;
+  if ((current.e2eeVersion ?? 0) < 1) current = await migrateDrive(current);
+  return getDriveKeyMaterial(current);
 }
 
 /**
