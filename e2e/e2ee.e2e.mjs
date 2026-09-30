@@ -102,12 +102,15 @@ try {
   for (let attempt = 0; attempt < 6 && discord.log.length === 0; attempt++) {
     console.log("  [attempt]", attempt, page.url(), "inputs:", await page.locator('input[type="file"]').count());
     await page.waitForTimeout(1500);
-    // Like a real user: click "Upload" and answer the native file chooser.
-    const [chooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      page.getByRole("button", { name: "Upload" }).first().click(),
-    ]);
-    await chooser.setFiles(plainPath);
+    // Hand the file to the regular (non-directory) input through DataTransfer, exactly like a drop/pick would.
+    const bytes = [...fs.readFileSync(plainPath)];
+    await page.evaluate(async (arr) => {
+      const input = document.querySelector('input[type="file"]:not([webkitdirectory])');
+      const dt = new DataTransfer();
+      dt.items.add(new File([new Uint8Array(arr)], "rapport-secret-é.bin", { type: "application/octet-stream" }));
+      input.files = dt.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }, bytes);
     await page.waitForTimeout(4000);
   }
   await page.getByText("rapport-secret-é.bin").first().waitFor();
