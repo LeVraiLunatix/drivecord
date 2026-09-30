@@ -1,0 +1,60 @@
+{
+  "_comment": "Frozen vectors for e2ee format v1. See vectors.test.ts.",
+  "chunkIv": {
+    "prefix": "a0a1a2a3a4a5a6",
+    "first": "a0a1a2a3a4a5a60000000000",
+    "firstLast": "a0a1a2a3a4a5a60000000001",
+    "i258": "a0a1a2a3a4a5a60000010200"
+  },
+  "chunk": {
+    "fk": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+    "noncePrefix": "a0a1a2a3a4a5a6",
+    "fileId": "file_vector_1",
+    "index": 0,
+    "last": true,
+    "plain": "426f6e6a6f7572204472697665636f726420e2809420636869666672656d656e7420646520626f757420656e20626f7574",
+    "cipher": "4d7fae9633cd7777d80f32b83acffd14b188a57439d4b930755041ee20eaeb1ac03a95054e1d95c88980c7a3af1b1f34307dad223aa69adb4ce7e9f1e9f7646803",
+    "notLast": "2a632f9f91e3ca9832e3cb5ca3623fa214883b5ad51dfaac9e1fa1c714f8fe17866802c7be7f7bc0562a38f5d9900e82ed643c824798dc2cb30de09246fc84666f",
+    "emptyFile": "58d6310af42bac1e2b86444eb9d1a607"
+  },
+  "wrap": {
+    "kek": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+    "iv": "909192939495969798999a9b",
+    "context": "drivecord:dk:v1:drive_1",
+    "secret": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "blob": "v1.kJGSk5SVlpeYmZqb.VhasHfX3AoKJzLjF3mPYgtXm5YDw5EpUfdFPecpzUF0rLKqgyt36PcJpoquab4aM"
+  },
+  "aad": {
+    "mk": "drivecord:mk:v1:u",
+    "dk": "drivecord:dk:v1:d",
+    "fk": "drivecord:fk:v1:f",
+    "chunk": "drivecord:chunk:v1:f:3",
+    "meta": "drivecord:meta:v1:f",
+    "folder": "drivecord:folder:v1:x"
+  },
+  "hkdf": {
+    "ikm": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "info": "drivecord:kek:recovery:v1",
+    "okm": "bbda08c36346aa3aa76f6ce2c67a311e3ef0f6656819bc05093bf4096e04910f"
+  },
+  "argon2id": {
+    "phrase": "correct horse battery staple",
+    "kdf": {
+      "alg": "argon2id",
+      "m": 64,
+      "t": 2,
+      "p": 1,
+      "salt": "EBESExQVFhcYGRobHB0eHw=="
+    },
+    "sealed": "v1.AAECAwQFBgcICQoL.8BSzbldByAmKHQlYgNkyolB+pp94pCRiSs+DLrV5p0rzYRh2rv4HU4bRNgAx8UUT"
+  },
+  "base32": {
+    "in": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "out": "AAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPQ"
+  },
+  "sas": {
+    "a": "392d174a38b3b1beafaf1fe824870841c5fa531bc6eafdb6402c124664488c1c",
+    "b": "23b7bb8c91ae008711fb12846780bcdf1e065f821bdfec49f57e7c7dcd4c4823",
+    "code": "378589"
+  }
+}
