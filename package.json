@@ -75,6 +75,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "playwright-core": "^1.63.0",
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "typescript": "^5",
