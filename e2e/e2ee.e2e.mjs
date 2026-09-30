@@ -100,6 +100,7 @@ try {
   await page.getByRole("button", { name: "Upload" }).first().waitFor();
   // Dev-mode HMR may re-mount the page right after navigation and swallow an early `change`: retry until the upload starts.
   for (let attempt = 0; attempt < 6 && discord.log.length === 0; attempt++) {
+    console.log("  [attempt]", attempt, page.url(), "inputs:", await page.locator('input[type="file"]').count());
     await page.waitForTimeout(1500);
     await page.evaluate(() => {
       const i = document.querySelector('input[type="file"]');
