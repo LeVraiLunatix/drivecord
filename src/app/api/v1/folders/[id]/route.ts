@@ -4,115 +4,59 @@
  *   (every sub-folder + every file inside, including the files' Discord
  *   messages). Best-effort on the Discord side, same as `DELETE /api/v1/files/[id]`.
  */
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { decryptUrl } from "@/lib/auth/encrypt";
 import { toFolderEntry } from "@/app/api/drive/_helpers";
-import { DiscordClient } from "@/lib/discord";
-import type { ChunkRef, FileManifest } from "@/lib/discord";
-import { authenticateApiKey, checkRateLimit, corsJson, hasScope, preflight } from "../../_helpers";
+import { deleteFileMessages } from "@/lib/api-v1/discord-cleanup";
+import { HttpError } from "@/lib/api-v1/errors";
+import { idSchema, parse } from "@/lib/api-v1/schemas";
+import { json, noContent, preflight, v1Route } from "@/lib/api-v1/pipeline";
 
 export const runtime = "nodejs";
 
-type RouteParams = { params: Promise<{ id: string }> };
+type Params = { id: string };
 
-export async function OPTIONS() {
+export function OPTIONS() {
   return preflight();
 }
 
-export async function GET(req: NextRequest, { params }: RouteParams) {
-  const auth = await authenticateApiKey(req);
-  if (!auth) return corsJson({ error: "Clé API invalide ou manquante." }, { status: 401 });
-  if (!hasScope(auth.apiKey, "read")) {
-    return corsJson({ error: "Cette clé n'a pas la permission de lecture." }, { status: 403 });
-  }
-  const limited = await checkRateLimit(auth.apiKey);
-  if (limited) return limited;
+export const GET = v1Route<Params>({ route: "/api/v1/folders/[id]", scope: "files:read" }, async ({ auth, params }) => {
+  const id = parse(idSchema, params.id);
+  const row = await prisma.driveFolder.findFirst({ where: { id, webhookId: auth.webhook.id } });
+  if (!row) throw new HttpError(404, "Dossier introuvable.");
+  return json(toFolderEntry(row));
+});
 
-  const { id } = await params;
-  const row = await prisma.driveFolder.findFirst({
-    where: { id, webhookId: auth.webhook.id },
-  });
-  if (!row) return corsJson({ error: "Dossier introuvable." }, { status: 404 });
-  return corsJson(toFolderEntry(row));
-}
+export const DELETE = v1Route<Params>({ route: "/api/v1/folders/[id]", scope: "files:delete" }, async ({ auth, params }) => {
+  const id = parse(idSchema, params.id);
+  const webhookId = auth.webhook.id;
+  const root = await prisma.driveFolder.findFirst({ where: { id, webhookId }, select: { id: true } });
+  if (!root) throw new HttpError(404, "Dossier introuvable.");
 
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
-  const auth = await authenticateApiKey(req);
-  if (!auth) return corsJson({ error: "Clé API invalide ou manquante." }, { status: 401 });
-  if (!hasScope(auth.apiKey, "write")) {
-    return corsJson({ error: "Cette clé n'a pas la permission d'écriture." }, { status: 403 });
-  }
-  const limited = await checkRateLimit(auth.apiKey);
-  if (limited) return limited;
-
-  const { id } = await params;
-  const root = await prisma.driveFolder.findFirst({
-    where: { id, webhookId: auth.webhook.id },
-    select: { id: true },
-  });
-  if (!root) return corsJson({ error: "Dossier introuvable." }, { status: 404 });
-
-  // BFS: this folder + every descendant folder id.
+  // Load the drive's folder tree once, walk it in memory.
+  const all = await prisma.driveFolder.findMany({ where: { webhookId }, select: { id: true, parentId: true } });
+  const children = new Map<string, string[]>();
+  for (const f of all) children.set(f.parentId, [...(children.get(f.parentId) ?? []), f.id]);
   const subtreeIds = [id];
-  const queue = [id];
-  while (queue.length > 0) {
-    const cur = queue.shift()!;
-    const children = await prisma.driveFolder.findMany({
-      where: { webhookId: auth.webhook.id, parentId: cur },
-      select: { id: true },
-    });
-    for (const c of children) {
-      subtreeIds.push(c.id);
-      queue.push(c.id);
-    }
-  }
+  for (let i = 0; i < subtreeIds.length; i++) subtreeIds.push(...(children.get(subtreeIds[i]!) ?? []));
 
-  // Discord cleanup for every file in the subtree, attempted BEFORE the DB
-  // delete commits. A failure here (rate limit, revoked webhook, …) must not
-  // drop metadata for a file whose Discord messages are still live — that
-  // would orphan them with nothing left to ever clean them up.
-  const files = await prisma.driveFile.findMany({
-    where: { webhookId: auth.webhook.id, parentId: { in: subtreeIds } },
-  });
-  if (files.length > 0) {
-    const client = DiscordClient.fromUrl(decryptUrl(auth.webhook.encryptedUrl));
-    const failures: string[] = [];
-    await Promise.all(
-      files.map(async (f) => {
-        const manifest: FileManifest = {
-          size: f.size,
-          mimeType: f.mimeType,
-          filename: f.filename,
-          chunkSize: f.chunkSize,
-          chunks: f.chunks as unknown as ChunkRef[],
-        };
-        try {
-          await client.deleteFile(manifest);
-        } catch {
-          failures.push(f.filename);
-        }
-      }),
-    );
-    if (failures.length > 0) {
-      return corsJson(
-        {
-          error: `Échec de nettoyage Discord pour ${failures.length}/${files.length} fichier(s). Rien n'a été supprimé — réessaie.`,
-          failedFiles: failures,
-        },
-        { status: 502 },
-      );
-    }
+  // Vault files are off-limits to API keys: refuse rather than silently destroy them.
+  const locked = await prisma.driveFile.count({ where: { webhookId, locked: true, parentId: { in: subtreeIds } } });
+  if (locked > 0) throw new HttpError(409, "Ce dossier contient des éléments du coffre-fort : suppression refusée.");
+
+  // Discord cleanup BEFORE the DB delete commits: a failure (rate limit, revoked
+  // webhook…) must not drop metadata for a file whose messages are still live.
+  const files = await prisma.driveFile.findMany({ where: { webhookId, parentId: { in: subtreeIds } } });
+  const failures = await deleteFileMessages(auth.webhook, files);
+  if (failures.length > 0) {
+    throw new HttpError(502, `Échec de nettoyage Discord pour ${failures.length}/${files.length} fichier(s). Rien n'a été supprimé — réessaie.`, {
+      extra: { failedFiles: failures.slice(0, 50) },
+    });
   }
 
   await prisma.$transaction([
-    prisma.driveFile.deleteMany({
-      where: { webhookId: auth.webhook.id, parentId: { in: subtreeIds } },
-    }),
-    prisma.driveFolder.deleteMany({
-      where: { id: { in: subtreeIds }, webhookId: auth.webhook.id },
-    }),
+    prisma.share.deleteMany({ where: { webhookId, fileId: { in: files.map((f) => f.id) } } }),
+    prisma.driveFile.deleteMany({ where: { webhookId, parentId: { in: subtreeIds } } }),
+    prisma.driveFolder.deleteMany({ where: { id: { in: subtreeIds }, webhookId } }),
   ]);
-
-  return new NextResponse(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*" } });
-}
+  return noContent();
+});

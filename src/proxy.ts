@@ -13,6 +13,7 @@
 import NextAuth from "next-auth";
 import { NextResponse, type NextRequest } from "next/server";
 import { authConfig } from "@/auth.config";
+import { routeForOrigin } from "@/lib/usercontent";
 
 const { auth } = NextAuth(authConfig);
 
@@ -48,6 +49,12 @@ export async function proxy(
   event: unknown,
 ): Promise<Response | undefined> {
   const { pathname } = req.nextUrl;
+
+  // Content-origin isolation: raw user files only on USERCONTENT_ORIGIN, and
+  // nothing else (no app, no session, no API) there. No-op when it's unset.
+  if (routeForOrigin(req.headers.get("host") ?? req.nextUrl.host, pathname) === "not-found") {
+    return new NextResponse("Not found", { status: 404 });
+  }
 
   if (pathname.startsWith("/api/")) {
     const origin = req.headers.get("origin") ?? "";

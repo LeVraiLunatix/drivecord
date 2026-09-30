@@ -9,6 +9,7 @@ import { getWebhookLimiter } from "./rate-limit";
 import { withRetry } from "./retry";
 import { planChunks, parseCdnExpiry } from "./chunking";
 import { proxyUrl } from "./proxy";
+import { isSnowflake } from "./cdn-url";
 import { hashWebhook, parseWebhookUrl, fetchWebhookInfo } from "./webhook";
 import {
   DiscordApiError,
@@ -361,6 +362,20 @@ export class DiscordClient {
         url: att.url,
         expiresAt: parseCdnExpiry(att.url),
       };
+    });
+  }
+
+  /**
+   * Fetch one message of THIS webhook (null if it doesn't exist there). Used to
+   * verify chunk references against Discord instead of trusting a client.
+   */
+  async getMessage(messageId: string): Promise<DiscordMessage | null> {
+    if (!isSnowflake(messageId)) return null;
+    return withRetry(async () => {
+      const res = await this.webhookFetch(`${this.baseUrl}/messages/${messageId}`, { method: "GET" });
+      if (res.status === 404) return null;
+      if (!res.ok) throw await parseDiscordError(res);
+      return (await res.json()) as DiscordMessage;
     });
   }
 

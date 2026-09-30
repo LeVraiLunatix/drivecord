@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BackButton } from "@/components/back-button";
 import { AnnouncementAdmin } from "@/components/admin/announcement-admin";
+import { ReportsAdmin } from "@/components/admin/reports-admin";
 
 type AdminUser = {
   id: string;
@@ -162,6 +163,12 @@ export default function AdminPage() {
       {data && (
         <motion.div variants={v ?? item}>
           <AnnouncementAdmin />
+        </motion.div>
+      )}
+
+      {data && (
+        <motion.div variants={v ?? item}>
+          <ReportsAdmin />
         </motion.div>
       )}
 

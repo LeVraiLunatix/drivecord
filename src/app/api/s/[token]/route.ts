@@ -12,6 +12,11 @@ export async function GET(
   const share = await prisma.share.findUnique({ where: { token } });
   if (!share) return NextResponse.json({ error: "Lien introuvable." }, { status: 404 });
 
+  if (share.disabledAt) {
+    // Treated like a dead link: no file details for a disabled share.
+    return NextResponse.json({ exists: false, expired: false, hasPassword: false, filename: null, size: null, mimeType: null });
+  }
+
   const expired = share.expiresAt ? share.expiresAt.getTime() < Date.now() : false;
   const file = await prisma.driveFile.findFirst({
     where: { id: share.fileId, trashed: false },

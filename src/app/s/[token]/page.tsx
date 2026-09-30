@@ -4,7 +4,7 @@ import * as React from "react";
 import { use } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Download, FileIcon, Lock, Loader2, CloudUpload, AlertCircle } from "lucide-react";
+import { Download, FileIcon, Flag, Lock, Loader2, CloudUpload, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatBytes } from "@/lib/utils/format";
@@ -34,6 +34,9 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
   const [busy, setBusy] = React.useState(false);
   const [progress, setProgress] = React.useState<number | null>(null);
   const [error, setError] = React.useState("");
+  const [reporting, setReporting] = React.useState(false);
+  const [reportReason, setReportReason] = React.useState("");
+  const [reportSent, setReportSent] = React.useState(false);
 
   React.useEffect(() => {
     fetch(`/api/s/${token}`)
@@ -50,6 +53,26 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     a.download = filename;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
+  const sendReport = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, reason: reportReason }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error ?? "Échec de l'envoi du signalement.");
+      setReportSent(true);
+      setReporting(false);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const download = async () => {
@@ -154,6 +177,35 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
                 ? progress !== null ? `Téléchargement… ${progress}%` : "Préparation…"
                 : "Télécharger"}
             </Button>
+          </div>
+        )}
+
+        {info?.exists && !info.expired && (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            {reportSent ? (
+              <p>Merci, ton signalement a été transmis.</p>
+            ) : reporting ? (
+              <div className="space-y-2 text-left">
+                <Input
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  placeholder="Pourquoi signales-tu ce fichier ?"
+                  maxLength={500}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="destructive" onClick={sendReport} disabled={busy || reportReason.trim().length < 3}>
+                    Envoyer le signalement
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setReporting(false)}>
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="inline-flex items-center gap-1 underline-offset-2 hover:underline" onClick={() => setReporting(true)}>
+                <Flag className="size-3" /> Signaler ce fichier
+              </button>
+            )}
           </div>
         )}
 

@@ -136,6 +136,7 @@ model Webhook {
   folders DriveFolder[]
   shares  Share[]
   apiKeys ApiKey[]
+  uploadSessions UploadSession[]
 
   @@unique([userId, driveId])
 }
@@ -149,6 +150,8 @@ model Share {
   passwordHash String?
   expiresAt    DateTime?
   downloads    Int       @default(0)
+  /// Set by an admin after an abuse report: the link stops serving anything.
+  disabledAt   DateTime?
   createdAt    DateTime  @default(now())
 
   webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
@@ -170,13 +173,19 @@ model ApiKey {
   keyPrefix  String
   /// SHA-256 hex digest of the raw key.
   keyHash    String    @unique
-  /// Granted capabilities: "read", "write", "delete", "share". On `/api/v1`
-  /// "write" also allows delete; `/api/v2` requires the explicit scope.
+  /// Granted capabilities: "files:read", "files:write", "files:delete",
+  /// "public:manage", "folders:write" — plus the legacy "read" / "write" of older
+  /// keys, expanded at check time (see lib/auth/api-key.ts).
   scopes     String[]
   /// Hard expiry — the key is rejected after this instant (null = never).
   expiresAt  DateTime?
+  /// Set when the owner revokes the key; revoked keys are refused but kept listed.
+  revokedAt  DateTime?
   /// Exact client IPs allowed to use the key (empty = any IP).
   allowedIps String[]  @default([])
+  /// Browser origins allowed to use the key (empty = any). Requests carrying an
+  /// `Origin` header from elsewhere are refused; CORS echoes the exact origin.
+  allowedOrigins String[] @default([])
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
 
@@ -185,6 +194,79 @@ model ApiKey {
 
   @@index([userId])
   @@index([webhookId])
+}
+
+/// Server-side record of a chunked upload started through `/api/v1/files/chunks`.
+/// Chunk references are stored HERE (never trusted from the client), so the
+/// finalize step can only ever reference messages this server itself posted to
+/// the key's own webhook.
+model UploadSession {
+  id             String   @id @default(cuid())
+  apiKeyId       String
+  userId         String
+  webhookId      String
+  parentId       String   @default("")
+  /// Optional chunk count announced up front; enforced at finalize when set.
+  expectedChunks Int?
+  /// "open" | "completed" | "aborted"
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  webhook Webhook       @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  chunks  UploadChunk[]
+
+  @@index([apiKeyId])
+  @@index([status, expiresAt])
+}
+
+model UploadChunk {
+  sessionId    String
+  index        Int
+  size         Int
+  messageId    String
+  attachmentId String
+  url          String
+  /// Unix ms expiry parsed from the CDN URL; null when unknown.
+  urlExpiresAt DateTime?
+
+  session UploadSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, index])
+}
+
+/// One row per authenticated API call (best-effort, purged after 30 days).
+/// `ip` is truncated (IPv4 /24, IPv6 /48) — enough to spot abuse, not to track people.
+model ApiAuditLog {
+  id        String   @id @default(cuid())
+  apiKeyId  String?
+  /// Reserved for OAuth apps (phase 3).
+  appId     String?
+  userId    String?
+  /// Route pattern, never the concrete URL (ids stay out of the log).
+  route     String
+  method    String
+  status    Int
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([apiKeyId, createdAt])
+}
+
+/// Abuse report filed against a public link (`/s/:token`, `/api/v1/public/:token`).
+model LinkReport {
+  id         String    @id @default(cuid())
+  token      String
+  reason     String
+  /// Truncated reporter IP.
+  ip         String
+  createdAt  DateTime  @default(now())
+  /// Set once an admin dealt with it (link disabled or report dismissed).
+  handledAt  DateTime?
+
+  @@index([token])
+  @@index([handledAt, createdAt])
 }
 
 // ── Drive content (files + folders) ──────────────────────────────────────────

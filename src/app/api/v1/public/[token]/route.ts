@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { fetchAndDecryptFile } from "@/lib/serve-file";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ChunkRef } from "@/lib/discord";
+import { buildSafeFileHeaders } from "@/lib/safe-file-headers";
 
 export const runtime = "nodejs";
 
@@ -31,15 +32,14 @@ function fileHeaders(file: {
 }) {
   return {
     ...CORS_HEADERS,
+    // Content-Type / Content-Disposition / CSP / nosniff: one audited place.
+    // Only passive media is ever shown inline; everything else downloads as
+    // application/octet-stream (see lib/safe-file-headers.ts).
+    ...buildSafeFileHeaders(file, { disposition: "inline", isPublic: true, cacheControl: "public, max-age=3600" }),
     "Accept-Ranges": "bytes",
-    "Content-Type": file.mimeType || "application/octet-stream",
-    "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
-    "Content-Length": String(file.size),
     "Last-Modified": file.updatedAt.toUTCString(),
     ETag: `"${file.id}-${file.updatedAt.getTime()}-${file.size}"`,
-    // Browsers may cache the immutable file, but the CDN must not mix a cached
-    // 200 response with a later byte-range request for the same public URL.
-    "Cache-Control": "public, max-age=3600",
+    // The CDN must not mix a cached 200 with a later byte-range request for the same public URL.
     "CDN-Cache-Control": "no-store",
   };
 }
@@ -92,6 +92,9 @@ async function servePublicFile(
   const share = await prisma.share.findUnique({ where: { token }, include: { webhook: true } });
   if (!share) {
     return NextResponse.json({ error: "Lien introuvable." }, { status: 404, headers: CORS_HEADERS });
+  }
+  if (share.disabledAt) {
+    return NextResponse.json({ error: "Ce lien a été désactivé." }, { status: 410, headers: CORS_HEADERS });
   }
   if (share.expiresAt && share.expiresAt.getTime() < Date.now()) {
     return NextResponse.json({ error: "Ce lien a expiré." }, { status: 410, headers: CORS_HEADERS });

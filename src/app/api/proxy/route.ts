@@ -20,13 +20,10 @@
  *     without worker payload limits.
  */
 
+import { fetchDiscordCdn, isDiscordCdnUrl } from "@/lib/discord/cdn-url";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const ALLOWED_HOSTS = new Set([
-  "cdn.discordapp.com",
-  "media.discordapp.net",
-]);
 
 // Headers we forward from upstream → client. Allowlisted, not blanket, to
 // avoid leaking server-side concerns (set-cookie, server, etc.).
@@ -47,15 +44,9 @@ export async function GET(req: Request): Promise<Response> {
     return new Response("Missing `u` query parameter", { status: 400 });
   }
 
-  let parsed: URL;
-  try {
-    parsed = new URL(target);
-  } catch {
-    return new Response("Invalid URL", { status: 400 });
-  }
-
-  if (!ALLOWED_HOSTS.has(parsed.host)) {
-    return new Response(`Forbidden host: ${parsed.host}`, { status: 403 });
+  // https + exact CDN host, no credentials / custom port (see lib/discord/cdn-url.ts).
+  if (!isDiscordCdnUrl(target)) {
+    return new Response("Forbidden URL", { status: 403 });
   }
 
   // Forward Range / If-* headers for partial content + caching support.
@@ -73,12 +64,10 @@ export async function GET(req: Request): Promise<Response> {
 
   let upstream: Response;
   try {
-    upstream = await fetch(parsed.toString(), {
+    // Redirects are followed by hand, each hop re-validated against the allowlist.
+    upstream = await fetchDiscordCdn(target, {
       method: "GET",
       headers: upstreamHeaders,
-      // Pass-through; do not follow auth redirects implicitly to weird hosts.
-      redirect: "follow",
-      // Cache at the edge level only when upstream allows it.
       cache: "no-store",
     });
   } catch (err) {

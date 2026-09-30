@@ -7,6 +7,15 @@
   à chaque changement notable.
 -->
 
+## API publique v1 : sécurité renforcée
+
+🔐 **L'API v1 (intégrations, client Windows) est durcie**
+- Upload par morceaux sécurisé : le serveur retient lui-même chaque morceau reçu, et la finalisation ne peut plus référencer que ce que tu as réellement envoyé à ton drive.
+- Les fichiers ne sont plus servis en « affichage direct » que pour les images, vidéos, sons et PDF : un HTML ou un SVG envoyé par quelqu'un est toujours téléchargé, jamais exécuté.
+- Clés API : **permissions plus fines** (lecture, envoi, suppression, dossiers, liens publics), **expiration**, **révocation**, **adresses IP** et **origines web** autorisées. Les anciennes clés continuent de fonctionner.
+- Protection contre le brute-force, limites de débit annoncées dans les en-têtes, quota d'envoi quotidien.
+- **Signaler ce fichier** sur les pages de partage ; l'admin peut désactiver un lien signalé.
+
 ## Cord d'abord
 
 🟣 **Le Compte Cord devient LA façon d'entrer dans Drivecord**

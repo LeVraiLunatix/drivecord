@@ -6,7 +6,7 @@
  */
 import { decryptUrl } from "@/lib/auth/encrypt";
 import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
-import { parseWebhookUrl, withRetry } from "@/lib/discord";
+import { fetchDiscordCdn, isDiscordCdnUrl, isSnowflake, parseWebhookUrl, withRetry } from "@/lib/discord";
 import { getWebhookLimiter } from "@/lib/discord/rate-limit";
 import { parseDiscordError } from "@/lib/discord/errors";
 import { DiscordApiError } from "@/lib/discord/types";
@@ -49,6 +49,11 @@ export async function fetchAndDecryptFile(params: {
   const cache = new Map<string, DiscordMessage | null>();
   const parts: Buffer[] = [];
   for (const c of chunks) {
+    // Defense in depth: chunk refs come from the database, whose content we
+    // don't fully control. Never build a request from an unexpected id or URL.
+    if (!isSnowflake(c.messageId) || !isSnowflake(c.attachmentId)) {
+      return { ok: false, status: 502, error: "Référence de fichier invalide." };
+    }
     let url = c.url;
     // The cached URL is still comfortably valid — skip the refetch entirely
     // instead of hitting `/messages/{id}` on every single download.
@@ -71,15 +76,18 @@ export async function fetchAndDecryptFile(params: {
           cache.set(c.messageId, msg);
         }
         const att = msg?.attachments.find((a) => a.id === c.attachmentId);
-        if (att) url = att.url;
+        if (att && isDiscordCdnUrl(att.url)) url = att.url;
       } catch {
         // fall back to the stored URL
       }
     }
+    if (!isDiscordCdnUrl(url)) {
+      return { ok: false, status: 502, error: "Référence de fichier invalide." };
+    }
     let r: Response;
     try {
       r = await withRetry(async () => {
-        const res = await fetch(url);
+        const res = await fetchDiscordCdn(url);
         if (!res.ok) {
           throw new DiscordApiError(`CDN fetch failed (HTTP ${res.status})`, {
             category: res.status >= 500 ? "transient" : "permanent",
