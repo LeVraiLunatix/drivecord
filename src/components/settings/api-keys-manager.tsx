@@ -22,6 +22,8 @@ type ApiKeyRow = {
   name: string;
   prefix: string;
   scopes: string[];
+  expiresAt: string | null;
+  ipRestricted: boolean;
   driveId: string;
   driveName: string;
   lastUsedAt: string | null;
@@ -29,6 +31,20 @@ type ApiKeyRow = {
 };
 
 type Drive = { driveId: string; name: string };
+
+const SCOPE_LABELS: Record<string, string> = {
+  read: "lecture",
+  write: "écriture",
+  delete: "suppression",
+  share: "partage",
+};
+
+const EXPIRY_OPTIONS = [
+  { value: "30", label: "30 jours" },
+  { value: "90", label: "90 jours" },
+  { value: "365", label: "1 an" },
+  { value: "never", label: "Jamais" },
+];
 
 
 function formatDate(iso: string | null): string {
@@ -50,10 +66,14 @@ export function ApiKeysManager() {
   const [showForm, setShowForm] = React.useState(false);
   const [name, setName] = React.useState("");
   const [driveId, setDriveId] = React.useState("");
-  const [scopes, setScopes] = React.useState<{ read: boolean; write: boolean }>({
+  const [scopes, setScopes] = React.useState<Record<string, boolean>>({
     read: true,
-    write: true,
+    write: false,
+    delete: false,
+    share: false,
   });
+  const [expiry, setExpiry] = React.useState("90");
+  const [ips, setIps] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [confirmId, setConfirmId] = React.useState<string | null>(null);
   const [revealed, setRevealed] = React.useState<{ key: string; name: string } | null>(null);
@@ -67,21 +87,29 @@ export function ApiKeysManager() {
 
   const create = async () => {
     if (!name.trim() || !driveId) return;
-    const activeScopes = [
-      ...(scopes.read ? ["read"] : []),
-      ...(scopes.write ? ["write"] : []),
-    ];
+    const activeScopes = Object.keys(scopes).filter((s) => scopes[s]);
+    const allowedIps = ips
+      .split(/[\s,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     setBusy(true);
     const res = await authFetch("/api/settings/api-keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), driveId, scopes: activeScopes }),
+      body: JSON.stringify({
+        name: name.trim(),
+        driveId,
+        scopes: activeScopes,
+        expiresInDays: expiry === "never" ? null : Number(expiry),
+        allowedIps,
+      }),
     });
     setBusy(false);
     if (res.ok) {
       const created = await res.json();
       setRevealed({ key: created.key, name: created.name });
       setName("");
+      setIps("");
       setShowForm(false);
       mutate();
     } else {
@@ -194,28 +222,53 @@ export function ApiKeysManager() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-1.5 text-sm">
-              <input
-                type="checkbox"
-                checked={scopes.read}
-                onChange={(e) => setScopes((s) => ({ ...s, read: e.target.checked }))}
-              />
-              Lecture
-            </label>
-            <label className="flex items-center gap-1.5 text-sm">
-              <input
-                type="checkbox"
-                checked={scopes.write}
-                onChange={(e) => setScopes((s) => ({ ...s, write: e.target.checked }))}
-              />
-              Écriture (upload + suppression)
-            </label>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            {(
+              [
+                ["read", "Lecture"],
+                ["write", "Écriture (upload, renommer, déplacer, corbeille)"],
+                ["delete", "Suppression définitive"],
+                ["share", "Liens de partage"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={scopes[key]}
+                  onChange={(e) => setScopes((s) => ({ ...s, [key]: e.target.checked }))}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Expiration</Label>
+            <Select value={expiry} onValueChange={setExpiry}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPIRY_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="api-key-ips">Adresses IP autorisées (optionnel)</Label>
+            <Input
+              id="api-key-ips"
+              placeholder="ex. 203.0.113.7, 2001:db8::1 — vide = toutes"
+              value={ips}
+              onChange={(e) => setIps(e.target.value)}
+            />
           </div>
           <Button
             size="sm"
             onClick={create}
-            disabled={busy || !name.trim() || !driveId || (!scopes.read && !scopes.write)}
+            disabled={busy || !name.trim() || !driveId || !Object.values(scopes).some(Boolean)}
           >
             {busy && <Loader2 className="size-4 animate-spin" />}
             Créer la clé
@@ -242,13 +295,17 @@ export function ApiKeysManager() {
                   {k.name}
                   {k.scopes.map((s) => (
                     <Badge key={s} variant="secondary" className="text-[10px]">
-                      {s === "read" ? "lecture" : "écriture"}
+                      {SCOPE_LABELS[s] ?? s}
                     </Badge>
                   ))}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {k.prefix}••••••••… · {k.driveName} · utilisée{" "}
                   {k.lastUsedAt ? `le ${formatDate(k.lastUsedAt)}` : "jamais"}
+                  {k.expiresAt
+                    ? ` · ${new Date(k.expiresAt) < new Date() ? "expirée" : "expire"} le ${formatDate(k.expiresAt)}`
+                    : ""}
+                  {k.ipRestricted ? " · IP restreintes" : ""}
                 </p>
               </div>
 

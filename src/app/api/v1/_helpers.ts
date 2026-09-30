@@ -7,8 +7,8 @@
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashApiKey, type ApiScope } from "@/lib/auth/api-key";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkKeyRestrictions, hashApiKey, type ApiScope } from "@/lib/auth/api-key";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import type { ApiKey, Webhook } from "@/generated/prisma/client";
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
@@ -47,6 +47,8 @@ export async function authenticateApiKey(req: Request): Promise<ApiAuth | null> 
     include: { webhook: true },
   });
   if (!apiKey) return null;
+  // Expired key or client IP outside the key's allowlist → same 401 as a bad key.
+  if (checkKeyRestrictions(apiKey, getClientIp(req))) return null;
 
   // Best-effort — don't block the request on this write.
   prisma.apiKey

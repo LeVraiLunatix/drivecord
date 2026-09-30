@@ -170,8 +170,13 @@ model ApiKey {
   keyPrefix  String
   /// SHA-256 hex digest of the raw key.
   keyHash    String    @unique
-  /// Granted capabilities: "read" and/or "write" (write also allows delete).
+  /// Granted capabilities: "read", "write", "delete", "share". On `/api/v1`
+  /// "write" also allows delete; `/api/v2` requires the explicit scope.
   scopes     String[]
+  /// Hard expiry — the key is rejected after this instant (null = never).
+  expiresAt  DateTime?
+  /// Exact client IPs allowed to use the key (empty = any IP).
+  allowedIps String[]  @default([])
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
 
