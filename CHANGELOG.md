@@ -7,16 +7,6 @@
   à chaque changement notable.
 -->
 
-## API publique v2
-
-🔐 **Nouvelle API `/api/v2`, pensée pour la sécurité** (la v1 reste disponible, inchangée)
-- **Quatre permissions distinctes** pour les clés : lecture, écriture, suppression définitive et partage. Aucune n'en implique une autre.
-- **Clés qui expirent** (1 à 365 jours) et **restriction par adresse IP**, à la création dans Réglages › API pour développeurs — valables aussi pour la v1.
-- Erreurs uniformes et lisibles par un programme, limites de débit annoncées dans les en-têtes, et aucune fuite d'informations internes (ni références Discord, ni URLs du CDN).
-- Le **coffre-fort** reste totalement hors d'atteinte de l'API.
-- Nouveautés : pagination par curseur avec tri et recherche, renommer / déplacer / étiqueter, **corbeille** (mettre à la corbeille et restaurer), dossiers complets, liens de partage avec expiration et mot de passe.
-- Doc : Aide › Technique › API publique v2. L'upload reste pour l'instant sur la v1.
-
 ## Cord d'abord
 
 🟣 **Le Compte Cord devient LA façon d'entrer dans Drivecord**

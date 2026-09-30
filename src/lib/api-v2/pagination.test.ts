@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { ApiError } from "./errors.ts";
 import { decodeCursor, encodeCursor, keysetWhere, orderBy, sliceWithCursor } from "./pagination.ts";
