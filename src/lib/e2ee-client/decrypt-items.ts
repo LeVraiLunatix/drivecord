@@ -18,7 +18,8 @@ export async function decryptFile<T extends FileEntry>(dk: DriveKeyMaterial | nu
   try {
     const meta = await readFileMeta(dk, f);
     return { ...f, filename: meta.name, mimeType: meta.mime, size: meta.size };
-  } catch {
+  } catch (err) {
+    console.warn("[e2ee] impossible d'ouvrir les métadonnées du fichier", f.id, (err as Error).message);
     return { ...f, filename: UNREADABLE, undecryptable: true };
   }
 }
@@ -47,6 +48,7 @@ export function sortItems<T extends DriveItem>(items: T[]): T[] {
 export async function decryptItems(driveId: string, items: DriveItem[], opts: { sort?: boolean } = {}): Promise<DriveItem[]> {
   if (!items.some((i) => (i.kind === "file" ? isE2eeFile(i) : Boolean(i.encName)))) return items;
   const dk = await tryGetDriveKeyMaterial(driveId);
+  if (!dk) console.warn("[e2ee] clé du drive indisponible pour", driveId);
   const out = await Promise.all(items.map((i) => (i.kind === "folder" ? decryptFolder(dk, i) : decryptFile(dk, i))));
   return opts.sort ? sortItems(out) : out;
 }

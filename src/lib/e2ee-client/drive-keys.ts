@@ -49,7 +49,8 @@ export async function tryGetDriveKeyMaterial(driveId: string): Promise<DriveKeyM
   if (!isUnlocked()) return null;
   try {
     return await getDriveKeyMaterialById(driveId);
-  } catch {
+  } catch (err) {
+    console.warn("[e2ee] clé du drive inaccessible :", (err as Error).message);
     return null;
   }
 }

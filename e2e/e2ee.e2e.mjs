@@ -57,7 +57,7 @@ try {
   page.on("crash", () => console.log("  [PAGE CRASH]"));
   page.on("close", () => console.log("  [page closed]"));
   page.on("pageerror", (e) => console.log("  [pageerror]", e.message));
-  page.on("console", (m) => { fs.appendFileSync("/tmp/e2e-console.log", `[${m.type()}] ${m.text().slice(0, 300)}\n`); if (m.text().includes("[dbg]") || (m.type() === "error" && !/DevTools|HMR|Fast Refresh|Password field/.test(m.text()))) console.log("  [console.error]", m.text().slice(0, 300)); });
+  page.on("console", (m) => { fs.appendFileSync("/tmp/e2e-console.log", `[${m.type()}] ${m.text().slice(0, 300)}\n`); if (m.text().includes("[dbg]") || m.text().includes("[e2ee]") || (m.type() === "error" && !/DevTools|HMR|Fast Refresh|Password field/.test(m.text()))) console.log("  [console.error]", m.text().slice(0, 300)); });
   page.on("requestfailed", (r) => console.log("  [requestfailed]", r.method(), r.url().slice(0, 120), r.failure()?.errorText));
   page.on("response", (r) => { if (r.status() >= 400 && r.url().includes("/api/")) console.log("  [http", r.status() + "]", r.url().slice(0, 140)); });
   await page.goto(`${BASE}/drive`, { waitUntil: "domcontentloaded" });
