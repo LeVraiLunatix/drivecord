@@ -242,7 +242,6 @@ function DriveContent() {
 
   const handleUploadEntries = React.useCallback(
     async (entries: UploadEntry[], parentOverride?: ParentId) => {
-      console.log("[dbg] handleUploadEntries", entries.length, Boolean(activeDrive), Boolean(client));
       if (!activeDrive || !client) { toast.error("Drive non prêt"); return; }
       if (entries.length === 0) return;
       const driveId = activeDrive.id;
