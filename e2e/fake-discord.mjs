@@ -4,7 +4,7 @@
  */
 import crypto from "node:crypto";
 
-const snowflake = () => "1" + String(crypto.randomInt(0, 1e17)).padStart(17, "0");
+const snowflake = () => "1" + String(crypto.randomBytes(6).readUIntBE(0, 6)).padStart(17, "0");
 
 export function parseMultipart(buf, contentType) {
   const boundary = /boundary=(?:"([^"]+)"|([^;]+))/.exec(contentType);
