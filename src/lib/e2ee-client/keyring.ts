@@ -104,7 +104,9 @@ export async function initKeyring(userId: string): Promise<void> {
     if (dev) {
       try {
         mk = await unwrapForDevice(dev.kek, userId, dev.wrapped);
-        return set({ status: "unlocked" });
+        set({ status: "unlocked" });
+        void mutate(() => true);
+        return;
       } catch {
         // Stale / mismatching blob (e.g. after a key reset): forget it, fall back to a manual unlock.
         await idbDel(deviceKey(userId)).catch(() => {});
@@ -141,6 +143,8 @@ export function reset(): void {
 function unlockedWith(key: Uint8Array) {
   mk = key;
   set({ status: "unlocked", error: null });
+  // Anything fetched while locked was cached with unreadable names: refetch it with the key.
+  void mutate(() => true);
 }
 
 // ── Setup ────────────────────────────────────────────────────────────────────

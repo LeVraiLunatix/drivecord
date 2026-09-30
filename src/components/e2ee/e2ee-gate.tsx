@@ -51,7 +51,12 @@ export function E2eeGate({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [status, synced, migrated]);
 
-  // Not signed in (or mid step-up): nothing to guard here, the page's own auth logic applies.
+  // Session still loading: don't render the app yet — its first fetches would run before the keys
+  // are unlocked and cache "unreadable" names.
+  if (authStatus === "loading") {
+    return <div className="flex min-h-[100dvh] items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
+  }
+  // Not signed in: nothing to guard here, the page's own auth logic applies.
   if (authStatus !== "authenticated") return <>{children}</>;
 
   if (setupInProgress) return <Onboarding onDone={finishSetup} />;
