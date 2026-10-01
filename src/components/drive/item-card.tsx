@@ -29,7 +29,7 @@ import { buildItemMenu, type ItemAction } from "./item-menu";
 import { ItemMenuButton } from "./item-menu-button";
 import { decryptDownloaded } from "@/lib/e2ee-client/file-crypto";
 import { TagBadge } from "./tag-badge";
-import { useLongPress } from "./use-long-press";
+import { useLongPress, useTouchOnly, type ItemClickIntent } from "./use-long-press";
 
 export type { ItemAction };
 
@@ -39,7 +39,8 @@ type Props = {
   onAction: (action: ItemAction, item: DriveItem) => void;
   onDoubleClick?: (item: DriveItem) => void;
   /** Called on single-click — used by the explorer for selection logic. */
-  onItemClick?: (e: React.MouseEvent) => void;
+  /** `intent`: "toggle" from the checkbox, "hold" from a long press. */
+  onItemClick?: (e: React.MouseEvent, intent?: ItemClickIntent) => void;
   onDropItem?: (sourceItemId: string, target: DriveItem) => void;
   onDropExternalFiles?: (files: File[], target: DriveItem) => void;
 };
@@ -92,7 +93,8 @@ export const DriveItemCard = React.memo(function DriveItemCard({
   }, [item.id, isImage, client]);
 
   // --- Long press → select ---
-  const longPress = useLongPress(() => onItemClick?.({ shiftKey: false, ctrlKey: false, metaKey: false } as React.MouseEvent));
+  const longPress = useLongPress(() => onItemClick?.({ shiftKey: false, ctrlKey: false, metaKey: false } as React.MouseEvent, "hold"));
+  const touchOnly = useTouchOnly();
 
   // --- Drag source ---
   const handleDragStart = (e: React.DragEvent) => {
@@ -183,7 +185,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       {/* Selection checkbox — visible on hover or when selected */}
       {onItemClick && (
         <div
-          onClick={(e) => { e.stopPropagation(); onItemClick(e); }}
+          onClick={(e) => { e.stopPropagation(); onItemClick(e, "toggle"); }}
           className={cn(
             "absolute left-1.5 top-1.5 z-10 flex size-5 cursor-pointer items-center justify-center rounded-md border-2 transition-all",
             selected
@@ -195,7 +197,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
         </div>
       )}
       <ContextMenu modal={false}>
-        <ContextMenuTrigger asChild>
+        <ContextMenuTrigger asChild disabled={touchOnly}>
           <div
             role="button"
             tabIndex={0}
@@ -209,7 +211,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
             onKeyDown={(e) => {
               if (e.key === "Enter") onDoubleClick?.(item);
             }}
-            className="flex flex-1 flex-col gap-2 outline-none focus-visible:outline-2 focus-visible:outline-ring"
+            className="flex flex-1 flex-col gap-2 outline-none focus-visible:outline-2 focus-visible:outline-ring pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
             {...longPress.handlers}
           >
             {isFolder ? (

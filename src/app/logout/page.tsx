@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { wipeLocalDrives } from "@/lib/storage/drives";
+import { unregisterNativePush } from "@/components/native-push-register";
 
 /**
  * Page de déconnexion. À l'arrivée, elle effectue réellement la déconnexion
@@ -27,6 +28,8 @@ export default function LogoutPage() {
     (async () => {
       await mutate(() => true, undefined, { revalidate: false }).catch(() => {});
       await wipeLocalDrives().catch(() => {});
+      // iPhone app: stop this device getting the old account's login pushes.
+      await unregisterNativePush();
       await signOut({ redirect: false }).catch(() => {});
       setDone(true);
     })();

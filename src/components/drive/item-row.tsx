@@ -23,7 +23,7 @@ import {
 } from "@/lib/drive-dnd";
 import { buildItemMenu, type ItemAction } from "./item-menu";
 import { ItemMenuButton } from "./item-menu-button";
-import { useLongPress } from "./use-long-press";
+import { useLongPress, useTouchOnly, type ItemClickIntent } from "./use-long-press";
 
 export type { ItemAction };
 
@@ -46,7 +46,8 @@ type Props = {
   selected?: boolean;
   onAction: (action: ItemAction, item: DriveItem) => void;
   onDoubleClick?: (item: DriveItem) => void;
-  onItemClick?: (e: React.MouseEvent) => void;
+  /** `intent`: "toggle" from the checkbox, "hold" from a long press. */
+  onItemClick?: (e: React.MouseEvent, intent?: ItemClickIntent) => void;
   onDropItem?: (sourceItemId: string, target: DriveItem) => void;
   onDropExternalFiles?: (files: File[], target: DriveItem) => void;
 };
@@ -79,7 +80,8 @@ export const DriveItemRow = React.memo(function DriveItemRow({
   const kindLabel = KIND_LABELS[fileKind] ?? "Fichier";
 
   // --- Long press → select ---
-  const longPress = useLongPress(() => onItemClick?.({ shiftKey: false, ctrlKey: false, metaKey: false } as React.MouseEvent));
+  const longPress = useLongPress(() => onItemClick?.({ shiftKey: false, ctrlKey: false, metaKey: false } as React.MouseEvent, "hold"));
+  const touchOnly = useTouchOnly();
 
   // --- Drag source ---
   const handleDragStart = (e: React.DragEvent) => {
@@ -151,7 +153,7 @@ export const DriveItemRow = React.memo(function DriveItemRow({
       )}
     >
       <ContextMenu modal={false}>
-        <ContextMenuTrigger asChild>
+        <ContextMenuTrigger asChild disabled={touchOnly}>
           <div
             role="button"
             tabIndex={0}
@@ -165,13 +167,13 @@ export const DriveItemRow = React.memo(function DriveItemRow({
             onKeyDown={(e) => {
               if (e.key === "Enter") onDoubleClick?.(item);
             }}
-            className="flex items-center gap-3 px-3 py-2.5 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring hover:bg-accent/40"
+            className="flex items-center gap-3 px-3 py-2.5 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring hover:bg-accent/40 pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
             {...longPress.handlers}
           >
             {/* Selection checkbox */}
             {onItemClick && (
               <div
-                onClick={(e) => { e.stopPropagation(); onItemClick(e); }}
+                onClick={(e) => { e.stopPropagation(); onItemClick(e, "toggle"); }}
                 className={cn(
                   "flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md border-2 transition-all",
                   selected

@@ -195,6 +195,14 @@ export function loginErrorMessage(
       return { title: "Identifiants incorrects", description: "Email ou mot de passe incorrect." };
     case "Verification":
       return { title: "Lien expiré", description: "Ce lien de connexion a expiré ou a déjà servi." };
+    // Return from Safari into the iPhone app (/api/native-auth/exchange).
+    case "NativeAuth":
+    case "NativeAuthExpired":
+      return {
+        title: "Retour dans l’app impossible",
+        description:
+          "Le lien de connexion a expiré ou n’a pas été ouvert depuis cette app. Relance la connexion depuis l’app.",
+      };
     default:
       return {
         title: cord ? "Connexion avec Cord impossible" : "Connexion impossible",

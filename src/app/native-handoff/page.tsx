@@ -24,13 +24,17 @@ export default function NativeHandoffPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/native-auth/code");
+        // Nonce the app generated: the code is bound to it, and must be kept
+        // across the 2FA detour below.
+        const n = new URLSearchParams(window.location.search).get("n") ?? "";
+        const self = `/native-handoff?${new URLSearchParams({ n })}`;
+        const res = await fetch(`/api/native-auth/code?${new URLSearchParams({ n })}`);
         if (res.status === 401) {
           const session = await fetch("/api/auth/session")
             .then((r) => r.json())
             .catch(() => null);
           if (session?.user && session.level === "pending") {
-            window.location.replace("/auth/challenge?next=/native-handoff");
+            window.location.replace(`/auth/challenge?${new URLSearchParams({ next: self })}`);
             return;
           }
         }

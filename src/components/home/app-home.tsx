@@ -52,8 +52,9 @@ export function AppHome() {
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-64 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
-      {/* Theme toggle */}
-      <div className="flex justify-end px-3 pt-2">
+      {/* Theme toggle — below the status bar / Dynamic Island (the app's web
+          view runs edge to edge). */}
+      <div className="flex justify-end px-3" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
         <ThemeToggle />
       </div>
 

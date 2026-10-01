@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { hasNativeTabBar } from "@/lib/use-platform";
 
 // Pages where the native bar should be hidden (auth / public / onboarding).
@@ -29,7 +30,12 @@ function activeIndex(pathname: string, section: string | null): number {
 
 type WebkitWindow = Window & {
   __drivecordNavigate?: (path: string) => void;
-  webkit?: { messageHandlers?: { nativeTabs?: { postMessage: (msg: unknown) => void } } };
+  webkit?: {
+    messageHandlers?: {
+      nativeTabs?: { postMessage: (msg: unknown) => void };
+      nativeShell?: { postMessage: (msg: unknown) => void };
+    };
+  };
 };
 
 function Inner() {
@@ -61,6 +67,15 @@ function Inner() {
     const w = window as WebkitWindow;
     w.webkit?.messageHandlers?.nativeTabs?.postMessage({ index, visible: !hidden });
   }, [pathname, section]);
+
+  // The shell styles the status bar, tab bar and native sheets after the app's
+  // theme, not the phone's (dark app + light iPhone = invisible status bar).
+  const { resolvedTheme } = useTheme();
+  React.useEffect(() => {
+    if (!hasNativeTabBar() || !resolvedTheme) return;
+    const w = window as WebkitWindow;
+    w.webkit?.messageHandlers?.nativeShell?.postMessage({ theme: resolvedTheme });
+  }, [resolvedTheme]);
 
   return null;
 }

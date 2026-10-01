@@ -8,6 +8,7 @@ import { Download, FileIcon, Flag, Lock, Loader2, CloudUpload, AlertCircle } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatBytes } from "@/lib/utils/format";
+import { saveBlobWithToast } from "@/lib/native-save";
 import {
   b64decode,
   b64urlDecode,
@@ -115,13 +116,9 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     }
   };
 
+  // saveBlob: also works when the link is opened inside the iOS app.
   const triggerDownload = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    void saveBlobWithToast(blob, filename, blob.type);
   };
 
   const sendReport = async () => {

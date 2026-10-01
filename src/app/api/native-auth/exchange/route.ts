@@ -1,7 +1,8 @@
 /**
- * GET /api/native-auth/exchange?code=XXX
+ * GET /api/native-auth/exchange?code=XXX&n=NONCE
  *
- * Runs inside the APP's WebView. Validates the one-time handoff code, then
+ * Runs inside the APP's WebView. Validates the one-time handoff code against
+ * the nonce only the app holds (see src/lib/auth/native-code.ts), then
  * crafts a NextAuth (JWT-strategy) session token and sets it as the session
  * cookie — logging the user in inside the app — and redirects to /drive.
  */
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=NativeAuth", req.url));
   }
 
-  const userId = verifyNativeCode(code);
+  const userId = verifyNativeCode(code, req.nextUrl.searchParams.get("n"));
   if (!userId) {
     return NextResponse.redirect(new URL("/login?error=NativeAuthExpired", req.url));
   }

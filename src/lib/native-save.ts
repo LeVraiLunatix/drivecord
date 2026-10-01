@@ -1,6 +1,7 @@
 "use client";
 
 import { isNativeApp } from "@/lib/use-platform";
+import { toast } from "sonner";
 import { kindOf } from "@/lib/utils/file-icons";
 
 export type SaveDestination = "gallery" | "files" | "web";
@@ -65,6 +66,21 @@ export async function saveBlob(blob: Blob, filename: string, mimeType = ""): Pro
   const target = await freeName(Filesystem, Directory.Documents, "Drivecord", safeName);
   await writeBlobChunked(Filesystem, blob, `Drivecord/${target}`, Directory.Documents);
   return "files";
+}
+
+/**
+ * `saveBlob` for one-off buttons (preview, recovery key, share page…), with
+ * feedback: in the app a file lands in Photos or Files — say where, since
+ * nothing like a browser download bar shows it. Never throws.
+ */
+export async function saveBlobWithToast(blob: Blob, filename: string, mimeType = ""): Promise<void> {
+  try {
+    const dest = await saveBlob(blob, filename, mimeType);
+    if (dest === "gallery") toast.success(`« ${filename} » enregistré dans Photos`);
+    else if (dest === "files") toast.success(`« ${filename} » enregistré dans Fichiers › Drivecord`);
+  } catch (e) {
+    toast.error(`Enregistrement impossible : ${(e as Error).message}`);
+  }
 }
 
 type Fs = typeof import("@capacitor/filesystem").Filesystem;

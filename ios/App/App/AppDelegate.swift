@@ -87,6 +87,7 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         // page is often /login or the welcome screen, where the bar used to sit
         // on top of the sign-in UI until hydration.
         nativeTabBar.isHidden = true
+        nativeTabBar.overrideUserInterfaceStyle = nativeStyle
         view.addSubview(nativeTabBar)
         NSLayoutConstraint.activate([
             nativeTabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -142,10 +143,40 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         case "nativeAnchorMenu":
             handleAnchorMenuMessage(message.body)
         case "nativeShell":
-            handleDocumentStart()
+            if let body = message.body as? [String: Any], let theme = body["theme"] as? String {
+                applyTheme(theme)
+            } else {
+                handleDocumentStart()
+            }
         default:
             break
         }
+    }
+
+    // Follow the web app's theme ("light", or a dark one) rather than the
+    // phone's appearance: the app is dark by default, so on an iPhone in light
+    // mode the status bar text was black on black, and the tab bar, sheets and
+    // menus came up light over a dark app.
+    // Only the NATIVE pieces get the style — overriding the web view (or the
+    // window) would also change its prefers-color-scheme and lock the app's
+    // « Système » theme to dark.
+    private var nativeStyle: UIUserInterfaceStyle = .dark
+
+    private func applyTheme(_ theme: String) {
+        DispatchQueue.main.async {
+            let light = theme == "light"
+            self.nativeStyle = light ? .light : .dark
+            self.nativeTabBar.overrideUserInterfaceStyle = self.nativeStyle
+            for (_, btn) in self.anchorButtons { btn.overrideUserInterfaceStyle = self.nativeStyle }
+            self.statusBarStyle = light ? .darkContent : .lightContent
+            self.setNeedsStatusBarAppearanceUpdate()
+        }
+    }
+
+    // Before the page reports its theme: match the dark launch background.
+    override func setStatusBarDefaults() {
+        super.setStatusBarDefaults()
+        statusBarStyle = .lightContent
     }
 
     // A new document replaced the page (reload, logout, OAuth exchange…). React
@@ -190,6 +221,7 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
                 self.anchorButtons[id] = btn
             }
             btn.frame = frame
+            btn.overrideUserInterfaceStyle = self.nativeStyle
             btn.accessibilityLabel = title.isEmpty ? "Menu" : title
 
             var actions: [UIAction] = []
@@ -243,6 +275,7 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
             let cancel = (body["cancel"] as? String) ?? "Annuler"
 
             let alert = UIAlertController(title: title, message: messageText, preferredStyle: .actionSheet)
+            alert.overrideUserInterfaceStyle = self.nativeStyle
             for (i, it) in items.enumerated() {
                 let selected = (it["selected"] as? Bool) ?? false
                 let label = ((it["label"] as? String) ?? "")
