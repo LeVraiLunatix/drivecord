@@ -204,7 +204,7 @@ try {
   ok(r.status < 300, "user revokes the app");
   r = await call(at, "GET", "/me");
   ok(r.status === 401, "revoked grant → 401 immediately");
-  const patId = (await DB.query(`select id from "PersonalToken" order by "createdAt" limit 1`)).rows[0].id;
+  const patId = (await DB.query(`select id from "PersonalToken" where "userId"='u_v2' order by "createdAt" limit 1`)).rows[0].id;
   r = await web(`/api/settings/personal-tokens/${patId}`, { method: "DELETE" });
   ok(r.status < 300 && (await call(pat, "GET", "/me")).status === 401, "revoked PAT → 401");
 } catch (e) {
