@@ -4,8 +4,9 @@ Server-side client for the [Drivecord](https://drivecord.app) API v2, using a pe
 Requires Node 20 or later.
 
 Drivecord's servers only ever hold ciphertext, so you also need the **drive key** (32 raw bytes),
-exported from Drivecord › Paramètres › Chiffrement. Encryption and decryption run in your process,
-with the same code as the web app.
+exported from Drivecord › Réglages › Sécurité › Chiffrement de bout en bout › your drive › **Exporter la clé** (64 hex characters;
+this is not the recovery key). Encryption and decryption run in your process, with the same code as the web app.
+If you renew the drive key, export the new one.
 
 ## Install
 
@@ -20,7 +21,7 @@ import DrivecordNode from "@drivecord/node";
 
 const dc = new DrivecordNode({
   token: process.env.DRIVECORD_TOKEN!,      // dvc_pat_…
-  driveKey,                                  // Uint8Array, 32 bytes
+  driveKey,                                  // Uint8Array, 32 bytes, e.g. Buffer.from(process.env.DRIVECORD_DRIVE_KEY!, "hex")
 });
 
 const { fileId } = await dc.upload({
