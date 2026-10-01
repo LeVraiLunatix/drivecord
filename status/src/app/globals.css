@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+/* Same family as drivecord.app: calm neutrals, one violet accent. Theme follows the system (no script). */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-orange: var(--orange);
+  --color-bad: var(--bad);
+  --color-maint: var(--maint);
+  --color-nodata: var(--nodata);
+  --font-sans: var(--font-sans), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-mono), "Consolas", "Lucida Console", monospace;
+}
+
+:root {
+  color-scheme: light dark;
+  --bg: oklch(1 0 0);
+  --fg: oklch(0.145 0 0);
+  --muted: oklch(0.45 0 0); /* 7.4:1 on --bg */
+  --subtle: oklch(0.97 0 0);
+  --card: oklch(0.985 0 0);
+  --line: oklch(0.9 0 0);
+  --accent: oklch(0.5 0.2 292);
+  --ok: oklch(0.52 0.14 155);
+  --warn: oklch(0.5 0.11 75);
+  --orange: oklch(0.52 0.16 45);
+  --bad: oklch(0.54 0.21 27);
+  --maint: oklch(0.52 0.15 250);
+  --nodata: oklch(0.9 0 0);
+  /* Bar fills are lighter than the text colours of the same hue. */
+  --ok-fill: oklch(0.68 0.16 155);
+  --warn-fill: oklch(0.72 0.15 80);
+  --orange-fill: oklch(0.7 0.17 50);
+  --bad-fill: oklch(0.62 0.2 27);
+  --maint-fill: oklch(0.66 0.13 250);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(0.145 0 0);
+    --fg: oklch(0.985 0 0);
+    --muted: oklch(0.75 0 0);
+    --subtle: oklch(0.2 0 0);
+    --card: oklch(0.18 0 0);
+    --line: oklch(1 0 0 / 12%);
+    --accent: oklch(0.72 0.16 292);
+    --ok: oklch(0.78 0.15 155);
+    --warn: oklch(0.85 0.15 85);
+    --orange: oklch(0.78 0.15 55);
+    --bad: oklch(0.74 0.17 25);
+    --maint: oklch(0.76 0.12 250);
+    --nodata: oklch(0.28 0 0);
+    --ok-fill: oklch(0.62 0.15 155);
+    --warn-fill: oklch(0.74 0.15 85);
+    --orange-fill: oklch(0.68 0.16 55);
+    --bad-fill: oklch(0.6 0.2 27);
+    --maint-fill: oklch(0.6 0.13 250);
+  }
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── Uptime bar ─────────────────────────────────────────────────────────── */
+.barwrap {
+  position: relative;
+  height: 1.75rem;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+.barfill {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  /* One cell per day, separated by a 2px gap. */
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0, #000 calc(100% / 90 - 2px), transparent calc(100% / 90 - 2px), transparent calc(100% / 90));
+  mask-image: repeating-linear-gradient(90deg, #000 0, #000 calc(100% / 90 - 2px), transparent calc(100% / 90 - 2px), transparent calc(100% / 90));
+}
+.mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border: 2px solid var(--fg);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  z-index: 10;
+  width: max-content;
+  max-width: min(15rem, 100%);
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--card);
+  color: var(--fg);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  box-shadow: 0 8px 24px oklch(0 0 0 / 18%);
+  pointer-events: none;
+}
+.tip[hidden], .mark[hidden] { display: none; }
+
+/* Markdown (changelog, incidents) */
+.prose-lite { line-height: 1.65; }
+.prose-lite p { margin: 0.5rem 0; }
+.prose-lite ul { margin: 0.5rem 0; padding-left: 1.25rem; list-style: disc; }
+.prose-lite ol { margin: 0.5rem 0; padding-left: 1.25rem; list-style: decimal; }
+.prose-lite li { margin: 0.25rem 0; }
+.prose-lite a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.prose-lite code { font-family: var(--font-mono); font-size: 0.85em; background: var(--subtle); padding: 0.1em 0.35em; border-radius: 4px; }
+.prose-lite strong { font-weight: 600; }
+.prose-lite h3, .prose-lite h4 { margin: 1rem 0 0.25rem; font-weight: 600; }

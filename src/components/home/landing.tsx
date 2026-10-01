@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { STATUS_URL } from "@/lib/status-url";
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -361,6 +362,9 @@ dc.mountUploader(el, {
           <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Link href="/docs" className="hover:text-foreground">Documentation</Link>
             <Link href="/conditions" className="hover:text-foreground">Conditions & mentions légales</Link>
+            <Link href={STATUS_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+              Statut
+            </Link>
             <Link
               href="https://github.com/LeVraiLunatix/drivecord"
               target="_blank"

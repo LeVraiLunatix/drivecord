@@ -1,0 +1,30 @@
+name: Status page probe
+
+# Optional scheduler for status.drivecord.app: triggers one probe cycle every 5 minutes so the history keeps
+# filling without visitors. Inert until the secret and the variable below exist (Vercel Cron on the Hobby plan
+# only runs daily). Free while this repository is public; on a private repository prefer an external pinger.
+#   Settings → Secrets and variables → Actions:
+#     secret   STATUS_CRON_SECRET  (same value as CRON_SECRET on the status project)
+#     variable STATUS_URL          (https://status.drivecord.app)
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: status-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      SECRET: ${{ secrets.STATUS_CRON_SECRET }}
+      URL: ${{ vars.STATUS_URL }}
+    steps:
+      - name: Trigger a probe cycle
+        if: env.SECRET != '' && env.URL != ''
+        run: |
+          curl --fail --silent --show-error --max-time 40 --retry 2 \
+            -H "Authorization: Bearer $SECRET" "$URL/api/cron/probe"

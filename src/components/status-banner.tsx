@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
 import { apiUrl } from "@/lib/api-base";
+import { STATUS_URL } from "@/lib/status-url";
 
 type Health = { ok: boolean; db: boolean; discord: boolean; message: string | null };
 const OK_POLL_MS = 60_000;
@@ -71,6 +72,9 @@ export function StatusBanner() {
     <div role="status" aria-live="polite" data-testid="status-banner" className="sticky top-0 z-[60] flex items-center justify-center gap-2 border-b border-amber-500/40 bg-amber-400 px-4 py-2 text-center text-sm font-medium text-amber-950" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
       <TriangleAlert className="size-4 shrink-0" />
       <span>{text}</span>
+      <a href={STATUS_URL} target="_blank" rel="noopener noreferrer" className="shrink-0 underline underline-offset-2 hover:no-underline">
+        En savoir plus
+      </a>
     </div>
   );
 }
