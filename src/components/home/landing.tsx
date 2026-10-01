@@ -564,7 +564,7 @@ export function Landing() {
             className="mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4"
           >
             {[
-              { k: "Stockage", v: <InfinityIcon className="mx-auto size-9" strokeWidth={2.5} />, c: "from-violet-400 to-fuchsia-500" },
+              { k: "Stockage", v: <span aria-label="illimité" className="text-5xl leading-[0.9]">∞</span>, c: "from-violet-400 to-fuchsia-500" },
               { k: "bits · AES-GCM", v: <Counter to={256} />, c: "from-emerald-400 to-teal-500" },
               { k: "% open source", v: <Counter to={100} />, c: "from-sky-400 to-indigo-500" },
               { k: "€ d'abonnement", v: <Counter to={0} />, c: "from-amber-400 to-orange-500" },
