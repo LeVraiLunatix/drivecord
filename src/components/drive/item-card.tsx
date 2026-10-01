@@ -27,6 +27,7 @@ import { useDiscordClient } from "@/lib/discord/context";
 import { getThumbnail, generateThumbnail } from "@/lib/thumbnail-cache";
 import { buildItemMenu, type ItemAction } from "./item-menu";
 import { ItemMenuButton } from "./item-menu-button";
+import { decryptDownloaded } from "@/lib/e2ee-client/file-crypto";
 import { TagBadge } from "./tag-badge";
 import { useLongPress } from "./use-long-press";
 
@@ -83,7 +84,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       filename: item.filename,
       chunkSize: item.chunkSize,
       chunks: item.chunks,
-    }, client).then((url) => {
+    }, client, 240, (raw) => decryptDownloaded(item.driveId, raw, item)).then((url) => {
       if (!cancelled && url) setThumbnailUrl(url);
     });
     return () => { cancelled = true; };

@@ -62,6 +62,22 @@ try {
   await page.waitForTimeout(2000);
   await shot(page, "1-many");
 
+  step("image thumbnail (encrypted file)");
+  await page.evaluate(async () => {
+    const bin = atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    const input = document.querySelector('input[type="file"]:not([webkitdirectory])');
+    const dt = new DataTransfer();
+    dt.items.add(new File([bytes], "pixel.png", { type: "image/png" }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.getByText("pixel.png").first().waitFor();
+  await page.waitForTimeout(4000);
+  const thumbs = await page.locator('img[src^="data:image"]').count();
+  if (!thumbs) note("no thumbnail rendered for an encrypted image");
+  await shot(page, "1b-thumb");
+
   step("select mode + bulk");
   await page.getByRole("button", { name: /Sélectionner/ }).click();
   await page.keyboard.press("Control+a");
