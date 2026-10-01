@@ -16,12 +16,11 @@ export const DISCORD_FREE_UPLOAD_LIMIT = 10 * 1024 * 1024;
  *  account for multipart form encoding overhead. */
 export const DEFAULT_CHUNK_SIZE = 9.5 * 1024 * 1024; // 9.5 MiB
 
-/** Max number of chunks uploaded concurrently. À 1 : les écritures vers un même
- *  webhook sont de toute façon sérialisées et cadencées par le rate limiter
- *  (voir rate-limit.ts), qui lit les en-têtes X-RateLimit-* de Discord pour
- *  rester sous la limite. Envoyer plusieurs chunks « en parallèle » ne ferait
- *  que les mettre en file au portillon — et provoquait avant les 429 / 403. */
-export const DEFAULT_PARALLEL_UPLOADS = 1;
+/** Max number of chunks uploaded concurrently. Le rate limiter (rate-limit.ts)
+ *  espace le départ des requêtes et plafonne le chevauchement à 3 : l'envoi d'un
+ *  chunk de 9,5 Mio dure plusieurs secondes, donc quelques envois simultanés
+ *  restent bien sous le budget Discord, et lisent X-RateLimit-* pour ralentir. */
+export const DEFAULT_PARALLEL_UPLOADS = 3;
 
 /** Max number of chunks downloaded concurrently. */
 export const DEFAULT_PARALLEL_DOWNLOADS = 4;

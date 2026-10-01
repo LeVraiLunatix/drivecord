@@ -285,6 +285,11 @@ export class DiscordClient {
     const chunks: ChunkRef[] = [];
     let index = 0;
     let bytesDone = 0;
+    let chunksDone = 0;
+    const parallel = Math.max(1, DEFAULT_PARALLEL_UPLOADS);
+    const chunksTotal = opts.totalSize ? Math.max(1, Math.ceil(opts.totalSize / chunkSize)) : -1;
+    const emit = () =>
+      opts.onProgress?.({ loaded: bytesDone, total: opts.totalSize ?? bytesDone, chunksDone, chunksTotal });
 
     // Pending byte queue (array of Uint8Array views) with O(1) length tracking.
     const pending: Uint8Array[] = [];
@@ -306,19 +311,34 @@ export class DiscordClient {
       return out;
     };
 
-    const flush = async (bytes: Uint8Array) => {
-      if (opts.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    // Up to `parallel` chunks on the wire while the next ones are read + encrypted:
+    // encryption and network overlap, and the rate limiter paces the actual sends.
+    const inFlight = new Set<Promise<void>>();
+    let failure: unknown;
+
+    const send = async (bytes: Uint8Array, idx: number) => {
       const blob = new Blob([bytes as BlobPart], { type: mimeType || "application/octet-stream" });
-      const name = `${opts.filename}.part${index}`;
-      const msg = await this.uploadChunk(blob, name, opts.signal);
+      const msg = await this.uploadChunk(blob, `${opts.filename}.part${idx}`, opts.signal);
       const att = msg.attachments[0];
-      if (!att) throw new DiscordApiError(`Chunk ${index} returned no attachment`, { category: "transient" });
-      chunks.push({ index, size: bytes.length, messageId: msg.id, attachmentId: att.id, url: att.url, expiresAt: parseCdnExpiry(att.url) });
-      index += 1;
+      if (!att) throw new DiscordApiError(`Chunk ${idx} returned no attachment`, { category: "transient" });
+      chunks.push({ index: idx, size: bytes.length, messageId: msg.id, attachmentId: att.id, url: att.url, expiresAt: parseCdnExpiry(att.url) });
       bytesDone += bytes.length;
-      opts.onProgress?.({ loaded: bytesDone, total: opts.totalSize ?? bytesDone, chunksDone: index, chunksTotal: -1 });
+      chunksDone += 1;
+      emit();
     };
 
+    const flush = async (bytes: Uint8Array) => {
+      if (opts.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      if (failure) throw failure;
+      while (inFlight.size >= parallel) await Promise.race(inFlight);
+      if (failure) throw failure;
+      const task: Promise<void> = send(bytes, index++)
+        .catch((e) => { failure ??= e; })
+        .finally(() => { inFlight.delete(task); });
+      inFlight.add(task);
+    };
+
+    emit();
     try {
       for (;;) {
         const { done, value } = await reader.read();
@@ -327,7 +347,11 @@ export class DiscordClient {
         while (pendingLen >= chunkSize) await flush(take(chunkSize));
       }
       if (pendingLen > 0) await flush(take(pendingLen));
+      await Promise.all(inFlight);
+      if (failure) throw failure;
     } catch (err) {
+      await Promise.allSettled([...inFlight]);
+      chunks.sort((x, y) => x.index - y.index);
       throw new DiscordApiError((err as Error)?.message ?? "Stream upload failed", {
         category: err instanceof DiscordApiError ? err.category : "transient",
         body: err,
@@ -335,6 +359,7 @@ export class DiscordClient {
       });
     }
 
+    chunks.sort((x, y) => x.index - y.index);
     return { size: bytesDone, mimeType, filename: opts.filename, chunkSize, chunks };
   }
 

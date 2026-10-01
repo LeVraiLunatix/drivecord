@@ -165,7 +165,7 @@ export const DriveItemRow = React.memo(function DriveItemRow({
             onKeyDown={(e) => {
               if (e.key === "Enter") onDoubleClick?.(item);
             }}
-            className="flex items-center gap-3 px-3 py-2.5 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring hover:bg-accent/40"
+            className="flex items-center gap-3 px-3 py-2.5 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring hover:bg-violet-500/10 active:bg-violet-500/15"
             {...longPress.handlers}
           >
             {/* Selection checkbox */}
