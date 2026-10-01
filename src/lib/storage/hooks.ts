@@ -19,7 +19,7 @@ import {
   type ParentId,
 } from "./schema";
 import { apiFetcher } from "@/lib/api-base";
-import { decryptPayload } from "@/lib/e2ee-client/decrypt-items";
+import { decryptItems, decryptPayload, sortItems } from "@/lib/e2ee-client/decrypt-items";
 
 /**
  * SWR fetcher for `/api/drive/:id/…`: end-to-end encrypted names/types are opened here
@@ -93,6 +93,26 @@ export function useDriveItems(
     { revalidateOnFocus: false },
   );
   return data?.items as DriveItem[] | undefined;
+}
+
+/**
+ * Every (non-trashed, non-vault) file and folder of the drive with readable names — the search
+ * index. Only fetched while `enabled` (i.e. while the user is actually searching).
+ */
+export function useDriveIndex(driveId: string | null, enabled: boolean): DriveItem[] | undefined {
+  const { data } = useSWR(
+    driveId && enabled ? `/api/drive/${driveId}/tree?index=1` : null,
+    async (url: string) => {
+      const raw = (await apiFetcher(url)) as { folders?: FolderEntry[]; files?: FileEntry[] };
+      const items: DriveItem[] = [
+        ...(raw.folders ?? []).map((f) => ({ ...f, kind: "folder" as const })),
+        ...(raw.files ?? []).map((f) => ({ ...f, kind: "file" as const })),
+      ];
+      return sortItems(await decryptItems(driveId!, items));
+    },
+    { revalidateOnFocus: false, dedupingInterval: 20_000 },
+  );
+  return data;
 }
 
 /** Files flagged as favorite in a drive. */

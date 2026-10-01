@@ -5,9 +5,9 @@ import { BackButton } from "@/components/back-button";
 
 const sections: { title: string; body: string[] }[] = [
   {
-    title: "1. Version bêta",
+    title: "1. Nature du service",
     body: [
-      "Drivecord est en version bêta. Des bugs, pertes de données, interruptions de service et changements peuvent survenir à tout moment — c'est normal à ce stade.",
+      "Drivecord s'appuie sur des services tiers (Discord) hors de notre contrôle : des interruptions, changements ou pertes de données peuvent survenir. Garde une copie de ce qui compte.",
       "Le service est fourni « tel quel », sans aucune garantie de disponibilité, de fiabilité ou d'intégrité des données.",
     ],
   },

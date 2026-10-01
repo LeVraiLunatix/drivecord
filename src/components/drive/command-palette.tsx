@@ -40,6 +40,8 @@ type Props = {
   onUpload: () => void;
   onNewFolder: () => void;
   onSection: (s: Section) => void;
+  /** Run a drive-wide file search for the typed text. */
+  onSearch: (q: string) => void;
 };
 
 /**
@@ -47,7 +49,7 @@ type Props = {
  * navigation + quick actions, supports keyboard navigation and fuzzy-ish
  * substring filtering.
  */
-export function CommandPalette({ onUpload, onNewFolder, onSection }: Props) {
+export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: Props) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const drives = useAllDrives();
@@ -108,10 +110,13 @@ export function CommandPalette({ onUpload, onNewFolder, onSection }: Props) {
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return commands;
-    return commands.filter((c) =>
+    const hits = commands.filter((c) =>
       (c.label + " " + (c.keywords ?? "")).toLowerCase().includes(q),
     );
-  }, [commands, query]);
+    // Always offer to search the files themselves (names are only readable on this device).
+    hits.push({ id: "search", label: `Rechercher « ${query.trim()} » dans le drive`, group: "Fichiers", icon: Search, run: () => act(() => { onSection("files"); onSearch(query.trim()); }) });
+    return hits;
+  }, [commands, query, onSection, onSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep active index in range.
   React.useEffect(() => { setActive(0); }, [query]);

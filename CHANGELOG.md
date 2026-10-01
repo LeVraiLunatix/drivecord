@@ -7,6 +7,21 @@
   à chaque changement notable.
 -->
 
+## Drivecord 1.0 : chiffrement de bout en bout et API v2
+
+🔒 **Vrai chiffrement de bout en bout**
+- Tes fichiers, leurs **noms**, leur type et le nom de tes dossiers sont chiffrés sur ton appareil. Le serveur ne détient plus aucune clé : même une fuite de sa base ne révèle rien.
+- **Clé de récupération** affichée à la création, phrase de chiffrement optionnelle, passkey, et **approbation depuis un autre appareil** avec code de vérification.
+- Tes drives existants sont migrés automatiquement ; un bouton « Chiffrer maintenant » traite les anciens fichiers.
+- Liens de partage chiffrés (la clé reste dans le lien, jamais envoyée au serveur), mot de passe optionnel.
+- Coffre-fort : le PIN n'est plus jamais envoyé au serveur.
+
+🧩 **Applications et API v2**
+- Connecte une application à ton Drivecord avec OAuth : elle n'accède qu'à **son dossier**, tu peux la révoquer à tout moment (Réglages › Applications connectées).
+- Nouvelle **API v2** chiffrée, **jetons personnels**, SDK navigateur (`@drivecord/sdk`) et Node (`@drivecord/node`), boutons d'upload et visionneuse en iframe. L'API v1 est dépréciée.
+
+✨ **La bêta est terminée** — Drivecord passe en version 1.0.
+
 ## API publique v1 : sécurité renforcée
 
 🔐 **L'API v1 (intégrations, client Windows) est durcie**

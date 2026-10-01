@@ -17,9 +17,11 @@ type Props = {
   item: DriveItem | null;
   onOpenChange: (open: boolean) => void;
   onConfirm: (item: DriveItem) => Promise<void>;
+  /** True in the trash: deleting there is final. */
+  permanent?: boolean;
 };
 
-export function ConfirmDeleteDialog({ item, onOpenChange, onConfirm }: Props) {
+export function ConfirmDeleteDialog({ item, onOpenChange, onConfirm, permanent = false }: Props) {
   const open = item !== null;
   const [busy, setBusy] = React.useState(false);
   if (!item) return null;
@@ -42,25 +44,26 @@ export function ConfirmDeleteDialog({ item, onOpenChange, onConfirm }: Props) {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Supprimer {isFolder ? "ce dossier" : "ce fichier"} ?
+            {permanent ? "Supprimer définitivement" : "Mettre à la corbeille"} {isFolder ? "ce dossier" : "ce fichier"} ?
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
-              <p>
-                <span className="font-mono">{name}</span> sera supprimé
-                définitivement.
-              </p>
-              {!isFolder && (
-                <p>
-                  Tous les chunks correspondants seront aussi effacés sur
-                  Discord. Cette action est irréversible.
-                </p>
-              )}
-              {isFolder && (
-                <p>
-                  Le dossier sera retiré, mais son contenu reste accessible —
-                  je le déplacerai à la racine plus tard.
-                </p>
+              {permanent ? (
+                <>
+                  <p>
+                    <span className="font-mono">{name}</span>
+                    {isFolder ? " et tout son contenu seront supprimés" : " sera supprimé"} définitivement.
+                  </p>
+                  <p>Les données sont aussi effacées sur Discord. Cette action est irréversible.</p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    <span className="font-mono">{name}</span>
+                    {isFolder ? " et son contenu seront déplacés" : " sera déplacé"} dans la corbeille.
+                  </p>
+                  <p>Tu pourras le restaurer à tout moment depuis la corbeille.</p>
+                </>
               )}
             </div>
           </AlertDialogDescription>
@@ -75,7 +78,7 @@ export function ConfirmDeleteDialog({ item, onOpenChange, onConfirm }: Props) {
             disabled={busy}
             className="bg-destructive text-white hover:bg-destructive/90"
           >
-            Supprimer
+            {permanent ? "Supprimer définitivement" : "Mettre à la corbeille"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

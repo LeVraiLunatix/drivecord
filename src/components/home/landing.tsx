@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import DarkVeil from "@/components/ui/dark-veil";
-import { BetaBanner } from "@/components/beta-banner";
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -70,8 +69,6 @@ export function Landing() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
-      {/* ── Beta banner ── */}
-      <BetaBanner />
 
       {/* ── Nav ── */}
       <motion.header
@@ -130,7 +127,7 @@ export function Landing() {
                   animate={reduce ? {} : { opacity: [1, 0.3, 1] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 />
-                v0.1 — open beta
+                v1.0 — chiffré de bout en bout
               </Badge>
             </motion.div>
 

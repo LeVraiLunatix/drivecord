@@ -31,6 +31,7 @@ import { UploadDropzone } from "@/components/drive/upload-dropzone";
 import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
 import { Lock, Star, Tag, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { VaultGate } from "@/components/drive/vault-gate";
 import { CordLinkPrompt } from "@/components/auth/cord-link-prompt";
 
@@ -56,6 +57,9 @@ import {
   useActiveDriveId,
   useAllDrives,
   useDriveItems,
+  useDriveIndex,
+  restoreFile,
+  restoreFolder,
   useFavorites,
   useVaultItems,
   useTrashedItems,
@@ -205,6 +209,9 @@ function DriveContent() {
   const [vaultUnlocked, setVaultUnlocked] = React.useState(false);
 
   const items      = useDriveItems(driveId, currentFolderId);
+  const searching = search.trim() !== "";
+  // While searching "Tous les fichiers", look in the whole drive, not just the open folder.
+  const driveIndex = useDriveIndex(driveId, searching && section === "files");
   const favorites  = useFavorites(driveId);
   const trashed    = useTrashedItems(driveId);
   const taggedItems = useFilesByTag(driveId, activeTag);
@@ -219,7 +226,7 @@ function DriveContent() {
 
   const displayedItems = React.useMemo(() => {
     const base =
-      section === "files" ? items
+      section === "files" ? (searching ? driveIndex : items)
       : section === "favorites" ? favorites
       : section === "vault" ? vaultItems
       : section === "tag" ? taggedItems
@@ -231,7 +238,7 @@ function DriveContent() {
       const name = it.kind === "folder" ? it.name : it.filename;
       return name.toLowerCase().includes(q);
     });
-  }, [section, items, favorites, vaultItems, trashed, taggedItems, search]);
+  }, [section, items, searching, driveIndex, favorites, vaultItems, trashed, taggedItems, search]);
 
   const previewSiblings = React.useMemo(
     () => (displayedItems ?? []).filter((i) => i.kind === "file").map((i) => i.id),
@@ -389,6 +396,14 @@ function DriveContent() {
       if (action === "favorite" && item.kind === "file") {
         try { await setFavorite(item.driveId, item.id, !item.favorite); }
         catch (err) { toast.error((err as Error).message); }
+        return;
+      }
+      if (action === "restore") {
+        try {
+          if (item.kind === "folder") await restoreFolder(item.driveId, item.id);
+          else await restoreFile(item.driveId, item.id);
+          toast.success("Restauré");
+        } catch (err) { toast.error(`Restauration impossible : ${(err as Error).message}`); }
         return;
       }
       if (action === "lock" && item.kind === "file") {
@@ -593,9 +608,18 @@ function DriveContent() {
           {section === "tag" && (displayedItems?.length ?? 0) === 0 && (
             <EmptyState icon={Tag} title={`Aucun fichier avec #${activeTag}`} description="Ajoute ce tag à des fichiers via le menu contextuel." />
           )}
+          {section === "trash" && (trashed?.length ?? 0) > 0 && (
+            <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3 text-sm text-muted-foreground">
+              <span>{trashed!.length} élément{trashed!.length > 1 ? "s" : ""} dans la corbeille</span>
+              <Button variant="outline" size="sm" className="text-red-400 hover:text-red-300" onClick={() => setBulkDeleteItems(trashed!)}>
+                <Trash2 className="size-4" />
+                Vider la corbeille
+              </Button>
+            </div>
+          )}
           {(section === "files" || (section === "vault" && vaultUnlocked && (displayedItems?.length ?? 0) > 0) || ((section === "favorites" || section === "trash" || section === "tag") && (displayedItems?.length ?? 0) > 0)) && (
             <DriveExplorer
-              key={`${section}-${currentFolderId}`}
+              key={`${section}-${currentFolderId}-${searching}`}
               items={displayedItems}
               viewMode={viewMode}
               sortField={sortField}
@@ -603,7 +627,7 @@ function DriveContent() {
               filterKind={filterKind}
               onSortChange={(field, dir) => { setSortField(field); setSortDir(dir); }}
               onAction={handleAction}
-              onOpenFolder={navigateTo}
+              onOpenFolder={(id) => { setSearch(""); navigateTo(id); }}
               onPreviewFile={(id) => setPreviewFileId(id)}
               onDropItem={(sourceId, targetFolder) => {
                 if (targetFolder.kind !== "folder") return;
@@ -654,6 +678,7 @@ function DriveContent() {
           if (s === "files") { resetHistory(ROOT_PARENT); }
           setSection(s);
         }}
+        onSearch={setSearch}
       />
 
       <NewFolderDialog
@@ -663,7 +688,7 @@ function DriveContent() {
         parentId={currentFolderId}
       />
       <RenameDialog item={renameTarget} onOpenChange={(open) => !open && setRenameTarget(null)} />
-      <ConfirmDeleteDialog item={deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} onConfirm={handleConfirmDelete} />
+      <ConfirmDeleteDialog permanent={section === "trash"} item={deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} onConfirm={handleConfirmDelete} />
       <MoveDialog
         item={moveTarget}
         items={bulkMoveItems.length > 0 ? bulkMoveItems : undefined}
