@@ -18,6 +18,7 @@ import { DesktopTokenBridge } from "@/components/auth/desktop-token-bridge";
 import { WindowChrome } from "@/components/window-chrome";
 import { CloseConfirm } from "@/components/close-confirm";
 import { UpdateBanner } from "@/components/update-banner";
+import { StatusBanner } from "@/components/status-banner";
 import "./globals.css";
 
 // Self-hosted (vendored in src/app/fonts/) — no build-time Google Fonts fetch,
@@ -189,6 +190,7 @@ export default function RootLayout({
         <WindowChrome />
         <CloseConfirm />
         <UpdateBanner />
+        <StatusBanner />
         <NativeDeepLink />
         <NativeClass />
         <NativeBackdrop />
