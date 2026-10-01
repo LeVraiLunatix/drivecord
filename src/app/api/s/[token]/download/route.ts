@@ -9,11 +9,9 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
-import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
-import { fetchDiscordCdn, isDiscordCdnUrl, isSnowflake } from "@/lib/discord";
+import { isDiscordCdnUrl, isSnowflake } from "@/lib/discord";
 import type { ChunkRef } from "@/lib/discord";
 import { auth } from "@/auth";
-import { buildSafeFileHeaders } from "@/lib/safe-file-headers";
 import { afterCordNotify, DRIVECORD_URL } from "@/lib/cord-sync";
 
 export const runtime = "nodejs";
@@ -48,8 +46,8 @@ export async function POST(
   });
   if (!file) return NextResponse.json({ error: "Fichier supprimé." }, { status: 404 });
 
-  // A legacy encrypted file whose key the server no longer holds can't be served any more.
-  if (file.cryptoVersion === 0 && file.encIv && (file.locked || !share.webhook.encKey || share.webhook.e2eeVersion >= 1)) {
+  // A legacy single-IV encrypted file can't be served: the server holds no key for it.
+  if (file.cryptoVersion === 0 && file.encIv) {
     return NextResponse.json(
       { error: "Ce lien doit être régénéré par son propriétaire (le chiffrement a été renforcé).", needsRegenerate: true },
       { status: 409 },
@@ -123,39 +121,6 @@ export async function POST(
       encMeta: file.encMeta,
       size: file.size,
       chunks: fresh,
-    });
-  }
-
-  // Legacy encrypted file → decrypt server-side and serve the plaintext bytes directly.
-  // (Vault-locked files can't be served: the server doesn't hold the PIN key.)
-  if (file.encIv) {
-    if (file.locked || !share.webhook.encKey) {
-      return NextResponse.json(
-        { error: "Ce fichier chiffré ne peut pas être partagé." },
-        { status: 403 },
-      );
-    }
-    const ordered = [...fresh].sort((a, b) => a.index - b.index);
-    const parts: Buffer[] = [];
-    for (const c of ordered) {
-      const r = await fetchDiscordCdn(c.url);
-      if (!r.ok) {
-        return NextResponse.json(
-          { error: "Téléchargement interrompu." },
-          { status: 502 },
-        );
-      }
-      parts.push(Buffer.from(await r.arrayBuffer()));
-    }
-    const keyB64 = decryptUrl(share.webhook.encKey);
-    const plain = decryptFileBuffer(Buffer.concat(parts), keyB64, file.encIv);
-    // Only count the download once the bytes are actually ready to serve.
-    await countDownload();
-    return new NextResponse(new Uint8Array(plain), {
-      headers: buildSafeFileHeaders(
-        { filename: file.filename, mimeType: file.mimeType, size: plain.length },
-        { disposition: "attachment", cacheControl: "private, no-store" },
-      ),
     });
   }
 

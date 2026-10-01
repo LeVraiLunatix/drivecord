@@ -117,7 +117,7 @@ async function servePublicFile(
 
   // Hotlinks serve plaintext only. An end-to-end encrypted file can't be shown by an <img>,
   // and the server can't decrypt it — the link is dead until the owner publishes a plaintext copy.
-  if (file.cryptoVersion >= 1 || (file.encIv && share.webhook.e2eeVersion >= 1)) {
+  if (file.cryptoVersion >= 1 || file.encIv) {
     return NextResponse.json(
       { error: "Ce fichier est chiffré de bout en bout : il ne peut pas être servi en lien public." },
       { status: 410, headers: CORS_HEADERS },
@@ -131,12 +131,10 @@ async function servePublicFile(
 
   const result = await fetchAndDecryptFile({
     encryptedWebhookUrl: share.webhook.encryptedUrl,
-    encKeyEncrypted: share.webhook.encKey,
     chunks: file.chunks as unknown as ChunkRef[],
     encIv: file.encIv,
     locked: file.locked,
     cryptoVersion: file.cryptoVersion,
-    e2eeVersion: share.webhook.e2eeVersion,
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status, headers: CORS_HEADERS });

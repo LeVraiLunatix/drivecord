@@ -12,7 +12,6 @@
 import { db } from "@/lib/storage/db";
 import { getActiveDriveId, setActiveDriveId, clearActiveDriveId } from "@/lib/storage/drives";
 import type { Drive } from "@/lib/storage/schema";
-import { wrapDriveKeyForLocalStorage } from "@/lib/crypto/drive-crypto";
 import { authFetch } from "@/lib/api-base";
 import { isUnlocked } from "@/lib/e2ee-client/keyring";
 import { createDriveKeyForNewDrive, getDriveKeyMaterial, migrateDrive, type DriveKeyMaterial } from "@/lib/e2ee-client/drive-keys";
@@ -23,8 +22,6 @@ type ServerWebhook = {
   name: string;
   channelId: string;
   guildId?: string;
-  /** LEGACY base64 raw per-drive key — only returned while the drive is not yet end-to-end (e2eeVersion 0). */
-  encKey?: string | null;
   /** E2EE drive key wrapped by the user's Master Key. */
   dkWrapped?: string | null;
   e2eeVersion?: number;
@@ -57,8 +54,6 @@ export async function syncWebhooksFromServer(): Promise<number> {
       name: existing?.name ?? w.name,
       channelId: w.channelId,
       guildId: w.guildId,
-      // Legacy key is cached locally (wrapped) only until the drive is migrated; then it's gone for good.
-      encKey: (w.e2eeVersion ?? 0) >= 1 ? undefined : w.encKey ? await wrapDriveKeyForLocalStorage(w.encKey) : existing?.encKey,
       dkWrapped: w.dkWrapped ?? undefined,
       e2eeVersion: w.e2eeVersion ?? 0,
       createdAt: existing?.createdAt ?? w.createdAt,
@@ -105,7 +100,7 @@ export async function syncWebhooksFromServer(): Promise<number> {
  * locked, the drive is created keyless and migrated at the next unlock.)
  */
 export async function pushWebhookToServer(drive: Drive): Promise<void> {
-  const fresh = isUnlocked() && (drive.e2eeVersion ?? 0) < 1 && !drive.encKey ? await createDriveKeyForNewDrive(drive.id) : null;
+  const fresh = isUnlocked() && (drive.e2eeVersion ?? 0) < 1 ? await createDriveKeyForNewDrive(drive.id) : null;
   const res = await authFetch("/api/webhooks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

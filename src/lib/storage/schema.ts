@@ -31,15 +31,9 @@ export type Drive = {
   createdAt: number;
   /** Last time the user opened this drive. */
   lastOpenedAt: number;
-  /** AES-256-GCM key encrypting this drive's regular files, wrapped for local
-   *  storage (JSON `{w,iv}`, see drive-crypto.ts wrapDriveKeyForLocalStorage)
-   *  — never persisted raw. Backed up (encrypted) on the account; present
-   *  locally only once confirmed server-side, so a key never exists unless
-   *  it's safely synced. Use unwrapDriveKeyFromLocalStorage before importing. */
-  encKey?: string;
   /** E2EE: the drive key wrapped by the user's Master Key (`v1.<iv>.<ct>`), as stored on the account. */
   dkWrapped?: string;
-  /** 0 = legacy server-held key, 1 = end-to-end encrypted (see lib/crypto/e2ee). */
+  /** 0 = no drive key yet, 1 = end-to-end encrypted (see lib/crypto/e2ee). */
   e2eeVersion?: number;
 };
 

@@ -6,7 +6,7 @@ vi.mock("@/lib/auth/encrypt", () => ({
 
 import { fetchAndDecryptFile } from "./serve-file";
 
-const base = { encryptedWebhookUrl: "x", encKeyEncrypted: null, encIv: null, locked: false };
+const base = { encryptedWebhookUrl: "x", encIv: null, locked: false };
 const chunk = (over: Record<string, unknown> = {}) => ({
   index: 0,
   size: 4,
@@ -77,16 +77,16 @@ describe("fetchAndDecryptFile — SSRF defence in depth", () => {
   describe("end-to-end encrypted files are never decrypted server-side", () => {
     const ok = () => vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("CIPHERTEXT", { status: 200 })));
 
-    it("cryptoVersion 1 → ciphertext returned as-is, even if a legacy key exists", async () => {
+    it("cryptoVersion 1 → ciphertext returned as-is", async () => {
       ok();
-      const res = await fetchAndDecryptFile({ ...base, encKeyEncrypted: "legacy-key-blob", cryptoVersion: 1, chunks: [chunk()] as never });
+      const res = await fetchAndDecryptFile({ ...base, cryptoVersion: 1, chunks: [chunk()] as never });
       expect(res).toMatchObject({ ok: true, encrypted: true });
       if (res.ok) expect(res.body.toString()).toBe("CIPHERTEXT");
     });
 
-    it("legacy single-IV file on a drive migrated to E2EE → ciphertext, no 403, no decrypt attempt", async () => {
+    it("legacy single-IV file → ciphertext, no 403, no decrypt attempt", async () => {
       ok();
-      const res = await fetchAndDecryptFile({ ...base, encIv: "AAAAAAAAAAAAAAAA", encKeyEncrypted: null, e2eeVersion: 1, chunks: [chunk()] as never });
+      const res = await fetchAndDecryptFile({ ...base, encIv: "AAAAAAAAAAAAAAAA", chunks: [chunk()] as never });
       expect(res).toMatchObject({ ok: true, encrypted: true });
     });
 

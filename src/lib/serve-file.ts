@@ -1,11 +1,10 @@
 /**
  * Fetch a DriveFile's bytes server-side: refresh each chunk's Discord CDN URL
- * (signed URLs expire after ~24h), concatenate, and decrypt if the file is
- * drive-key-encrypted. Shared by the `/api/v1` file download route and the
+ * (signed URLs expire after ~24h), concatenate and hand back the bytes — as-is,
+ * ciphertext included (the server holds no key). Shared by the `/api/v1` file download route and the
  * public-link route — both need the exact same "give me the raw bytes" logic.
  */
 import { decryptUrl } from "@/lib/auth/encrypt";
-import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
 import { fetchDiscordCdn, isDiscordCdnUrl, isSnowflake, parseWebhookUrl, withRetry } from "@/lib/discord";
 import { getWebhookLimiter } from "@/lib/discord/rate-limit";
 import { parseDiscordError } from "@/lib/discord/errors";
@@ -25,14 +24,11 @@ export type ServeFileResult =
 
 export async function fetchAndDecryptFile(params: {
   encryptedWebhookUrl: string;
-  encKeyEncrypted: string | null;
   chunks: ChunkRef[];
   encIv: string | null;
   locked: boolean;
   /** Chunked E2EE format (v1): never decryptable here. */
   cryptoVersion?: number;
-  /** Drive migrated to end-to-end encryption: the server no longer holds any drive key. */
-  e2eeVersion?: number;
 }): Promise<ServeFileResult> {
   // (Vault-locked files are ciphertext under a PIN-derived key the server never had.)
   if (params.locked) {
@@ -108,17 +104,10 @@ export async function fetchAndDecryptFile(params: {
     parts.push(Buffer.from(await r.arrayBuffer()));
   }
 
-  let body: Buffer = Buffer.concat(parts);
+  const body = Buffer.concat(parts);
 
-  // End-to-end encrypted: no key exists on this server. Hand back the ciphertext as-is.
-  const e2ee = (params.cryptoVersion ?? 0) >= 1 || (params.encIv && ((params.e2eeVersion ?? 0) >= 1 || !params.encKeyEncrypted));
-  if (e2ee) return { ok: true, body, encrypted: true };
-
-  // Legacy (server-held key, drive not migrated yet).
-  if (params.encIv) {
-    const keyB64 = decryptUrl(params.encKeyEncrypted!);
-    body = decryptFileBuffer(body, keyB64, params.encIv);
-  }
-
-  return { ok: true, body, encrypted: false };
+  // End-to-end encrypted (chunked format, or a legacy single-IV blob): no key exists on this
+  // server. Hand back the ciphertext as-is.
+  const encrypted = (params.cryptoVersion ?? 0) >= 1 || Boolean(params.encIv);
+  return { ok: true, body, encrypted };
 }

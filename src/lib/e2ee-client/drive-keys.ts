@@ -9,7 +9,6 @@
  */
 import { authFetch } from "@/lib/api-base";
 import { b64decode, b64encode, generateDriveKey, importAesKey, unwrapDriveKey, wrapDriveKey } from "@/lib/crypto/e2ee";
-import { unwrapDriveKeyFromLocalStorage } from "@/lib/crypto/drive-crypto";
 import { db } from "@/lib/storage/db";
 import type { Drive } from "@/lib/storage/schema";
 import { getMk, isUnlocked } from "./keyring";
@@ -62,37 +61,18 @@ async function postJson(path: string, body: unknown) {
   return data;
 }
 
-/** Fetch the legacy raw key from the server one last time (only ever returned while e2eeVersion = 0). */
-async function fetchLegacyKey(driveId: string): Promise<Uint8Array | null> {
-  const res = await authFetch("/api/webhooks");
-  if (!res.ok) return null;
-  const list = (await res.json()) as { driveId: string; encKey?: string | null }[];
-  const k = list.find((w) => w.driveId === driveId)?.encKey;
-  return k ? b64decode(k) : null;
-}
-
 /**
- * Bring one drive under end-to-end encryption. Idempotent. The old server-side key (if any)
- * is promoted to DK; a drive that never had one gets a fresh random DK.
+ * Bring one keyless drive under end-to-end encryption. Idempotent: it gets a fresh random DK.
  */
 export async function migrateDrive(drive: Drive): Promise<Drive> {
   if ((drive.e2eeVersion ?? 0) >= 1 && drive.dkWrapped) return drive;
   const mk = getMk();
 
-  let raw: Uint8Array | null = null;
-  if (drive.encKey) {
-    try {
-      raw = b64decode(await unwrapDriveKeyFromLocalStorage(drive.encKey));
-    } catch {
-      raw = null;
-    }
-  }
-  raw ??= await fetchLegacyKey(drive.id);
-  raw ??= generateDriveKey();
+  const raw = generateDriveKey();
 
   const dkWrapped = await wrapDriveKey(mk, drive.id, raw);
   await postJson(`/api/drive/${drive.id}/e2ee/finalize`, { dkWrapped });
-  const next: Drive = { ...drive, dkWrapped, e2eeVersion: 1, encKey: undefined };
+  const next: Drive = { ...drive, dkWrapped, e2eeVersion: 1 };
   await db().drives.put(next);
   cache.set(drive.id, await material(raw));
   return next;
