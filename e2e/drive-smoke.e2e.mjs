@@ -51,7 +51,7 @@ try {
   await shot(page, "1-empty");
 
   step("new folder");
-  await page.getByRole("button", { name: /Nouveau dossier|Dossier/ }).first().click();
+  await page.getByRole("button", { name: "Nouveau", exact: true }).click(); await page.getByRole("menuitem", { name: "Nouveau dossier" }).click();
   await page.getByRole("textbox").first().fill("Documents");
   await page.keyboard.press("Enter");
   await page.getByText(/0 élément/).first().waitFor();

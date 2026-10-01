@@ -123,8 +123,8 @@ function SidebarContent({
         href="/"
         className="flex items-center gap-2.5 px-1 py-1 text-base font-semibold tracking-tight"
       >
-        <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-md shadow-violet-500/30">
-          <CloudUpload className="size-4.5 text-white" />
+        <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <CloudUpload className="size-4" />
         </span>
         drivecord
       </Link>
@@ -161,7 +161,6 @@ function SidebarContent({
       </DropdownMenu>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
-        <p className="mb-1 mt-1 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Mon drive</p>
         <NavButton
           label="Tous les fichiers"
           icon={HardDrive}
@@ -226,21 +225,15 @@ function SidebarContent({
         )}
       </nav>
 
-      <div className="space-y-2.5 rounded-2xl border border-border/50 bg-gradient-to-br from-card/80 to-card/30 p-3.5">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-medium">Espace utilisé</span>
-          <span className="font-mono text-muted-foreground">{usage?.fileCount ?? 0} fichier{(usage?.fileCount ?? 0) > 1 ? "s" : ""}</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-xl font-semibold tabular-nums">{formatBytes(used)}</span>
-          <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-            <InfinityIcon className="size-3" /> Illimité
-          </span>
+      <div className="space-y-1.5 px-1">
+        <div className="flex items-baseline justify-between text-xs text-muted-foreground">
+          <span><span className="text-sm font-medium tabular-nums text-foreground">{formatBytes(used)}</span> utilisés</span>
+          <span>{usage?.fileCount ?? 0} fichier{(usage?.fileCount ?? 0) > 1 ? "s" : ""}</span>
         </div>
         <div className="h-1 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500" style={{ width: `${Math.min(100, 4 + Math.log10(1 + used / 1024) * 12)}%` }} />
+          <div className="h-full rounded-full bg-primary/70" style={{ width: `${Math.min(100, 4 + Math.log10(1 + used / 1024) * 12)}%` }} />
         </div>
-        <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><Lock className="size-3 text-emerald-400" /> Chiffré de bout en bout</p>
+        <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><Lock className="size-3" /> Chiffré · stockage illimité</p>
       </div>
 
       {/* Camera-roll backup + install — just above the account.
@@ -377,14 +370,13 @@ function NavButton({
     <button
       onClick={onClick}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-all",
+        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors",
         active
-          ? "bg-primary/10 font-medium text-foreground"
+          ? "bg-accent font-medium text-foreground"
           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
       )}
     >
-      {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />}
-      <Icon className={cn("size-4 transition-colors", active && "text-primary")} />
+      <Icon className="size-4" />
       {label}
     </button>
   );

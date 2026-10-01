@@ -61,7 +61,6 @@ export const DriveItemCard = React.memo(function DriveItemCard({
     ? { Icon: Folder, colorClass: folderIconClass(item.color) }
     : iconFor(item.filename, item.mimeType);
   const tags = !isFolder ? item.tags : [];
-  const extLabel = !isFolder && item.filename.includes(".") ? item.filename.split(".").pop()!.slice(0, 5) : "";
   const favorite = !isFolder && item.favorite;
   const menu = React.useMemo(() => buildItemMenu(item), [item]);
   const childCount = useFolderItemCount(
@@ -175,7 +174,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       onDrop={handleDrop}
       data-item-id={item.id}
       className={cn(
-        "group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-border/50 bg-card/50 p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5",
+        "group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border/40 bg-card/40 p-3 transition-colors duration-150 hover:border-border hover:bg-card/70",
         selected && "border-primary/60 bg-primary/5",
         dragOver &&
           "border-primary scale-[1.02] bg-primary/10 shadow-md ring-2 ring-primary/30",
@@ -216,8 +215,8 @@ export const DriveItemCard = React.memo(function DriveItemCard({
             {isFolder ? (
               /* ── Folder: compact horizontal card ── */
               <div className="flex items-center gap-3">
-                <div className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", colorClass)}>
-                  <Icon className="size-5" />
+                <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", colorClass)}>
+                  <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold leading-tight" title={name}>{name}</p>
@@ -232,18 +231,13 @@ export const DriveItemCard = React.memo(function DriveItemCard({
             ) : (
               /* ── File: big preview on top, details below ── */
               <>
-                <div className="relative -mx-3 -mt-3 flex h-32 items-center justify-center overflow-hidden bg-gradient-to-br from-muted/70 via-muted/30 to-muted/10">
+                <div className="relative -mx-3 -mt-3 flex h-28 items-center justify-center overflow-hidden bg-muted/30">
                   {thumbnailUrl ? (
-                    <img src={thumbnailUrl} alt={name} draggable={false} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    <img src={thumbnailUrl} alt={name} draggable={false} className="h-full w-full object-cover " />
                   ) : (
-                    <div className={cn("flex size-14 items-center justify-center rounded-2xl shadow-sm", colorClass)}>
-                      <Icon className="size-7" />
+                    <div className={cn("flex size-10 items-center justify-center rounded-lg", colorClass)}>
+                      <Icon className="size-5" />
                     </div>
-                  )}
-                  {extLabel && !thumbnailUrl && (
-                    <span className="absolute bottom-2 left-2 rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-muted-foreground backdrop-blur">
-                      {extLabel}
-                    </span>
                   )}
                   {favorite && <Star className="absolute bottom-2 right-2 size-4 fill-amber-400 text-amber-400 drop-shadow" />}
                   <div className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">

@@ -94,7 +94,7 @@ try {
   await page.keyboard.press("Escape");
 
   step("new folder + drag a file into it");
-  await page.getByRole("button", { name: /Nouveau dossier/ }).first().click();
+  await page.getByRole("button", { name: "Nouveau", exact: true }).click(); await page.getByRole("menuitem", { name: "Nouveau dossier" }).click();
   await page.getByRole("textbox").first().fill("Rangement");
   await page.keyboard.press("Enter");
   await page.waitForTimeout(1200);

@@ -330,12 +330,12 @@ export function DriveExplorer({
         title={empty?.title ?? "Ce dossier est vide"}
         description={empty?.description ?? "Glisse des fichiers ou des dossiers n'importe où sur la page. Ils sont chiffrés sur ton appareil avant d'être envoyés."}
         action={onEmptyUpload ? (
-          <Button onClick={onEmptyUpload} className="gap-2 bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/20 hover:opacity-90">
+          <Button onClick={onEmptyUpload} className="gap-2">
             <Upload className="size-4" />
             Envoyer des fichiers
           </Button>
         ) : undefined}
-        hint="Astuce : Ctrl K ouvre la recherche et les actions rapides."
+        hint="Ctrl K : recherche et actions rapides"
       />
     );
   }

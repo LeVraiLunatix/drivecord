@@ -1,5 +1,6 @@
 "use client";
 
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import * as React from "react";
 import {
   ChevronLeft,
@@ -7,6 +8,7 @@ import {
   FolderPlus,
   FolderUp,
   Menu,
+  Plus,
   Search,
   Upload,
   X,
@@ -181,7 +183,7 @@ export function DriveTopbar({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Rechercher dans ce drive…"
-                className="h-9 rounded-xl border-transparent bg-muted/50 pl-9 pr-12 transition-colors focus-visible:bg-background"
+                className="h-9 rounded-lg border-transparent bg-muted/40 pl-9 pr-12 shadow-none transition-colors focus-visible:bg-background"
               />
               <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground xl:block">Ctrl K</kbd>
             </div>
@@ -209,24 +211,21 @@ export function DriveTopbar({
             <Upload className="size-4" />
           </Button>
 
-          {/* Desktop: icon + label */}
-          <Button variant="outline" size="sm" className="hidden sm:flex" onClick={onNewFolder}>
-            <FolderPlus className="size-4" />
-            Nouveau dossier
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="hidden size-8 sm:flex"
-            onClick={onFolderUploadClick}
-            title="Importer un dossier"
-          >
-            <FolderUp className="size-4" />
-          </Button>
-          <Button size="sm" className="hidden bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/20 hover:opacity-90 sm:flex" onClick={onUploadClick}>
-            <Upload className="size-4" />
-            Upload
-          </Button>
+          {/* Desktop: one calm entry point */}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="hidden gap-1.5 sm:flex">
+                <Plus className="size-4" />
+                Nouveau
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={onUploadClick}><Upload className="size-4" />Envoyer des fichiers</DropdownMenuItem>
+              <DropdownMenuItem onClick={onFolderUploadClick}><FolderUp className="size-4" />Envoyer un dossier</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onNewFolder}><FolderPlus className="size-4" />Nouveau dossier</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
