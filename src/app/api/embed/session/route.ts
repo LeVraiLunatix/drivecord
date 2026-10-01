@@ -14,7 +14,6 @@ import { TICKET_SALT } from "../ticket/route";
 
 export const runtime = "nodejs";
 const SESSION_TTL = 60 * 60; // 1 h — the embed asks for a new ticket afterwards
-const COOKIE_NAME = "__Secure-authjs.session-token";
 
 export async function POST(req: NextRequest) {
   const rl = await rateLimit(`embed:session:${getClientIp(req)}`, 30, 60);
@@ -36,10 +35,13 @@ export async function POST(req: NextRequest) {
   });
   if (!grant) return NextResponse.json({ error: "Application non autorisée." }, { status: 403 });
 
+  // Same cookie name the proxy bridge will look for (it mirrors Auth.js' `useSecureCookies` default).
+  const secure = process.env.NODE_ENV === "production" || req.nextUrl.protocol === "https:";
+  const cookieName = secure ? "__Secure-authjs.session-token" : "authjs.session-token";
   const token = await encode({
     token: { sub: userId, id: userId, name: grant.user.name, email: grant.user.email, picture: grant.user.image, level: "full", embedFor: clientId },
     secret: process.env.AUTH_SECRET!,
-    salt: COOKIE_NAME,
+    salt: cookieName,
     maxAge: SESSION_TTL,
   });
   return NextResponse.json(

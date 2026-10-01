@@ -15,7 +15,7 @@ export const TICKET_SALT = "drivecord-embed-ticket";
 export async function POST(req: NextRequest) {
   // CSRF: only our own pages (the popup) may mint a ticket.
   const origin = req.headers.get("origin");
-  if (!origin || new URL(origin).host !== req.nextUrl.host) return NextResponse.json({ error: "Origine refusée." }, { status: 403 });
+  if (!origin || new URL(origin).host !== (req.headers.get("x-forwarded-host") ?? req.headers.get("host"))) return NextResponse.json({ error: "Origine refusée." }, { status: 403 });
   const u = await requireUser();
   if (isResponse(u)) return u;
   const b = await readBody(req, z.object({ client_id: z.string().max(80) }));

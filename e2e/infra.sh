@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Local infrastructure for the browser E2E test: throw-away Postgres (port 5433) + Next dev server (port 3100).
-# Usage: e2e/infra.sh up | down
+# Usage: [E2E_PROD=1] e2e/infra.sh up | down   (E2E_PROD=1: production build, much steadier for browser tests)
 set -euo pipefail
 PGB=/usr/lib/postgresql/16/bin
 PGDATA=/tmp/e2e-pgdata
@@ -18,7 +18,12 @@ case "${1:-up}" in
     echo "$ENCRYPTION_KEY" > /tmp/e2e-enc-key
     export AUTH_SECRET="e2e-secret-e2e-secret-e2e-secret"
     echo "$AUTH_SECRET" > /tmp/e2e-auth-secret
+    if [ "${E2E_PROD:-0}" = "1" ]; then
+      npx next build > /tmp/e2e-build.log 2>&1
+      (INTERNAL_ORIGIN=http://localhost:3100 AUTH_TRUST_HOST=true NODE_OPTIONS="--require $(pwd)/e2e/server-fake-discord.cjs" npx next start -p 3100 > /tmp/e2e-next.log 2>&1 &)
+    else
     (AUTH_TRUST_HOST=true NODE_OPTIONS="--require $(pwd)/e2e/server-fake-discord.cjs" npx next dev -p 3100 > /tmp/e2e-next.log 2>&1 &)
+    fi
     for i in $(seq 1 60); do sleep 2; curl -s -o /dev/null http://localhost:3100/api/v2/none && break; done
     echo "up"
     ;;

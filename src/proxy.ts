@@ -49,7 +49,8 @@ async function embedResponse(req: NextRequest): Promise<NextResponse> {
   let origins: string[] = [];
   if (/^app_[A-Za-z0-9_-]{8,64}$/.test(clientId)) {
     try {
-      const r = await fetch(new URL(`/api/embed/origins?client_id=${clientId}`, req.nextUrl.origin));
+      // INTERNAL_ORIGIN: how this server reaches itself when the public URL is not routable from inside (rare).
+      const r = await fetch(new URL(`/api/embed/origins?client_id=${clientId}`, process.env.INTERNAL_ORIGIN ?? req.nextUrl.origin));
       if (r.ok) origins = ((await r.json()) as { origins?: string[] }).origins ?? [];
     } catch {
       /* no origins → nobody may frame it */
