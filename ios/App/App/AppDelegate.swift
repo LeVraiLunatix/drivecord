@@ -1,5 +1,7 @@
 import UIKit
 import WebKit
+import AVFoundation
+import Network
 import Capacitor
 
 // MARK: - Native Liquid Glass tab bar
@@ -60,6 +62,111 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
+        // Watch load failures without replacing Capacitor's navigation delegate.
+        if let webView = webView, let inner = webView.navigationDelegate {
+            let proxy = NavigationFailureProxy(inner: inner)
+            proxy.onFinish = { [weak self] in self?.pageDidLoad() }
+            proxy.onFail = { [weak self] error in self?.pageDidFail(error) }
+            proxy.onProcessTerminated = { [weak self] in self?.hasLoadedPage = false }
+            navigationProxy = proxy
+            webView.navigationDelegate = proxy
+        }
+    }
+
+    // MARK: Offline launch
+    //
+    // The UI is the remote site: opened without network, the first load failed
+    // and the app stayed on a black screen for good (even once back online).
+    // Capacitor's `server.errorPath` would also fire on benign cancellations
+    // (a navigation superseding another) and break them, hence this overlay,
+    // shown only while NO page has loaded yet.
+
+    private var navigationProxy: NavigationFailureProxy?
+    private var hasLoadedPage = false
+    private var offlineView: UIView?
+    private var pathMonitor: NWPathMonitor?
+
+    private func pageDidLoad() {
+        hasLoadedPage = true
+        hideOffline()
+    }
+
+    private func pageDidFail(_ error: Error) {
+        let ns = error as NSError
+        // Cancelled / superseded / turned-into-download loads aren't outages.
+        if ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled { return }
+        if ns.domain == "WebKitErrorDomain" && ns.code == 102 { return }
+        // A page is on screen: WebKit keeps showing it, nothing to rescue.
+        guard !hasLoadedPage else { return }
+        showOffline()
+    }
+
+    private func showOffline() {
+        guard offlineView == nil else { return }
+        let overlay = UIView()
+        overlay.backgroundColor = UIColor(red: 0.04, green: 0.04, blue: 0.04, alpha: 1)
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+
+        let icon = UIImageView(image: UIImage(systemName: "wifi.slash"))
+        icon.tintColor = UIColor(white: 1, alpha: 0.6)
+        icon.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 40, weight: .regular)
+
+        let title = UILabel()
+        title.text = "Pas de connexion"
+        title.font = .systemFont(ofSize: 20, weight: .semibold)
+        title.textColor = .white
+
+        let message = UILabel()
+        message.text = "Drivecord a besoin d’Internet. L’app se recharge toute seule dès que le réseau revient."
+        message.font = .systemFont(ofSize: 15)
+        message.textColor = UIColor(white: 1, alpha: 0.6)
+        message.numberOfLines = 0
+        message.textAlignment = .center
+
+        let retry = UIButton(type: .system)
+        retry.setTitle("Réessayer", for: .normal)
+        retry.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        retry.tintColor = UIColor(red: 0.51, green: 0.42, blue: 0.98, alpha: 1.0)
+        retry.addTarget(self, action: #selector(retryLoad), for: .touchUpInside)
+
+        let stack = UIStackView(arrangedSubviews: [icon, title, message, retry])
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 12
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        overlay.addSubview(stack)
+        view.addSubview(overlay)
+        NSLayoutConstraint.activate([
+            overlay.topAnchor.constraint(equalTo: view.topAnchor),
+            overlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            overlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            stack.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+        ])
+        offlineView = overlay
+
+        // Reload by itself as soon as the network is back.
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            DispatchQueue.main.async { self?.retryLoad() }
+        }
+        monitor.start(queue: DispatchQueue(label: "drivecord.offline-monitor"))
+        pathMonitor = monitor
+    }
+
+    private func hideOffline() {
+        offlineView?.removeFromSuperview()
+        offlineView = nil
+        pathMonitor?.cancel()
+        pathMonitor = nil
+    }
+
+    @objc private func retryLoad() {
+        guard !hasLoadedPage, let url = bridge?.config.serverURL else { return }
+        webView?.load(URLRequest(url: url))
     }
 
     override func viewDidLoad() {
@@ -143,8 +250,12 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         case "nativeAnchorMenu":
             handleAnchorMenuMessage(message.body)
         case "nativeShell":
-            if let body = message.body as? [String: Any], let theme = body["theme"] as? String {
-                applyTheme(theme)
+            if let body = message.body as? [String: Any] {
+                if let theme = body["theme"] as? String { applyTheme(theme) }
+                // Long jobs (camera-roll backup): auto-lock suspends the web view.
+                if let awake = body["keepAwake"] as? Bool {
+                    DispatchQueue.main.async { UIApplication.shared.isIdleTimerDisabled = awake }
+                }
             } else {
                 handleDocumentStart()
             }
@@ -186,6 +297,8 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         DispatchQueue.main.async {
             for (_, btn) in self.anchorButtons { btn.removeFromSuperview() }
             self.anchorButtons.removeAll()
+            // A reload mid-backup never sends keepAwake: false.
+            UIApplication.shared.isIdleTimerDisabled = false
             self.pushBarHeight()
         }
     }
@@ -319,6 +432,48 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
     }
 }
 
+/// Sits in front of Capacitor's navigation delegate to observe load results;
+/// every call (handled here or not) still reaches Capacitor.
+private final class NavigationFailureProxy: NSObject, WKNavigationDelegate {
+    private weak var inner: WKNavigationDelegate?
+    var onFinish: (() -> Void)?
+    var onFail: ((Error) -> Void)?
+    var onProcessTerminated: (() -> Void)?
+
+    init(inner: WKNavigationDelegate) {
+        self.inner = inner
+    }
+
+    // Methods not implemented here go straight to Capacitor's handler.
+    override func responds(to aSelector: Selector!) -> Bool {
+        super.responds(to: aSelector) || (inner?.responds(to: aSelector) ?? false)
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        (inner?.responds(to: aSelector) ?? false) ? inner : nil
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        inner?.webView?(webView, didFinish: navigation)
+        onFinish?()
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        inner?.webView?(webView, didFail: navigation, withError: error)
+        onFail?(error)
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        inner?.webView?(webView, didFailProvisionalNavigation: navigation, withError: error)
+        onFail?(error)
+    }
+
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        onProcessTerminated?()
+        inner?.webViewWebContentProcessDidTerminate?(webView)
+    }
+}
+
 /// Forwards script messages without WKUserContentController retaining the
 /// view controller (it holds its handlers strongly).
 private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
@@ -339,7 +494,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // The web app's audio player (with lock-screen controls via Media
+        // Session) stopped as soon as the phone locked: background audio needs
+        // the "audio" background mode (Info.plist) and a playback session.
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         return true
     }
 

@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { registerPasskey } from "@/lib/auth/passkey-client";
+import { isNativeApp } from "@/lib/use-platform";
 
 type Passkey = {
   id: string;
@@ -50,6 +51,13 @@ export function PasskeyManager() {
   const passkeys = data?.passkeys ?? [];
 
   const add = async () => {
+    // The app's WebView can't create passkeys (no associated domain): do it in
+    // Safari, where the same account's Settings are one sign-in away.
+    if (isNativeApp()) {
+      toast("Ajoute ta passkey depuis Safari : elle servira ensuite à te connecter.");
+      window.open(`${window.location.origin}/settings`, "_system");
+      return;
+    }
     setAdding(true);
     const r = await registerPasskey();
     setAdding(false);
