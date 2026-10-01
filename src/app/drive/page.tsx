@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
+import { DriveBackdrop } from "@/components/drive/drive-backdrop";
 import { DriveSidebar } from "@/components/drive/sidebar";
 import { DriveNativeMenu } from "@/components/drive/native-menu";
 import { DriveTopbar } from "@/components/drive/topbar";
@@ -547,7 +548,8 @@ function DriveContent() {
   if (!activeDrive) return null;
 
   return (
-    <div className="flex min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden">
+    <div className="isolate flex min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden">
+      <DriveBackdrop />
       <DriveSidebar
         section={section}
         onSectionChange={setSection}

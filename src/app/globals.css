@@ -653,3 +653,61 @@ html.is-desktop .drive-topbar-row { padding-right: 5.25rem; }
   .cord-halo, .cord-sheen, .cord-orbit { animation: none !important; }
   .cord-sheen { opacity: 0; }
 }
+
+@keyframes dc-eq {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+
+/* ── Drivecord : motion + couleurs au survol ─────────────────────────────── */
+
+/* Symbole ∞ de la carte de stockage : un trait lumineux court en boucle. */
+.dc-infinity {
+  stroke-dasharray: 100;
+  animation: dc-infinity 5s ease-in-out infinite;
+}
+@keyframes dc-infinity {
+  0% { stroke-dashoffset: 100; opacity: 0.5; }
+  45%, 60% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: -100; opacity: 0.5; }
+}
+
+/* Teinte propre à chaque bouton (selon sa position parmi ses frères), appliquée
+   UNIQUEMENT au survol : au repos l'interface reste sobre. */
+:root { --fx: #a78bfa; }
+:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 1) { --fx: #818cf8; }
+:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 2) { --fx: #c084fc; }
+:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 3) { --fx: #f472b6; }
+:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 4) { --fx: #38bdf8; }
+:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 5) { --fx: #fbbf24; }
+
+:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):not(:disabled):not([class*="destructive"]) > svg {
+  transition: color 0.2s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+}
+:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):not(:disabled):not([class*="destructive"]):hover > svg {
+  color: var(--fx);
+  transform: scale(1.14) rotate(-5deg);
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--fx) 55%, transparent));
+}
+[data-slot="button"]:is([data-variant="outline"], [data-variant="ghost"], [data-variant="secondary"]):not(:disabled):hover {
+  background: color-mix(in oklab, var(--fx) 13%, transparent);
+  border-color: color-mix(in oklab, var(--fx) 42%, transparent);
+}
+[data-slot="button"][data-variant="default"]:not(:disabled):hover {
+  box-shadow: 0 0 22px -4px color-mix(in oklab, var(--fx) 70%, transparent);
+}
+
+/* Anneau + éclats déclenchés au clic (voir components/click-fx.tsx). */
+.dc-fx-layer { position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; overflow: hidden; }
+.dc-fx-ring, .dc-fx-dot { position: absolute; border-radius: 9999px; will-change: transform, opacity; }
+.dc-fx-ring { border: 2px solid var(--c); }
+.dc-fx-dot { background: var(--c); box-shadow: 0 0 8px var(--c); }
+
+/* Fond animé du drive (version gratuite) : trois nappes qui dérivent lentement. */
+.dc-blob { position: absolute; border-radius: 9999px; filter: blur(80px); will-change: transform; }
+@keyframes dc-drift-a { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(8vw,6vh,0) scale(1.15); } }
+@keyframes dc-drift-b { 0%,100% { transform: translate3d(0,0,0) scale(1.1); } 50% { transform: translate3d(-9vw,-5vh,0) scale(0.9); } }
+@keyframes dc-drift-c { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-5vw,8vh,0) scale(1.2); } }
+@media (prefers-reduced-motion: reduce) {
+  .dc-blob, .dc-infinity { animation: none !important; }
+}
