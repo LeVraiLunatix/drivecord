@@ -28,6 +28,14 @@ export function UploadQueuePanel() {
   const clearFinished = useUploadQueue((s) => s.clearFinished);
   const [collapsed, setCollapsed] = React.useState(false);
 
+  // Everything went through: tidy the panel away after a few seconds (failures stay until dismissed).
+  const allDone = items.length > 0 && items.every((i) => i.status === "done");
+  React.useEffect(() => {
+    if (!allDone) return;
+    const t = setTimeout(clearFinished, 8000);
+    return () => clearTimeout(t);
+  }, [allDone, clearFinished]);
+
   if (items.length === 0) return null;
 
   const inProgress = items.filter(
