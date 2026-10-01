@@ -93,9 +93,8 @@ try {
   await page.locator("#webhook").fill(WEBHOOK);
   await page.getByRole("button", { name: /Valider & ouvrir/ }).click();
   await page.waitForURL(/\/drive/);
-  const wh = (await DB.query(`select "dkWrapped","e2eeVersion","encKey" from "Webhook" where "userId"='u_e2e'`)).rows[0];
+  const wh = (await DB.query(`select "dkWrapped","e2eeVersion" from "Webhook" where "userId"='u_e2e'`)).rows[0];
   ok(wh?.e2eeVersion === 1 && wh.dkWrapped?.startsWith("v1."), "drive created with a wrapped drive key (e2eeVersion 1)");
-  ok(wh.encKey === null, "server holds NO drive key");
 
   await page.getByRole("button", { name: "Upload" }).first().waitFor();
   // Dev-mode HMR may re-mount the page right after navigation and swallow an early `change`: retry until the upload starts.

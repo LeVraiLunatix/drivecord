@@ -130,13 +130,10 @@ model Webhook {
   driveId      String
   /// AES-256-GCM encrypted webhook URL (base64)
   encryptedUrl String
-  /// AES-256-GCM encrypted per-drive file key (base64) — null until set.
-  /// Encrypts all of this drive's regular (non-vault) file uploads.
-  encKey       String?
-  /// E2EE (phase 2): the drive key wrapped by the user's Master Key (`v1.<iv>.<ct>`).
-  /// The server cannot open it. Replaces `encKey`, which is nulled at migration.
+  /// E2EE: the drive key wrapped by the user's Master Key (`v1.<iv>.<ct>`).
+  /// The server cannot open it.
   dkWrapped    String?
-  /// 0 = legacy (server-held `encKey`), 1 = end-to-end (`dkWrapped`).
+  /// 0 = no drive key yet (finalized at the next unlock), 1 = end-to-end (`dkWrapped`).
   e2eeVersion  Int      @default(0)
   name         String
   channelId    String

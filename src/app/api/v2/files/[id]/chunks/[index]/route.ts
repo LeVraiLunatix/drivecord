@@ -20,7 +20,6 @@ export const GET = v2Route<{ id: string; index: string }>(
     if (!chunk) throw new ApiError(404, "not_found", "Morceau introuvable.");
     const r = await fetchAndDecryptFile({
       encryptedWebhookUrl: scope.webhook.encryptedUrl,
-      encKeyEncrypted: null,
       chunks: [chunk],
       encIv: null,
       locked: false,

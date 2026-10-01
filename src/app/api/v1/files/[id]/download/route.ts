@@ -30,12 +30,10 @@ export const GET = v1Route<{ id: string }>(
 
     const result = await fetchAndDecryptFile({
       encryptedWebhookUrl: auth.webhook.encryptedUrl,
-      encKeyEncrypted: auth.webhook.encKey,
       chunks: file.chunks as unknown as ChunkRef[],
       encIv: file.encIv,
       locked: file.locked,
       cryptoVersion: file.cryptoVersion,
-      e2eeVersion: auth.webhook.e2eeVersion,
     });
     if (!result.ok) throw new HttpError(result.status, result.error);
 
