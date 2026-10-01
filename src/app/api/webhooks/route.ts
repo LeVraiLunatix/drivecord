@@ -34,6 +34,9 @@ export async function GET() {
       name: r.name,
       channelId: r.channelId,
       guildId: r.guildId,
+      // Legacy server-held key: handed out only while the drive hasn't been migrated
+      // to end-to-end encryption (once, so the client can re-wrap it). Then it's gone.
+      encKey: r.e2eeVersion === 0 && r.encKey ? decryptUrl(r.encKey) : null,
       dkWrapped: r.dkWrapped,
       e2eeVersion: r.e2eeVersion,
       createdAt: r.createdAt.getTime(),
@@ -54,6 +57,8 @@ export async function POST(req: NextRequest) {
     name: string;
     channelId: string;
     guildId?: string;
+    /** LEGACY: base64 raw per-drive key, server-encrypted. Refused for E2EE accounts. */
+    encKey?: string;
     /** E2EE: the drive key wrapped by the user's Master Key (opaque to the server). */
     dkWrapped?: string;
   };
@@ -69,7 +74,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Clé de drive chiffrée invalide." }, { status: 400 });
   }
 
-  // The server never holds a drive key: an old client still sending `encKey` is ignored.
+  // Once an account uses end-to-end encryption the server must never hold a drive key:
+  // an old client still sending `encKey` is ignored rather than stored.
   const hasE2ee = Boolean(
     await prisma.userKeys.findUnique({ where: { userId: session.user.id }, select: { userId: true } }),
   );
@@ -78,14 +84,17 @@ export async function POST(req: NextRequest) {
     select: { e2eeVersion: true },
   });
   const encryptedUrl = encryptUrl(body.webhookUrl);
+  const legacyKey = body.encKey && !hasE2ee && (existing?.e2eeVersion ?? 0) === 0 ? encryptUrl(body.encKey) : undefined;
   // A drive key may be set only while the drive has none (finalize/rotate endpoints do later changes).
   const dkWrapped = body.dkWrapped && hasE2ee && !existing ? body.dkWrapped : undefined;
+  const encKey = legacyKey;
   const row = await prisma.webhook.upsert({
     where: { userId_driveId: { userId: session.user.id, driveId: body.driveId } },
     create: {
       userId: session.user.id,
       driveId: body.driveId,
       encryptedUrl,
+      encKey,
       ...(dkWrapped ? { dkWrapped, e2eeVersion: 1 } : {}),
       name: body.name,
       channelId: body.channelId,
@@ -93,6 +102,8 @@ export async function POST(req: NextRequest) {
     },
     update: {
       encryptedUrl,
+      // Only overwrite the key if the client actually sent one — never wipe it.
+      ...(encKey ? { encKey } : {}),
       name: body.name,
       channelId: body.channelId,
       guildId: body.guildId,

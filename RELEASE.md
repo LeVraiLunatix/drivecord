@@ -18,8 +18,8 @@ Everything below was implemented and tested on branch `claude/zealous-cannon-wk2
 - v1 API listing still exposes chunk references; v1 is deprecated (`Sunset: 30 Sep 2027`).
 - In third-party iframes (SDK embeds) browsers partition storage: users may have to re-enter their recovery key/phrase inside the iframe.
 
-## Phase 6 cleanup — branch `chore/e2ee-legacy-cleanup`
-Drops `Webhook.encKey` (migration `20261001120000_drop_webhook_enckey`, which itself refuses to run while any key remains), the server-side decrypt paths and `src/lib/crypto/file-server-crypto.ts`. Ship it only when `DATABASE_URL=… node scripts/e2ee-migration-status.mjs` prints READY (every drive migrated), otherwise unmigrated users' files become unreadable.
+## Phase 6 cleanup — only after you validate
+Drop `Webhook.encKey`, the legacy chunk-finalize path and `src/lib/crypto/file-server-crypto.ts` only when `DATABASE_URL=… node scripts/e2ee-migration-status.mjs` prints READY (every drive migrated). Doing it earlier would make unmigrated users' files unreadable, so it is intentionally NOT part of this release.
 
 ## Done in this release (highlights)
 - Real E2EE (names, folders, content), recovery key / passphrase / passkey / device approval, vault PIN never sent.

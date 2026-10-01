@@ -1,9 +1,11 @@
 /**
- * POST /api/drive/[driveId]/e2ee/finalize — migrate a keyless drive to end-to-end encryption.
+ * POST /api/drive/[driveId]/e2ee/finalize — migrate a legacy drive to end-to-end encryption.
  *
- * The client wraps a drive key with the user's Master Key and sends the wrapped blob. The server stores it, flips
- * `e2eeVersion` to 1. A drive created while the keyring was locked has no key yet:
- * the client generates one and finalizes it here.
+ * The client has fetched the old server-held key one last time, wrapped it with
+ * the user's Master Key, and sends the wrapped blob. The server stores it, flips
+ * `e2eeVersion` to 1 and DESTROYS its copy of the key (`encKey = null`).
+ * Old files stay readable: they were encrypted with that very key, now known
+ * to the client only.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ dri
 
   const { count } = await prisma.webhook.updateMany({
     where: { id: webhook.id, e2eeVersion: 0 },
-    data: { dkWrapped: body.dkWrapped, e2eeVersion: 1 },
+    data: { dkWrapped: body.dkWrapped, e2eeVersion: 1, encKey: null },
   });
   if (count !== 1) return NextResponse.json({ error: "Migration déjà effectuée." }, { status: 409 });
   return NextResponse.json({ ok: true, e2eeVersion: 1 });
