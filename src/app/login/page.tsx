@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
 import { isDesktopApp, isNativeApp } from "@/lib/use-platform";
 import { newNativeNonce } from "@/lib/auth/native-nonce";
+import { openNativeSignIn } from "@/lib/native-auth";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { AuthErrorNotice, useCordEnabled } from "@/components/auth/cord-account";
 import { CordHero, CordRedirecting, OtherMethods, startCordSignIn } from "@/components/auth/cord-hero";
@@ -113,9 +114,10 @@ function LoginContent() {
     rememberLoginMethod("passkey");
     // Dans l'app iPhone, la WebView ne peut pas utiliser les passkeys (l'app
     // réinstallée par AltStore ou CordLauncher n'a pas le domaine associé) :
-    // on passe par Safari, comme Google et Discord, puis retour via /native-handoff.
+    // on passe par la feuille de connexion du système (qui, elle, y a accès),
+    // comme Google et Discord, puis retour via /native-handoff.
     if (isNativeApp()) {
-      window.open(`${window.location.origin}/native-login?provider=passkey&n=${newNativeNonce()}`, "_system");
+      openNativeSignIn(`${window.location.origin}/native-login?provider=passkey&n=${newNativeNonce()}`);
       return;
     }
     setBusy(true);
