@@ -32,6 +32,8 @@ type Props = {
 /**
  * The "⋮" actions button for a file/folder. In the native iOS app it opens a
  * real Liquid Glass action sheet; on the web it falls back to the dropdown.
+ * Revealed on hover with a mouse; always visible on touch screens, which never
+ * hover (Tailwind v4 only applies `hover:` under `(hover: hover)`).
  */
 export function ItemMenuButton({ item, menu, name, onAction, className }: Props) {
   const [useNative, setUseNative] = React.useState(false);
@@ -42,7 +44,7 @@ export function ItemMenuButton({ item, menu, name, onAction, className }: Props)
       <Button
         size="icon"
         variant="ghost"
-        className={cn("size-7 opacity-0 transition-opacity group-hover:opacity-100", className)}
+        className={cn("size-7 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100", className)}
         onClick={async (e) => {
           e.stopPropagation();
           const action = await presentItemMenuNative(menu, name);
@@ -61,7 +63,7 @@ export function ItemMenuButton({ item, menu, name, onAction, className }: Props)
           size="icon"
           variant="ghost"
           className={cn(
-            "size-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100",
+            "size-7 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100 data-[state=open]:opacity-100",
             className,
           )}
           onClick={(e) => e.stopPropagation()}

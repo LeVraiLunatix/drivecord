@@ -7,6 +7,28 @@
   à chaque changement notable.
 -->
 
+## App iPhone : corrections
+
+📱 **Connexion et navigation**
+- La connexion avec Cord depuis l'app ouvre bien Safari à chaque fois (elle restait parfois bloquée sans rien faire).
+- La barre d'onglets n'apparaît plus par-dessus l'écran de connexion ni sur les étapes de vérification du compte.
+- Toucher « Fichiers » quand le coffre-fort ou les favoris sont ouverts ramène bien à tes fichiers.
+- Les menus du haut (drive, tri) ne bloquent plus les touches sous une fenêtre ouverte, après un défilement ou après un rechargement de la page.
+
+📸 **Pellicule et téléchargements**
+- Les grosses vidéos ne sont plus abandonnées au bout de 2 minutes d'envoi : seule une vraie panne de plus de 2 minutes arrête un média.
+- « Arrêter » interrompt tout de suite le média en cours.
+- Les vidéos rangées dans un album vont dans le bon sous-dossier, et un dossier de l'app Photos ne range plus toute la pellicule à son nom.
+- Un souci réseau au lancement ne relance plus l'envoi de toute la pellicule en double.
+- Les formats que Photos refuse (SVG, WebM, MKV…) sont enregistrés dans Fichiers › Drivecord au lieu d'échouer, sans écraser un fichier du même nom ; les gros fichiers ne font plus planter l'app.
+
+🔐 **Coffre-fort**
+- Face ID ne se relance plus en boucle, et n'ouvre plus le coffre-fort si sa clé n'est pas disponible (le code est alors demandé).
+
+🛠️ **Divers**
+- Prendre une photo ou une vidéo depuis l'envoi de fichiers ne fait plus planter l'app.
+- Le bouton ⋮ des fichiers est visible sur écran tactile.
+
 ## Drivecord 1.0 : chiffrement de bout en bout et API v2
 
 🔒 **Vrai chiffrement de bout en bout**

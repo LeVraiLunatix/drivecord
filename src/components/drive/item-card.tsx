@@ -240,7 +240,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
                     </div>
                   )}
                   {favorite && <Star className="absolute bottom-2 right-2 size-4 fill-amber-400 text-amber-400 drop-shadow" />}
-                  <div className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <div className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100">
                     <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} className="bg-background/70 backdrop-blur hover:bg-background/90" />
                   </div>
                 </div>
