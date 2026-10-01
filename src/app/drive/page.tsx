@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
+import { DriveBackdrop } from "@/components/drive/drive-backdrop";
 import { DriveSidebar } from "@/components/drive/sidebar";
 import { DriveNativeMenu } from "@/components/drive/native-menu";
 import { DriveTopbar } from "@/components/drive/topbar";
@@ -27,6 +28,7 @@ import { ColorPickerDialog } from "@/components/drive/color-picker-dialog";
 import { BulkDeleteDialog } from "@/components/drive/bulk-delete-dialog";
 import { BulkTagDialog } from "@/components/drive/bulk-tag-dialog";
 import { PreviewModal } from "@/components/drive/preview-modal";
+import { useAudioPlayer } from "@/lib/audio-player";
 import { UploadDropzone } from "@/components/drive/upload-dropzone";
 import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
@@ -183,6 +185,21 @@ function DriveContent() {
   const [colorTarget, setColorTarget] = React.useState<DriveItem | null>(null);
   const [shareTarget, setShareTarget] = React.useState<DriveItem | null>(null);
   const [previewFileId, setPreviewFileId] = React.useState<string | null>(null);
+
+  // Mini-lecteur → « retourner sur la page du lecteur » (demande en attente : fonctionne aussi
+  // quand on arrive depuis une autre page).
+  const audioOpenPending = useAudioPlayer((st) => st.pendingOpen);
+  React.useEffect(() => {
+    if (!audioOpenPending) return;
+    const st = useAudioPlayer.getState();
+    st.clearOpen();
+    const t = st.track;
+    if (t) {
+      if (t.driveId && t.driveId !== activeDriveId) selectDrive(t.driveId);
+      setPreviewFileId(t.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioOpenPending]);
   const [bulkDeleteItems, setBulkDeleteItems] = React.useState<DriveItem[]>([]);
   const [bulkMoveItems, setBulkMoveItems] = React.useState<DriveItem[]>([]);
   const [bulkTagItems, setBulkTagItems] = React.useState<DriveItem[]>([]);
@@ -563,7 +580,8 @@ function DriveContent() {
   if (!activeDrive) return null;
 
   return (
-    <div className="flex min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden">
+    <div className="isolate flex min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden">
+      <DriveBackdrop />
       <DriveSidebar
         section={section}
         onSectionChange={setSection}

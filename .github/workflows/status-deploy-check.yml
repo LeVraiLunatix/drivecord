@@ -1,0 +1,50 @@
+name: Status page checks
+
+# Lint, types, unit tests, production build and the end-to-end run of status/ on every PR that touches it.
+on:
+  pull_request:
+    paths:
+      - "status/**"
+      - ".github/workflows/status-deploy-check.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: status-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: status
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: status/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      # Production server against a fake Drivecord. The runner has Chrome installed, so the browser layer
+      # (light/dark, 1280 px and 390 px, console errors, overflow, tooltip + keyboard) runs too.
+      - name: End-to-end
+        run: npm run e2e
+        env:
+          E2E_CHROME: /usr/bin/google-chrome
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: status-screenshots
+          path: status/e2e/shots
+          if-no-files-found: ignore
+          retention-days: 7

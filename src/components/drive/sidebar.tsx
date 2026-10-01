@@ -121,9 +121,9 @@ function SidebarContent({
     <>
       <Link
         href="/"
-        className="flex items-center gap-2.5 px-1 py-1 text-base font-semibold tracking-tight"
+        className="group/logo flex items-center gap-2.5 px-1 py-1 text-base font-semibold tracking-tight"
       >
-        <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+        <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/30 transition-transform duration-300 group-hover/logo:rotate-[-8deg] group-hover/logo:scale-110">
           <CloudUpload className="size-4" />
         </span>
         drivecord
@@ -225,15 +225,41 @@ function SidebarContent({
         )}
       </nav>
 
-      <div className="space-y-1.5 px-1">
-        <div className="flex items-baseline justify-between text-xs text-muted-foreground">
-          <span><span className="text-sm font-medium tabular-nums text-foreground">{formatBytes(used)}</span> utilisés</span>
-          <span>{usage?.fileCount ?? 0} fichier{(usage?.fileCount ?? 0) > 1 ? "s" : ""}</span>
+      {/* Stockage illimité : pas de jauge, juste ce qu'on utilise. */}
+      <div className="group/storage relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-indigo-500/10 via-violet-500/5 to-fuchsia-500/10 p-3 transition-all duration-300 hover:border-violet-400/40 hover:shadow-[0_0_28px_-8px_rgba(168,85,247,0.5)]">
+        <div className="flex items-center gap-3">
+          <svg viewBox="0 0 64 32" className="h-7 w-14 shrink-0 overflow-visible" aria-hidden>
+            <defs>
+              <linearGradient id="dc-inf" x1="0" x2="1">
+                <stop offset="0" stopColor="#6366f1" />
+                <stop offset="0.5" stopColor="#a855f7" />
+                <stop offset="1" stopColor="#ec4899" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M32 16C26 6 8 6 8 16s18 10 24 0 24-10 24 0-18 10-24 0Z"
+              fill="none"
+              stroke="url(#dc-inf)"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              className="dc-infinity"
+              pathLength={100}
+            />
+          </svg>
+          <div className="min-w-0">
+            <p className="bg-gradient-to-r from-indigo-400 via-violet-400 to-fuchsia-400 bg-clip-text text-sm font-semibold leading-tight text-transparent">
+              Stockage illimité
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              <span className="font-medium tabular-nums text-foreground">{formatBytes(used)}</span>
+              {" · "}
+              {usage?.fileCount ?? 0} fichier{(usage?.fileCount ?? 0) > 1 ? "s" : ""}
+            </p>
+          </div>
         </div>
-        <div className="h-1 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary/70" style={{ width: `${Math.min(100, 4 + Math.log10(1 + used / 1024) * 12)}%` }} />
-        </div>
-        <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><Lock className="size-3" /> Chiffré · stockage illimité</p>
+        <p className="mt-2 flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+          <Lock className="size-3 transition-colors group-hover/storage:text-emerald-400" /> chiffré de bout en bout
+        </p>
       </div>
 
       {/* Camera-roll backup + install — just above the account.

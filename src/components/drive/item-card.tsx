@@ -176,7 +176,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       onDrop={handleDrop}
       data-item-id={item.id}
       className={cn(
-        "group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border/40 bg-card/40 p-3 transition-colors duration-150 hover:border-border hover:bg-card/70",
+        "group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border/40 bg-card/40 p-3 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-400/50 hover:bg-card/70 hover:shadow-[0_8px_30px_-10px_rgba(168,85,247,0.55)] active:scale-[0.97]",
         selected && "border-primary/60 bg-primary/5",
         dragOver &&
           "border-primary scale-[1.02] bg-primary/10 shadow-md ring-2 ring-primary/30",

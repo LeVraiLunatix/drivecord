@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { KeyRound, Loader2, Lock, RefreshCw, ShieldCheck } from "lucide-react";
+import { Copy, KeyRound, Loader2, Lock, RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,8 @@ import {
   trustThisDevice,
 } from "@/lib/e2ee-client/keyring";
 import { passkeysAvailable } from "@/lib/e2ee-client/passkey-prf";
+import { getDriveKeyMaterialById } from "@/lib/e2ee-client/drive-keys";
+import { driveKeyToHex } from "@/lib/e2ee-client/drive-key-export";
 import { convertFileToE2ee, listWholeDrive, needsConversion, rotateDriveKey, type RotationProgress } from "@/lib/e2ee-client/convert";
 import { RecoveryKeyDisplay } from "./recovery-key-display";
 import { useKeyring } from "./use-keyring";
@@ -195,8 +197,16 @@ function RecoveryKey() {
 function DriveCrypto({ drive }: { drive: Drive }) {
   const [progress, setProgress] = React.useState<string | null>(null);
   const [plainCount, setPlainCount] = React.useState<number | null>(null);
+  const [exportedKey, setExportedKey] = React.useState<string | null>(null);
   const { busy, run } = useAction();
   const e2ee = (drive.e2eeVersion ?? 0) >= 1;
+
+  // The key never stays on screen: it hides itself after a minute.
+  React.useEffect(() => {
+    if (!exportedKey) return;
+    const timer = setTimeout(() => setExportedKey(null), 60_000);
+    return () => clearTimeout(timer);
+  }, [exportedKey]);
   const client = React.useMemo(() => DiscordClient.fromUrl(drive.webhookUrl), [drive.webhookUrl]);
 
   const label = (p: RotationProgress) =>
@@ -249,11 +259,50 @@ function DriveCrypto({ drive }: { drive: Drive }) {
               void run(async () => {
                 await rotateDriveKey(client, drive.id, (p) => setProgress(label(p)));
                 setProgress(null);
+                setExportedKey(null);
               }, "Clé du drive renouvelée.");
             }}
           >
             Renouveler la clé
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              if (!confirm("Cette clé déchiffre tous les fichiers de ce drive. Ne la montre à personne et ne la colle que dans la configuration de ton propre serveur. Afficher la clé ?")) return;
+              void run(async () => setExportedKey(driveKeyToHex((await getDriveKeyMaterialById(drive.id)).raw)));
+            }}
+          >
+            <KeyRound className="size-3.5" /> Exporter la clé
+          </Button>
+        </div>
+      )}
+      {exportedKey && (
+        <div className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3" data-testid="exported-drive-key">
+          <p className="text-xs font-medium">Clé du drive « {drive.name} » : elle se masque toute seule dans une minute.</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 break-all rounded bg-background/60 px-2 py-1.5 font-mono text-[11px]">{exportedKey}</code>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-8 shrink-0"
+              aria-label="Copier la clé"
+              onClick={() => {
+                navigator.clipboard.writeText(exportedKey).then(
+                  () => toast.success("Copié."),
+                  () => toast.error("Impossible de copier : sélectionne la clé à la main."),
+                );
+              }}
+            >
+              <Copy className="size-4" />
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            À coller dans la variable <code>DRIVECORD_DRIVE_KEY</code> de ton serveur (64 caractères hexadécimaux, pour <code>@drivecord/node</code>).
+            Ce n&apos;est pas la clé de récupération. Si tu renouvelles la clé du drive, il faudra exporter la nouvelle.
+          </p>
+          <Button size="sm" variant="ghost" onClick={() => setExportedKey(null)}>Masquer</Button>
         </div>
       )}
       {progress && <p className="text-xs text-muted-foreground">{progress}</p>}

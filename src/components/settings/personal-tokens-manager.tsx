@@ -31,6 +31,21 @@ const SCOPES = [
   ["drive:share", "Partage"],
 ] as const;
 
+/** Pastille à bascule : remplace les cases à cocher et listes natives. */
+function Chip({ active, children, onClick, role }: { active: boolean; children: React.ReactNode; onClick: () => void; role: "radio" | "checkbox" }) {
+  return (
+    <button
+      type="button"
+      role={role}
+      aria-checked={active}
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-all active:scale-95 ${active ? "border-violet-400/60 bg-gradient-to-r from-indigo-500/25 to-fuchsia-500/25 text-foreground shadow-[0_0_16px_-6px_rgba(168,85,247,0.8)]" : "border-border/60 text-muted-foreground hover:border-violet-400/40 hover:text-foreground"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "jamais");
 
 /** API v2 personal access tokens: full-drive access (within their scopes), to the ciphertext only. */
@@ -115,24 +130,34 @@ export function PersonalTokensManager() {
             <Input id="pat-name" placeholder="ex. Sauvegarde nocturne" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pat-drive">Drive</Label>
-            <select id="pat-drive" className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={effectiveDrive} onChange={(e) => setDriveId(e.target.value)}>
-              {drives?.map((d) => <option key={d.driveId} value={d.driveId}>{d.name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {SCOPES.map(([key, label]) => (
-              <label key={key} className="flex items-center gap-1.5 text-sm">
-                <input type="checkbox" checked={Boolean(scopes[key])} onChange={(e) => setScopes((s) => ({ ...s, [key]: e.target.checked }))} />
-                {label}
-              </label>
-            ))}
+            <Label>Drive</Label>
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Drive">
+              {drives?.map((d) => (
+                <Chip key={d.driveId} active={effectiveDrive === d.driveId} role="radio" onClick={() => setDriveId(d.driveId)}>
+                  {d.name}
+                </Chip>
+              ))}
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pat-days">Expiration</Label>
-            <select id="pat-days" className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={days} onChange={(e) => setDays(e.target.value)}>
-              <option value="30">30 jours</option><option value="90">90 jours</option><option value="365">1 an</option><option value="never">Jamais</option>
-            </select>
+            <Label>Permissions</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {SCOPES.map(([key, label]) => (
+                <Chip key={key} active={Boolean(scopes[key])} role="checkbox" onClick={() => setScopes((v) => ({ ...v, [key]: !v[key] }))}>
+                  {label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Expiration</Label>
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Expiration">
+              {([["30", "30 jours"], ["90", "90 jours"], ["365", "1 an"], ["never", "Jamais"]] as const).map(([v, label]) => (
+                <Chip key={v} active={days === v} role="radio" onClick={() => setDays(v)}>
+                  {label}
+                </Chip>
+              ))}
+            </div>
           </div>
           <Button size="sm" onClick={create} disabled={busy || !name.trim() || !effectiveDrive || !Object.values(scopes).some(Boolean)}>
             {busy && <Loader2 className="size-4 animate-spin" />}

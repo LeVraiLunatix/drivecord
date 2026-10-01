@@ -22,6 +22,8 @@ import { useDiscordClient } from "@/lib/discord/context";
 import { RichTextPreview } from "@/components/drive/rich-text-preview";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 import { saveBlobWithToast } from "@/lib/native-save";
+import { useAudioPlayer } from "@/lib/audio-player";
+import { AudioStage } from "@/components/audio/audio-stage";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -214,7 +216,7 @@ export function PreviewModal({
     if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
     if (!file || !blobUrl) return;
     const k = kindOf(file.filename, file.mimeType);
-    if (k !== "audio" && k !== "video") return;
+    if (k !== "video") return;
     try {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: file.filename,
@@ -283,6 +285,9 @@ export function PreviewModal({
 
         const url = URL.createObjectURL(finalBlob);
         setBlobUrl(url);
+        if (kindOf(file.filename, file.mimeType) === "audio") {
+          useAudioPlayer.getState().load({ id: file.id, name: file.filename, driveId }, finalBlob);
+        }
 
         // ── MOV / QuickTime → pre-build mp4 fallback URL ──────────────────
         // On PC, Chrome may play video/quicktime directly via system codecs.
@@ -312,6 +317,21 @@ export function PreviewModal({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file?.id, client]);
+
+  // L'aperçu audio est ouvert → le mini-lecteur flottant se cache. Fin de morceau → suivant.
+  const audioKind = !!file && kindOf(file.filename, file.mimeType) === "audio";
+  React.useEffect(() => {
+    if (!audioKind) return;
+    useAudioPlayer.getState().setStageOpen(true);
+    return () => useAudioPlayer.getState().setStageOpen(false);
+  }, [audioKind]);
+  const endedTick = useAudioPlayer((st) => st.endedTick);
+  const lastEnded = React.useRef(endedTick);
+  React.useEffect(() => {
+    if (endedTick === lastEnded.current) return;
+    lastEnded.current = endedTick;
+    if (audioKind && hasNext) goNext();
+  }, [endedTick, audioKind, hasNext, goNext]);
 
   // Revoke blob URLs on unmount
   React.useEffect(() => {
@@ -450,22 +470,10 @@ export function PreviewModal({
           />
         )}
 
-        {/* Audio */}
-        {loadState === "done" && kind === "audio" && blobUrl && (
-          <div className="flex flex-col items-center gap-6">
-            <div className="flex size-20 items-center justify-center rounded-3xl bg-white/10 sm:size-24">
-              <Music className="size-9 text-white/60 sm:size-10" />
-            </div>
-            <p className="max-w-xs truncate text-center text-sm text-white/70">
-              {file?.filename}
-            </p>
-            <audio
-              key={blobUrl}
-              src={blobUrl}
-              controls
-              autoPlay
-              className="w-[min(20rem,calc(100vw-3rem))]"
-            />
+        {/* Audio — le son est porté par le lecteur global : il continue à la fermeture */}
+        {loadState === "done" && kind === "audio" && blobUrl && file && (
+          <div className="max-h-full overflow-x-visible overflow-y-auto px-14 py-14 -mx-14 -my-14">
+            <AudioStage name={file.filename} onPrev={hasPrev ? goPrev : undefined} onNext={hasNext ? goNext : undefined} />
           </div>
         )}
 

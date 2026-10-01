@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { mutate } from "swr";
 import { CircleCheckBig, Loader2, CloudUpload } from "lucide-react";
@@ -17,8 +16,13 @@ import { unregisterNativePush } from "@/components/native-push-register";
  * Auth.js), puis affiche une confirmation. Idempotente : y arriver directement
  * déconnecte aussi.
  */
+/**
+ * Full page load, not a client-side navigation: the Auth.js session held in memory by this tab (and the
+ * router cache) still describes the signed-in user, which made the home page redirect straight back to /drive.
+ */
+const leave = (to: string) => window.location.assign(to);
+
 export default function LogoutPage() {
-  const router = useRouter();
   const [done, setDone] = React.useState(false);
   const ranRef = React.useRef(false);
 
@@ -31,6 +35,13 @@ export default function LogoutPage() {
       // iPhone app: stop this device getting the old account's login pushes.
       await unregisterNativePush();
       await signOut({ redirect: false }).catch(() => {});
+      // Prove the session is really gone before offering to leave: if the cookie survived (failed signOut,
+      // stale tab), try once more so "Retour à l'accueil" can never bounce back into the drive.
+      const alive = await fetch("/api/auth/session", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((j) => Boolean(j && Object.keys(j).length))
+        .catch(() => false);
+      if (alive) await signOut({ redirect: false }).catch(() => {});
       setDone(true);
     })();
   }, []);
@@ -60,13 +71,13 @@ export default function LogoutPage() {
                   </p>
                 </div>
                 <div className="flex w-full flex-col gap-2 pt-2">
-                  <Button className="w-full" onClick={() => router.push("/login")}>
+                  <Button className="w-full" onClick={() => leave("/login")}>
                     Se reconnecter
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => router.push("/")}
+                    onClick={() => leave("/")}
                   >
                     Retour à l&apos;accueil
                   </Button>

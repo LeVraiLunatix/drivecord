@@ -1,11 +1,12 @@
 "use client";
 import { CordAccountCard } from "@/components/auth/cord-account";
+import { STATUS_URL } from "@/lib/status-url";
 
 import * as React from "react";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
 import { useTheme } from "next-themes";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import {
   User,
@@ -29,6 +30,7 @@ import {
   ShieldCheck,
   LogOut,
   Share2,
+  Activity,
   ChevronRight,
   Crown,
   RefreshCw,
@@ -37,6 +39,7 @@ import {
   Sparkles,
   Star,
   Lock,
+  Search,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -49,6 +52,8 @@ import { PasskeyManager } from "@/components/auth/passkey-manager";
 import { TwoFactorManager } from "@/components/auth/two-factor-manager";
 import { TrustedDevicesManager } from "@/components/auth/trusted-devices-manager";
 import { ApiKeysManager } from "@/components/settings/api-keys-manager";
+import { ThemeStudio } from "@/components/settings/theme-studio";
+import { DriveBackdrop } from "@/components/drive/drive-backdrop";
 import { PersonalTokensManager } from "@/components/settings/personal-tokens-manager";
 import { EncryptionSettings } from "@/components/e2ee/encryption-settings";
 import { ConnectedApps } from "@/components/settings/connected-apps";
@@ -78,7 +83,6 @@ import {
   type Drive,
 } from "@/lib/storage";
 import { removeWebhookFromServer } from "@/lib/auth/sync";
-import { Masonry, useResponsiveColumns } from "@/components/masonry";
 
 type Account = {
   name: string | null;
@@ -96,22 +100,24 @@ type Account = {
 };
 
 
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
-};
-const item: Variants = {
-  hidden: { opacity: 0, y: 18, filter: "blur(4px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
+type GroupId = "profil" | "securite" | "drives" | "dev" | "apparence" | "admin" | "session";
+
+type Group = {
+  id: GroupId;
+  label: string;
+  hint: string;
+  icon: typeof User;
+  /** Dégradé de la pastille (grisée au repos, en couleur au survol / actif). */
+  tint: string;
+  keywords: string;
+  render: () => React.ReactNode;
 };
 
 export default function SettingsPage() {
   const reduce = useReducedMotion();
-  const v = reduce ? {} : undefined;
   const { data: account, mutate } = useSWR<Account>("/api/account", fetcher, {
     revalidateOnFocus: false,
   });
-  const columns = useResponsiveColumns();
 
   // Back from Cord (Auth.js redirect): confirm the link, or show why it failed.
   // (Only rendered once /api/account has loaded client-side: no hydration mismatch.)
@@ -125,77 +131,303 @@ export default function SettingsPage() {
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
-  const sections = [
-    <motion.div key="profile" variants={v ?? item}>
-      <ProfileSection account={account} onUpdate={mutate} />
-    </motion.div>,
-    <motion.div key="cord-account" variants={v ?? item}>
-      <CordAccountCard account={account} onUpdate={() => void mutate()} error={cordError} />
-    </motion.div>,
-    <motion.div key="security" variants={v ?? item}>
-      <SecuritySection account={account} onUpdate={mutate} />
-    </motion.div>,
-    <motion.div key="encryption" variants={v ?? item}>
-      <EncryptionSettings />
-    </motion.div>,
-    <motion.div key="drives" variants={v ?? item}>
-      <DrivesSection />
-    </motion.div>,
-    <motion.div key="connected-apps" variants={v ?? item}>
-      <ConnectedApps />
-    </motion.div>,
-    <motion.div key="api-keys" variants={v ?? item}>
-      <ApiKeysSection />
-    </motion.div>,
-    <motion.div key="personal-tokens" variants={v ?? item}>
-      <Card>
-        <CardContent className="pt-6">
-          <PersonalTokensManager />
-        </CardContent>
-      </Card>
-    </motion.div>,
-    ...(account?.isAdmin
-      ? [
-          <motion.div key="admin" variants={v ?? item}>
-            <AdminSection />
-          </motion.div>,
-        ]
-      : []),
-    <motion.div key="patreon" variants={v ?? item}>
-      <PatreonSection />
-    </motion.div>,
-    <motion.div key="preferences" variants={v ?? item}>
-      <PreferencesSection />
-    </motion.div>,
-    <motion.div key="account-links" variants={v ?? item}>
-      <AccountLinksSection />
-    </motion.div>,
-    <motion.div key="danger" variants={v ?? item}>
-      <DangerSection />
-    </motion.div>,
-  ];
+  const groups: Group[] = React.useMemo(
+    () => [
+      {
+        id: "profil",
+        label: "Profil",
+        hint: "Nom, avatar, Compte Cord",
+        icon: User,
+        tint: "from-indigo-500 to-sky-500",
+        keywords: "profil nom avatar email photo cord compte",
+        render: () => (
+          <>
+            <ProfileSection account={account} onUpdate={mutate} />
+            <CordAccountCard account={account} onUpdate={() => void mutate()} error={cordError} />
+          </>
+        ),
+      },
+      {
+        id: "securite",
+        label: "Sécurité",
+        hint: "Mot de passe, 2FA, passkeys, chiffrement",
+        icon: ShieldCheck,
+        tint: "from-emerald-500 to-teal-500",
+        keywords:
+          "sécurité securite mot de passe 2fa double authentification passkey clé récupération chiffrement e2ee appareils",
+        render: () => (
+          <>
+            <SecuritySection account={account} onUpdate={mutate} />
+            <EncryptionSettings />
+          </>
+        ),
+      },
+      {
+        id: "drives",
+        label: "Drives",
+        hint: "Tes drives et leurs webhooks",
+        icon: HardDrive,
+        tint: "from-amber-500 to-orange-500",
+        keywords: "drive drives webhook stockage discord renommer supprimer",
+        render: () => <DrivesSection />,
+      },
+      {
+        id: "dev",
+        label: "Développeurs",
+        hint: "Apps connectées, clés API, jetons",
+        icon: KeyRound,
+        tint: "from-violet-500 to-fuchsia-500",
+        keywords: "api clé clés jeton jetons token oauth applications connectées développeur sdk",
+        render: () => (
+          <>
+            <ConnectedApps />
+            <ApiKeysSection />
+            <Card>
+              <CardContent className="pt-6">
+                <PersonalTokensManager />
+              </CardContent>
+            </Card>
+          </>
+        ),
+      },
+      {
+        id: "apparence",
+        label: "Apparence & Patreon",
+        hint: "Thèmes, vue par défaut, abonnement",
+        icon: Palette,
+        tint: "from-pink-500 to-rose-500",
+        keywords:
+          "apparence thème theme sombre clair aurora or nocturne vue grille liste patreon abonnement palier gold premium vip",
+        render: () => (
+          <>
+            <ThemeStudio />
+            <PreferencesSection />
+            <PatreonSection />
+          </>
+        ),
+      },
+      ...(account?.isAdmin
+        ? [
+            {
+              id: "admin" as const,
+              label: "Administration",
+              hint: "Outils réservés aux admins",
+              icon: ShieldAlert,
+              tint: "from-red-500 to-orange-500",
+              keywords: "admin administration modération utilisateurs annonces",
+              render: () => <AdminSection />,
+            },
+          ]
+        : []),
+      {
+        id: "session",
+        label: "Session & compte",
+        hint: "Déconnexion, zone sensible",
+        icon: LogOut,
+        tint: "from-slate-500 to-zinc-500",
+        keywords: "session déconnexion deconnecter supprimer compte danger liens",
+        render: () => (
+          <>
+            <AccountLinksSection />
+            <DangerSection />
+          </>
+        ),
+      },
+    ],
+    [account, mutate, cordError],
+  );
+
+  const [active, setActive] = React.useState<GroupId>("profil");
+  const [query, setQuery] = React.useState("");
+  const searchRef = React.useRef<HTMLInputElement>(null);
+
+  // Lien profond : /settings#securite
+  React.useEffect(() => {
+    const h = window.location.hash.slice(1) as GroupId;
+    if (h && groups.some((g) => g.id === h)) setActive(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const select = (id: GroupId) => {
+    setActive(id);
+    setQuery("");
+    window.history.replaceState(null, "", `#${id}`);
+  };
+
+  // "/" focalise la recherche.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName ?? "") && !t?.isContentEditable) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const q = query.trim().toLowerCase();
+  const shown = q
+    ? groups.filter((g) => (g.label + " " + g.hint + " " + g.keywords).toLowerCase().includes(q))
+    : groups.filter((g) => g.id === active);
+  const { tier } = useTier();
+  const memberSince = account?.createdAt
+    ? new Date(account.createdAt).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+    : null;
+  const initial = (account?.name ?? account?.email ?? "?").charAt(0).toUpperCase();
 
   return (
-    <motion.div
-      variants={v ?? container}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 tabbar-pad px-5 pb-20 sm:max-w-4xl sm:px-6 xl:max-w-6xl"
+    <div
+      className="relative isolate mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col gap-5 tabbar-pad px-4 pb-20 sm:px-6"
       style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
     >
-      <motion.div variants={v ?? item}>
-        <BackButton fallback="/drive" className="w-fit" />
-      </motion.div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.18),transparent_65%)]"
+      />
+      <DriveBackdrop />
+      <BackButton fallback="/drive" className="w-fit" />
 
-      <motion.header variants={v ?? item} className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
-        <p className="text-sm text-muted-foreground">Gère ton compte, tes drives et tes préférences.</p>
+      {/* ── En-tête : carte d'identité + recherche ─────────────────────────── */}
+      <motion.header
+        initial={reduce ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-fuchsia-500/15 p-5 sm:p-6"
+      >
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-48 rounded-full bg-fuchsia-500/20 blur-3xl" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            {account?.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={account.image} alt="" className="size-16 rounded-2xl object-cover ring-2 ring-white/20" />
+            ) : (
+              <div className="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-2xl font-bold text-white shadow-lg shadow-fuchsia-500/30">
+                {initial}
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">
+                <span className="truncate">{account?.name ?? "Paramètres"}</span>
+                <TierBadge tier={tier} />
+              </h1>
+              <p className="truncate text-sm text-muted-foreground">
+                {account?.email ?? "Chargement…"}
+                {memberSince && <span className="hidden sm:inline"> · membre depuis {memberSince}</span>}
+              </p>
+            </div>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Chercher un réglage…"
+              aria-label="Chercher un réglage"
+              className="h-10 rounded-xl border-border/60 bg-background/60 pl-9 pr-9 backdrop-blur"
+            />
+            {query ? (
+              <button
+                onClick={() => setQuery("")}
+                aria-label="Effacer"
+                className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            ) : (
+              <kbd className="pointer-events-none absolute right-2.5 top-1/2 z-10 hidden -translate-y-1/2 rounded border border-border/60 px-1.5 text-[10px] text-muted-foreground sm:block">
+                /
+              </kbd>
+            )}
+          </div>
+        </div>
       </motion.header>
 
-      <Masonry columns={columns} gap={24}>
-        {sections}
-      </Masonry>
-    </motion.div>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        {/* ── Navigation : colonne (desktop) / pastilles défilantes (mobile) ── */}
+        <nav
+          aria-label="Catégories de réglages"
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:sticky lg:top-6 lg:mx-0 lg:w-64 lg:shrink-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0"
+        >
+          {groups.map((g) => {
+            const on = !q && g.id === active;
+            const dim = q && !shown.some((x) => x.id === g.id);
+            const Icon = g.icon;
+            return (
+              <button
+                key={g.id}
+                onClick={() => select(g.id)}
+                aria-current={on ? "page" : undefined}
+                className={cn(
+                  "group/nav relative flex shrink-0 items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all duration-200 active:scale-[0.97] lg:w-full",
+                  on ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                  dim && "opacity-35",
+                )}
+              >
+                {on && (
+                  <motion.span
+                    layoutId="settings-active"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    className="absolute inset-0 rounded-2xl border border-violet-400/30 bg-gradient-to-r from-indigo-500/15 via-violet-500/10 to-fuchsia-500/15 shadow-[0_0_30px_-12px_rgba(168,85,247,0.7)]"
+                  />
+                )}
+                <span
+                  className={cn(
+                    "relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white transition-all duration-300",
+                    g.tint,
+                    on
+                      ? "shadow-lg"
+                      : "scale-95 opacity-60 grayscale group-hover/nav:scale-105 group-hover/nav:opacity-100 group-hover/nav:grayscale-0",
+                  )}
+                >
+                  <Icon className="size-[18px]" />
+                </span>
+                <span className="relative min-w-0">
+                  <span className="block text-sm font-medium leading-tight">{g.label}</span>
+                  <span className="hidden text-[11px] leading-tight text-muted-foreground lg:block">{g.hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* ── Contenu ───────────────────────────────────────────────────────── */}
+        <main className="min-w-0 flex-1">
+          {q && shown.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-border/60 px-6 py-14 text-center">
+              <Search className="mx-auto mb-3 size-8 text-muted-foreground/50" />
+              <p className="text-sm font-medium">Aucun réglage pour « {query} »</p>
+              <p className="mt-1 text-xs text-muted-foreground">Essaie « mot de passe », « thème », « jeton »…</p>
+            </div>
+          )}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={q ? "search" : active}
+              initial={reduce ? false : { opacity: 0, y: 12, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={reduce ? undefined : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col gap-5"
+            >
+              {shown.map((g) => (
+                <section key={g.id} aria-labelledby={`g-${g.id}`} className="flex flex-col gap-4">
+                  {q && (
+                    <h2 id={`g-${g.id}`} className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                      <span className={cn("flex size-5 items-center justify-center rounded-md bg-gradient-to-br text-white", g.tint)}>
+                        <g.icon className="size-3" />
+                      </span>
+                      {g.label}
+                    </h2>
+                  )}
+                  {g.render()}
+                </section>
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+    </div>
   );
 }
 
@@ -218,6 +450,20 @@ function AccountLinksSection() {
           </div>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         </button>
+
+        <a
+          href={STATUS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition hover:bg-accent/60"
+        >
+          <Activity className="size-5 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Statut</p>
+            <p className="text-xs text-muted-foreground">État des services, incidents et nouveautés</p>
+          </div>
+          <ExternalLink className="size-4 shrink-0 text-muted-foreground" />
+        </a>
 
         <button
           type="button"
