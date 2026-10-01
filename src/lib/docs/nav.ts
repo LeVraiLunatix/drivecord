@@ -67,7 +67,7 @@ export const docsNav: DocSection[] = [
     title: "Technique & self-host",
     icon: Settings,
     items: [
-      { title: "Comment marche le stockage", href: "/docs/technique/fonctionnement" },
+      { title: "Comment marche le stockage", href: "/docs/technique/fonctionnement", ready: true },
       { title: "Architecture & stack", href: "/docs/technique/architecture" },
       { title: "API v2", href: "/docs/technique/api-v2", ready: true },
       { title: "Applications & OAuth", href: "/docs/technique/applications", ready: true },
