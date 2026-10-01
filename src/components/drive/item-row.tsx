@@ -150,7 +150,7 @@ export const DriveItemRow = React.memo(function DriveItemRow({
         dragOver && "bg-primary/10 ring-1 ring-inset ring-primary/40",
       )}
     >
-      <ContextMenu>
+      <ContextMenu modal={false}>
         <ContextMenuTrigger asChild>
           <div
             role="button"

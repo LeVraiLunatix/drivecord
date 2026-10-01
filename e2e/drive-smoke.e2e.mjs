@@ -137,6 +137,54 @@ try {
     if (await restore.count()) { await restore.first().click(); await page.waitForTimeout(1000); } else note("no Restaurer in trash menu");
   }
   console.log("  trash text:", (await page.locator("main").innerText()).replace(/\s+/g, " ").slice(0, 200));
+  step("rename / favorite / list view");
+  await page.getByText("Tous les fichiers", { exact: true }).first().click();
+  await page.getByText("Mon drive", { exact: true }).first().click();
+  await page.waitForTimeout(1000);
+  await page.getByText(/^\d+ éléments? ·/).first().dblclick();
+  await page.getByText("notes.txt").first().waitFor();
+  await page.getByText("notes.txt").first().click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Renommer" }).click();
+  await page.getByRole("textbox").last().fill("notes-v2.txt");
+  await page.keyboard.press("Enter");
+  await page.getByText("notes-v2.txt").first().waitFor().catch(() => note("rename did not show the new name"));
+  await page.waitForTimeout(1200);
+  console.log("  body pointer-events:", await page.evaluate(() => document.body.style.pointerEvents + "|" + document.body.getAttribute("data-scroll-locked") + "|" + document.querySelectorAll("[data-radix-focus-guard]").length));
+  const t0 = Date.now();
+  const r = await Promise.race([page.evaluate(() => new Promise((res) => requestAnimationFrame(() => res("raf ok")))), new Promise((res) => setTimeout(() => res("raf BLOCKED"), 5000))]);
+  console.log("  main thread:", r, Date.now() - t0, "ms");
+  await shot(page, "dbg-before-rc");
+  await page.getByText("notes-v2.txt").first().click({ button: "right", timeout: 8000, force: true }).catch(async (e) => { console.log("  rc fail:", e.message.split("\n").slice(0, 8).join(" ")); });
+  console.log("  menu:", (await page.getByRole("menuitem").allInnerTexts()).join("|"));
+  await page.getByRole("menuitem", { name: /Mettre en favori/ }).click({ timeout: 5000 });
+  await page.waitForTimeout(800);
+  console.log("  fav toast/state:", (await page.locator("[data-sonner-toast]").allInnerTexts()).join("|"));
+  await page.getByRole("button", { name: "Favoris" }).or(page.getByRole("link", { name: "Favoris" })).first().click();
+  await page.waitForTimeout(1200);
+  if (!(await page.getByText("notes-v2.txt").count())) note("favorite not listed in Favoris");
+  await shot(page, "11-favorites");
+  await page.getByText("Tous les fichiers", { exact: true }).first().click();
+  await page.waitForTimeout(800);
+  await page.getByLabel(/liste/i).first().click().catch(() => {});
+  await page.waitForTimeout(600);
+  await shot(page, "12-list");
+
+  step("other pages");
+  for (const [path, name] of [["/settings", "settings"], ["/stats", "stats"], ["/shares", "shares"], ["/backup", "backup"], ["/install", "install"]]) {
+    await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2500);
+    await shot(page, `p-${name}`);
+  }
+  step("light theme + landing");
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(`${BASE}/drive`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(2500);
+  await shot(page, "13-light");
+  const anon = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const lp = await anon.newPage();
+  await lp.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+  await lp.waitForTimeout(2500);
+  await lp.screenshot({ path: "/tmp/drive-landing.png" });
   console.log("  body text sample:", (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 300));
 } catch (e) {
   note(`ABORT: ${e.message.split("\n")[0]}`);

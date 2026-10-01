@@ -55,7 +55,7 @@ export function ItemMenuButton({ item, menu, name, onAction, className }: Props)
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           size="icon"

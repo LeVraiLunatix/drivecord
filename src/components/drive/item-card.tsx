@@ -193,7 +193,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
           {selected && <Check className="size-3" />}
         </div>
       )}
-      <ContextMenu>
+      <ContextMenu modal={false}>
         <ContextMenuTrigger asChild>
           <div
             role="button"

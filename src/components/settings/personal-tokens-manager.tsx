@@ -82,7 +82,7 @@ export function PersonalTokensManager() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <KeyRound className="size-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Jetons personnels (API v2)</h3>
+          <h3 className="text-sm font-medium">Jetons personnels</h3>
         </div>
         <Button size="sm" variant="outline" onClick={() => setOpen((v) => !v)} disabled={!drives?.length}>
           <Plus className="size-4" />
