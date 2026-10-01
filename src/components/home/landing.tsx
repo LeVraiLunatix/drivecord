@@ -527,10 +527,6 @@ export function Landing() {
         {/* ── Hero ── */}
         <section className="relative flex flex-col items-center justify-center px-5 pb-20 pt-14 text-center sm:pt-24">
           <motion.div variants={v ?? container} initial="hidden" animate="show" className="flex flex-col items-center gap-6">
-            <motion.div variants={v ?? item}>
-              <StatusLink />
-            </motion.div>
-
             <motion.h1 variants={v ?? item} className="max-w-4xl text-balance text-[2.6rem] font-bold leading-[1.05] tracking-tight sm:text-7xl">
               Ton cloud <GradientText>illimité</GradientText>,<br className="hidden sm:block" /> propulsé par Discord.
             </motion.h1>
