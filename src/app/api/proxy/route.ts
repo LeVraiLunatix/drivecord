@@ -88,6 +88,19 @@ export async function GET(req: Request): Promise<Response> {
     respHeaders.set("accept-ranges", "bytes");
   }
 
+  // A signed CDN URL always serves the same bytes (and they are ciphertext for
+  // encrypted drives), so let Vercel's CDN and the browser reuse them: repeated
+  // previews / range requests then stop costing Fast Origin Transfer. Errors
+  // (expired URL → 403/404) must never be cached.
+  if (upstream.status === 200 || upstream.status === 206) {
+    respHeaders.set(
+      "cache-control",
+      "public, max-age=86400, s-maxage=86400, immutable",
+    );
+  } else {
+    respHeaders.set("cache-control", "no-store");
+  }
+
   return new Response(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
