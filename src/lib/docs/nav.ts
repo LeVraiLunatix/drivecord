@@ -60,6 +60,7 @@ export const docsNav: DocSection[] = [
       { title: "Ce que Discord voit", href: "/docs/securite/confidentialite", ready: true },
       { title: "Comptes & connexion", href: "/docs/securite/comptes", ready: true },
       { title: "Bonnes pratiques", href: "/docs/securite/bonnes-pratiques", ready: true },
+      { title: "Modèle de menace", href: "/docs/securite/modele-de-menace", ready: true },
     ],
   },
   {
@@ -68,7 +69,10 @@ export const docsNav: DocSection[] = [
     items: [
       { title: "Comment marche le stockage", href: "/docs/technique/fonctionnement" },
       { title: "Architecture & stack", href: "/docs/technique/architecture" },
-      { title: "API publique", href: "/docs/technique/api", ready: true },
+      { title: "API v2", href: "/docs/technique/api-v2", ready: true },
+      { title: "Applications & OAuth", href: "/docs/technique/applications", ready: true },
+      { title: "SDK & iframe", href: "/docs/technique/sdk", ready: true },
+      { title: "API v1 (dépréciée)", href: "/docs/technique/api", ready: true },
       { title: "Auto-hébergement", href: "/docs/technique/auto-hebergement" },
       { title: "Variables d'environnement", href: "/docs/technique/configuration" },
     ],

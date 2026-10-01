@@ -17,6 +17,10 @@ export default function Page() {
       title="API publique"
       lead="Une clé API te permet d'uploader, lister, télécharger et supprimer des fichiers d'un drive directement depuis le serveur d'un autre site — sans passer par cette interface."
     >
+      <Callout variant="warning" title="API dépréciée">
+        La v1 est gelée et sera retirée le 30 septembre 2027. Utilise l&apos;<a href="/docs/technique/api-v2">API v2</a> (chiffrée de bout en bout).
+      </Callout>
+
       <DocH2>Créer une clé</DocH2>
       <p>
         Dans <strong>Réglages → API pour développeurs</strong>, choisis le
