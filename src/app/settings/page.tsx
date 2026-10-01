@@ -1,5 +1,6 @@
 "use client";
 import { CordAccountCard } from "@/components/auth/cord-account";
+import { STATUS_URL } from "@/lib/status-url";
 
 import * as React from "react";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
@@ -29,6 +30,7 @@ import {
   ShieldCheck,
   LogOut,
   Share2,
+  Activity,
   ChevronRight,
   Crown,
   RefreshCw,
@@ -448,6 +450,20 @@ function AccountLinksSection() {
           </div>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         </button>
+
+        <a
+          href={STATUS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition hover:bg-accent/60"
+        >
+          <Activity className="size-5 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Statut</p>
+            <p className="text-xs text-muted-foreground">État des services, incidents et nouveautés</p>
+          </div>
+          <ExternalLink className="size-4 shrink-0 text-muted-foreground" />
+        </a>
 
         <button
           type="button"
