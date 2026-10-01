@@ -2,37 +2,27 @@
 
 import * as React from "react";
 import { isNativeApp } from "@/lib/use-platform";
-import { takeNativeNonce } from "@/lib/auth/native-nonce";
+import { completeNativeSignIn, listenNativeSignIn } from "@/lib/native-auth";
 
 /**
- * Listens for the app being opened via the drivecord:// custom URL scheme.
- * When the OAuth handoff returns drivecord://auth?code=XXX, navigate the
- * WebView to the exchange endpoint, which sets the in-app session cookie.
+ * Brings a sign-in started from the app back into its WebView:
+ *  - current builds: the system sign-in sheet hands drivecord://auth?code=…
+ *    to `window.__drivecordAuthCallback`;
+ *  - older builds: Safari opens the drivecord:// custom URL scheme
+ *    (`appUrlOpen`).
+ * Either way the code is exchanged for the in-app session cookie.
  */
 export function NativeDeepLink() {
   React.useEffect(() => {
     if (!isNativeApp()) return;
+    const stopSheet = listenNativeSignIn();
     let cleanup: (() => void) | undefined;
 
     (async () => {
       try {
         const { App } = await import("@capacitor/app");
-        const handle = await App.addListener("appUrlOpen", async (data: { url: string }) => {
-          try {
-            const u = new URL(data.url);
-            // drivecord://auth?code=XXX  → host "auth"
-            if (u.protocol.replace(":", "") === "drivecord" && u.host === "auth") {
-              const code = u.searchParams.get("code");
-              if (code) {
-                // The nonce this app kept when it opened Safari: without it the
-                // server refuses the code (a link replayed by another app).
-                const n = await takeNativeNonce(code);
-                window.location.href = `/api/native-auth/exchange?${new URLSearchParams({ code, n: n ?? "" })}`;
-              }
-            }
-          } catch {
-            /* ignore malformed URLs */
-          }
+        const handle = await App.addListener("appUrlOpen", (data: { url: string }) => {
+          void completeNativeSignIn(data.url);
         });
         cleanup = () => handle.remove();
       } catch {
@@ -40,7 +30,10 @@ export function NativeDeepLink() {
       }
     })();
 
-    return () => cleanup?.();
+    return () => {
+      stopSheet();
+      cleanup?.();
+    };
   }, []);
 
   return null;

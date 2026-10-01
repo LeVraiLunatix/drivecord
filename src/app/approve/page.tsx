@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OtpInput } from "@/components/auth/otp-input";
+import { CordPushHint } from "@/components/auth/cord-push-hint";
 
 /**
  * Onglet « Approuver une connexion ».
@@ -112,6 +113,10 @@ export default function ApprovePage() {
           )}
         </CardContent>
       </Card>
+
+      <div className="mt-4">
+        <CordPushHint />
+      </div>
     </div>
   );
 }

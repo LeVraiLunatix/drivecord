@@ -7,6 +7,12 @@
   à chaque changement notable.
 -->
 
+## App iPhone : connexion sans quitter l'app
+
+🔐 **Connexion dans l'app** : Cord, Google, Discord et passkey s'ouvrent maintenant dans la fenêtre de connexion d'iOS, par-dessus l'app (« Drivecord souhaite utiliser drivecord.app pour se connecter »), au lieu de basculer dans Safari. Tu restes dans Drivecord du début à la fin.
+
+🔔 **Demandes de connexion, même app fermée** : elles arrivent aussi en notification via ton Compte Cord. Pour ça : ouvre compte.cordsuite.app dans Safari, Partager → Sur l'écran d'accueil, puis active les notifications dans le Compte Cord. Le détail est dans l'onglet « Approuver ».
+
 ## App iPhone : encore des corrections
 
 📶 **Sans réseau** : ouvrir l'app hors connexion affichait un écran noir pour de bon. Un écran « Pas de connexion » s'affiche maintenant, et l'app se recharge toute seule dès que le réseau revient.

@@ -1,6 +1,7 @@
 import UIKit
 import WebKit
 import AVFoundation
+import AuthenticationServices
 import Network
 import Capacitor
 
@@ -57,6 +58,8 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         controller.add(proxy, name: "nativeAnchorMenu")
         // Signals each new document (full load / reload), see handleDocumentStart.
         controller.add(proxy, name: "nativeShell")
+        // Sign-in in the in-app system sheet instead of leaving for Safari.
+        controller.add(proxy, name: "nativeAuth")
         controller.addUserScript(WKUserScript(
             source: "window.webkit.messageHandlers.nativeShell.postMessage('documentStart')",
             injectionTime: .atDocumentStart,
@@ -249,6 +252,8 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
             handleMenuMessage(message.body)
         case "nativeAnchorMenu":
             handleAnchorMenuMessage(message.body)
+        case "nativeAuth":
+            handleAuthMessage(message.body)
         case "nativeShell":
             if let body = message.body as? [String: Any] {
                 if let theme = body["theme"] as? String { applyTheme(theme) }
@@ -261,6 +266,53 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
             }
         default:
             break
+        }
+    }
+
+    // MARK: Sign-in sheet
+    //
+    // Cord / Google / Discord / passkey sign-in runs in ASWebAuthenticationSession
+    // — the system sheet over the app (« Drivecord souhaite utiliser
+    // drivecord.app pour se connecter ») — instead of switching to Safari. It
+    // shares Safari's cookies and passkeys, and the drivecord://auth?code=…
+    // ending the flow comes straight back to this session: no app switch, and
+    // no other app registering drivecord:// can catch it.
+
+    private var authSession: ASWebAuthenticationSession?
+
+    private func handleAuthMessage(_ raw: Any) {
+        DispatchQueue.main.async {
+            guard let body = raw as? [String: Any],
+                  let string = body["url"] as? String,
+                  let url = URL(string: string),
+                  url.scheme == "https",
+                  // Any page shown in the web view can post here: only our site.
+                  url.host == self.bridge?.config.serverURL.host else { return }
+
+            self.authSession?.cancel()
+            let completion: (URL?, Error?) -> Void = { [weak self] callbackURL, _ in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    self.authSession = nil
+                    // null = closed / cancelled by the user.
+                    let arg = callbackURL.map { self.jsString($0.absoluteString) } ?? "null"
+                    self.webView?.evaluateJavaScript(
+                        "window.__drivecordAuthCallback && window.__drivecordAuthCallback(\(arg))",
+                        completionHandler: nil
+                    )
+                }
+            }
+            let session: ASWebAuthenticationSession
+            if #available(iOS 17.4, *) {
+                session = ASWebAuthenticationSession(url: url, callback: .customScheme("drivecord"), completionHandler: completion)
+            } else {
+                session = ASWebAuthenticationSession(url: url, callbackURLScheme: "drivecord", completionHandler: completion)
+            }
+            session.presentationContextProvider = self
+            // Shared with Safari: Cord / Google already signed in there stay so.
+            session.prefersEphemeralWebBrowserSession = false
+            self.authSession = session
+            if !session.start() { completion(nil, nil) }
         }
     }
 
@@ -429,6 +481,12 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         guard let data = try? JSONSerialization.data(withJSONObject: s, options: .fragmentsAllowed),
               let literal = String(data: data, encoding: .utf8) else { return "\"\"" }
         return literal
+    }
+}
+
+extension MainViewController: ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        view.window ?? ASPresentationAnchor()
     }
 }
 

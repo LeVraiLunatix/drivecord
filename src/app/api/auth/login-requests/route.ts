@@ -17,6 +17,7 @@ import {
   LOGIN_REQUEST_TTL_MS,
 } from "@/lib/auth/login-request";
 import { sendLoginRequestPush } from "@/lib/push/apns";
+import { afterCordNotify, DRIVECORD_URL } from "@/lib/cord-sync";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -79,6 +80,21 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[login-requests] push", err);
   }
+
+  // Also through the Compte Cord: its home-screen web app (compte.cordsuite.app
+  // → Partager → Sur l'écran d'accueil) receives Web Push even when closed —
+  // the only way to reach a phone here, since the sideloaded iOS app can't get
+  // APNs pushes. Best-effort, after the response; no-op without a linked Cord.
+  const where = location ? ` (${location})` : "";
+  afterCordNotify(
+    userId,
+    {
+      title: "Demande de connexion à Drivecord",
+      body: `${label}${where} veut se connecter · code ${request.shortCode}. Approuve ou refuse dans Drivecord.`,
+      url: `${DRIVECORD_URL}/approve`,
+    },
+    { kind: { key: "login-request", limit: 10, windowSec: 10 * 60 } },
+  );
 
   return NextResponse.json(request);
 }

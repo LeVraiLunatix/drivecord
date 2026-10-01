@@ -4,6 +4,7 @@ import { signIn, signOut } from "next-auth/react";
 import { isNativeApp } from "@/lib/use-platform";
 import { cordAuthParams } from "@/lib/auth/cord-shared";
 import { newNativeNonce } from "@/lib/auth/native-nonce";
+import { openNativeSignIn } from "@/lib/native-auth";
 
 export type OAuthProvider = "google" | "discord" | "cord";
 
@@ -61,9 +62,9 @@ export function lastOAuthProvider(): string | null {
  *    redirect. Without the sign-out, logging in with a different OAuth account
  *    while already authenticated kept the old account (NextAuth links to the
  *    current session instead of switching).
- *  - Native app: open the flow in the SYSTEM browser (where passkeys/Google
- *    work), which deep-links back into the app via /native-handoff →
- *    drivecord://auth?code=… → session exchange.
+ *  - Native app: run the flow in the system sign-in sheet (Safari's cookies
+ *    and passkeys, where Google works), which ends on /native-handoff →
+ *    drivecord://auth?code=… → session exchange (see src/lib/native-auth.ts).
  *  - Cord accepts `cord` options: sign-up screen and pre-filled email, carried
  *    through /native-login in the app.
  */
@@ -75,8 +76,8 @@ export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive", cor
     // redirect URIs OAuth cohérents.
     // `n`: nonce the code coming back via drivecord:// will be bound to.
     const url = `${window.location.origin}/native-login?${new URLSearchParams({ provider, ...params, n: newNativeNonce() })}`;
-    // Capacitor routes target "_system" to the external browser.
-    window.open(url, "_system");
+    // System sign-in sheet over the app (Safari on older builds).
+    openNativeSignIn(url);
   } else {
     rememberOAuthProvider(provider);
     // Sign out the current session, then start OAuth — guarantees a clean
