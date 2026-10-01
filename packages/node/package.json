@@ -1,8 +1,11 @@
 {
   "name": "@drivecord/node",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Server-side Drivecord API v2 client (personal access token) with end-to-end encryption.",
   "license": "MIT",
+  "homepage": "https://drivecord.app",
+  "repository": { "type": "git", "url": "git+https://github.com/LeVraiLunatix/drivecord.git", "directory": "packages/node" },
+  "publishConfig": { "access": "public" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -1,8 +1,11 @@
 {
   "name": "@drivecord/sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Browser SDK for Drivecord: OAuth 2.1 + PKCE sign-in, end-to-end encrypted upload/viewer iframes, API v2 client.",
   "license": "MIT",
+  "homepage": "https://drivecord.app",
+  "repository": { "type": "git", "url": "git+https://github.com/LeVraiLunatix/drivecord.git", "directory": "packages/sdk" },
+  "publishConfig": { "access": "public" },
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
