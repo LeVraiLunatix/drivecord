@@ -61,6 +61,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
     ? { Icon: Folder, colorClass: folderIconClass(item.color) }
     : iconFor(item.filename, item.mimeType);
   const tags = !isFolder ? item.tags : [];
+  const extLabel = !isFolder && item.filename.includes(".") ? item.filename.split(".").pop()!.slice(0, 5) : "";
   const favorite = !isFolder && item.favorite;
   const menu = React.useMemo(() => buildItemMenu(item), [item]);
   const childCount = useFolderItemCount(
@@ -174,7 +175,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       onDrop={handleDrop}
       data-item-id={item.id}
       className={cn(
-        "group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border/50 bg-card/40 p-3 transition-all hover:border-border hover:bg-card/70",
+        "group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-border/50 bg-card/50 p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5",
         selected && "border-primary/60 bg-primary/5",
         dragOver &&
           "border-primary scale-[1.02] bg-primary/10 shadow-md ring-2 ring-primary/30",
@@ -212,76 +213,59 @@ export const DriveItemCard = React.memo(function DriveItemCard({
             className="flex flex-1 flex-col gap-2 outline-none focus-visible:outline-2 focus-visible:outline-ring"
             {...longPress.handlers}
           >
-            {/* ── Thumbnail (images) or icon (everything else) ── */}
-            {thumbnailUrl ? (
-              <div className="relative -mx-3 -mt-3 h-28 bg-muted/20">
-                <img
-                  src={thumbnailUrl}
-                  alt={name}
-                  draggable={false}
-                  className="h-full w-full object-cover"
-                />
-                {favorite && (
-                  <Star className="absolute bottom-1.5 left-1.5 size-3.5 fill-amber-400 text-amber-400 drop-shadow" />
-                )}
-                <div className="absolute right-1 top-1">
-                  <ItemMenuButton
-                    item={item}
-                    menu={menu}
-                    name={name}
-                    onAction={onAction}
-                    className="bg-black/30 text-white hover:bg-black/50"
-                  />
+            {isFolder ? (
+              /* ── Folder: compact horizontal card ── */
+              <div className="flex items-center gap-3">
+                <div className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", colorClass)}>
+                  <Icon className="size-5" />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold leading-tight" title={name}>{name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {childCount === undefined ? "Dossier" : `${childCount} élément${childCount > 1 ? "s" : ""}`}
+                    {" · "}
+                    {formatRelativeTime(mtime)}
+                  </p>
+                </div>
+                <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} />
               </div>
             ) : (
-              <div className="flex items-start justify-between gap-2">
-                <div
-                  className={cn(
-                    "flex size-9 items-center justify-center rounded-lg",
-                    colorClass,
+              /* ── File: big preview on top, details below ── */
+              <>
+                <div className="relative -mx-3 -mt-3 flex h-32 items-center justify-center overflow-hidden bg-gradient-to-br from-muted/70 via-muted/30 to-muted/10">
+                  {thumbnailUrl ? (
+                    <img src={thumbnailUrl} alt={name} draggable={false} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  ) : (
+                    <div className={cn("flex size-14 items-center justify-center rounded-2xl shadow-sm", colorClass)}>
+                      <Icon className="size-7" />
+                    </div>
                   )}
-                >
-                  <Icon className="size-4" />
-                </div>
-                <div className="flex items-center gap-0.5">
-                  {favorite && (
-                    <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                  )}
-                  <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-1 pt-1">
-              <p
-                className="truncate text-sm font-medium leading-tight"
-                title={name}
-              >
-                {name}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {isFolder
-                  ? childCount === undefined
-                    ? "Dossier"
-                    : `${childCount} élément${childCount > 1 ? "s" : ""}`
-                  : formatBytes(size ?? 0)}
-                {" · "}
-                {formatRelativeTime(mtime)}
-              </p>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-0.5">
-                  {tags.slice(0, 2).map((t) => (
-                    <TagBadge key={t} tag={t} />
-                  ))}
-                  {tags.length > 2 && (
-                    <span className="text-[10px] text-muted-foreground self-center">
-                      +{tags.length - 2}
+                  {extLabel && !thumbnailUrl && (
+                    <span className="absolute bottom-2 left-2 rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-muted-foreground backdrop-blur">
+                      {extLabel}
                     </span>
                   )}
+                  {favorite && <Star className="absolute bottom-2 right-2 size-4 fill-amber-400 text-amber-400 drop-shadow" />}
+                  <div className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                    <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} className="bg-background/70 backdrop-blur hover:bg-background/90" />
+                  </div>
                 </div>
-              )}
-            </div>
+                <div className="space-y-1 pt-1">
+                  <p className="truncate text-sm font-medium leading-tight" title={name}>{name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatBytes(size ?? 0)}
+                    {" · "}
+                    {formatRelativeTime(mtime)}
+                  </p>
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {tags.slice(0, 2).map((t) => <TagBadge key={t} tag={t} />)}
+                      {tags.length > 2 && <span className="self-center text-[10px] text-muted-foreground">+{tags.length - 2}</span>}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>

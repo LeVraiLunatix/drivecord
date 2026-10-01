@@ -640,6 +640,7 @@ function DriveContent() {
                 handleUploadEntries(entriesFromFiles(files), targetFolder.id);
               }}
               onBulkAction={handleBulkAction}
+              onEmptyUpload={section === "files" && !searching ? () => fileInputRef.current?.click() : undefined}
             />
           )}
         </main>

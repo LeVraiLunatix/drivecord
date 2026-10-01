@@ -176,13 +176,14 @@ export function DriveTopbar({
 
             {/* Desktop search — always visible */}
             <div className="relative hidden w-64 sm:block xl:w-72">
-              <Search className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Rechercher dans ce drive…"
-                className="pl-7"
+                className="h-9 rounded-xl border-transparent bg-muted/50 pl-9 pr-12 transition-colors focus-visible:bg-background"
               />
+              <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground xl:block">Ctrl K</kbd>
             </div>
           </>
         )}
@@ -222,7 +223,7 @@ export function DriveTopbar({
           >
             <FolderUp className="size-4" />
           </Button>
-          <Button size="sm" className="hidden sm:flex" onClick={onUploadClick}>
+          <Button size="sm" className="hidden bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/20 hover:opacity-90 sm:flex" onClick={onUploadClick}>
             <Upload className="size-4" />
             Upload
           </Button>

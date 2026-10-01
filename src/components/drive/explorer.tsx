@@ -7,6 +7,7 @@ import {
   Filter,
   Folder,
   ListChecks,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DriveItemCard } from "./item-card";
@@ -135,6 +136,8 @@ type Props = {
   onDropExternalFiles?: (files: File[], target: DriveItem) => void;
   onBulkAction?: (action: BulkAction, items: DriveItem[]) => void;
   empty?: { title: string; description: string };
+  /** Shows an "Envoyer des fichiers" button in the empty state. */
+  onEmptyUpload?: () => void;
 };
 
 export function DriveExplorer({
@@ -151,6 +154,7 @@ export function DriveExplorer({
   onDropExternalFiles,
   onBulkAction,
   empty,
+  onEmptyUpload,
 }: Props) {
   // ── Selection state ─────────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
@@ -306,7 +310,7 @@ export function DriveExplorer({
     return viewMode === "grid" ? (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-28 animate-pulse rounded-xl border border-border/40 bg-card/30" />
+          <div key={i} className="h-52 animate-pulse rounded-2xl border border-border/40 bg-gradient-to-b from-card/50 to-card/20" />
         ))}
       </div>
     ) : (
@@ -323,8 +327,15 @@ export function DriveExplorer({
     return (
       <EmptyState
         icon={Folder}
-        title={empty?.title ?? "Aucun fichier ici"}
-        description={empty?.description ?? "Glisse-dépose des fichiers n'importe où, ou clique sur « Upload » pour commencer."}
+        title={empty?.title ?? "Ce dossier est vide"}
+        description={empty?.description ?? "Glisse des fichiers ou des dossiers n'importe où sur la page. Ils sont chiffrés sur ton appareil avant d'être envoyés."}
+        action={onEmptyUpload ? (
+          <Button onClick={onEmptyUpload} className="gap-2 bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/20 hover:opacity-90">
+            <Upload className="size-4" />
+            Envoyer des fichiers
+          </Button>
+        ) : undefined}
+        hint="Astuce : Ctrl K ouvre la recherche et les actions rapides."
       />
     );
   }
@@ -446,11 +457,31 @@ export function DriveExplorer({
     >
         {rubberBand}
         {selectBar}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {processed.map((item, index) => (
-            <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />
-          ))}
-        </div>
+        {(() => {
+          const withIndex = processed.map((item, index) => ({ item, index }));
+          const folders = withIndex.filter((x) => x.item.kind === "folder");
+          const files = withIndex.filter((x) => x.item.kind !== "folder");
+          return (
+            <div className="space-y-6">
+              {folders.length > 0 && (
+                <section>
+                  {files.length > 0 && <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Dossiers</h2>}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {folders.map(({ item, index }) => <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />)}
+                  </div>
+                </section>
+              )}
+              {files.length > 0 && (
+                <section>
+                  {folders.length > 0 && <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Fichiers</h2>}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    {files.map(({ item, index }) => <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />)}
+                  </div>
+                </section>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   }

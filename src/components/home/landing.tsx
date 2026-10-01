@@ -71,6 +71,79 @@ const reveal: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
 };
 
+
+/** Pure-CSS replica of the drive: shows the product without a screenshot that goes stale. */
+function ProductMock() {
+  const files = [
+    { n: "vacances-2026.jpg", m: "4,2 Mo", c: "from-orange-500/40 to-pink-500/40", e: "JPG" },
+    { n: "contrat.pdf", m: "820 Ko", c: "from-red-500/30 to-rose-500/30", e: "PDF" },
+    { n: "maquette.fig", m: "12 Mo", c: "from-violet-500/40 to-indigo-500/40", e: "FIG" },
+    { n: "demo.mp4", m: "148 Mo", c: "from-cyan-500/30 to-blue-500/40", e: "MP4" },
+    { n: "notes.md", m: "6 Ko", c: "from-emerald-500/30 to-teal-500/30", e: "MD" },
+    { n: "budget.xlsx", m: "96 Ko", c: "from-lime-500/30 to-green-500/30", e: "XLS" },
+  ];
+  return (
+    <div className="relative mx-auto mt-14 w-full max-w-5xl [perspective:1600px]">
+      <div aria-hidden className="absolute inset-x-10 -bottom-10 h-40 rounded-full bg-gradient-to-r from-indigo-500/40 via-violet-500/40 to-fuchsia-500/40 blur-3xl" />
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 shadow-2xl shadow-violet-900/30 backdrop-blur-xl [transform:rotateX(4deg)]">
+        <div className="flex items-center gap-1.5 border-b border-border/50 bg-background/60 px-4 py-2.5">
+          <span className="size-2.5 rounded-full bg-red-400/70" /><span className="size-2.5 rounded-full bg-amber-400/70" /><span className="size-2.5 rounded-full bg-emerald-400/70" />
+          <span className="mx-auto flex items-center gap-1.5 rounded-md bg-muted/60 px-3 py-0.5 font-mono text-[11px] text-muted-foreground"><Lock className="size-3 text-emerald-400" />drivecord.app/drive</span>
+        </div>
+        <div className="grid grid-cols-[170px_1fr] text-left">
+          <aside className="hidden space-y-1 border-r border-border/50 bg-background/40 p-3 text-xs sm:block">
+            <div className="mb-3 flex items-center gap-2 font-semibold"><span className="flex size-6 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500"><CloudUpload className="size-3.5 text-white" /></span>drivecord</div>
+            {["Tous les fichiers", "Favoris", "Coffre-fort", "Liens partagés", "Corbeille"].map((l, i) => (
+              <div key={l} className={`rounded-lg px-2.5 py-1.5 ${i === 0 ? "bg-primary/10 font-medium text-foreground" : "text-muted-foreground"}`}>{l}</div>
+            ))}
+            <div className="mt-6 rounded-xl border border-border/50 bg-card/60 p-2.5">
+              <p className="text-[10px] text-muted-foreground">Espace utilisé</p>
+              <p className="text-sm font-semibold">2,4 Go · Illimité</p>
+              <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground"><Lock className="size-2.5 text-emerald-400" />Chiffré de bout en bout</p>
+            </div>
+          </aside>
+          <div className="col-span-2 space-y-3 p-4 sm:col-span-1">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 rounded-xl bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">Rechercher dans ce drive…</div>
+              <div className="rounded-lg bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-3 py-1.5 text-xs font-medium text-white">Upload</div>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {["Projets", "Photos", "Documents"].map((f) => (
+                <div key={f} className="flex items-center gap-2.5 rounded-2xl border border-border/50 bg-card/60 p-2.5">
+                  <span className="flex size-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400"><FolderMock /></span>
+                  <div><p className="text-xs font-semibold">{f}</p><p className="text-[10px] text-muted-foreground">12 éléments</p></div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-6">
+              {files.map((f) => (
+                <div key={f.n} className="overflow-hidden rounded-2xl border border-border/50 bg-card/60">
+                  <div className={`flex h-16 items-end bg-gradient-to-br ${f.c} p-1.5`}><span className="rounded bg-background/70 px-1 font-mono text-[9px] text-muted-foreground">{f.e}</span></div>
+                  <div className="p-1.5"><p className="truncate text-[11px] font-medium">{f.n}</p><p className="text-[10px] text-muted-foreground">{f.m}</p></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FolderMock() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+  );
+}
+
+const faq = [
+  { q: "Vraiment illimité ?", a: "Tes fichiers vivent dans ton propre salon Discord via un webhook : il n'y a pas de quota Drivecord. Seules les règles de Discord s'appliquent." },
+  { q: "Drivecord peut-il lire mes fichiers ?", a: "Non. Contenu, noms et dossiers sont chiffrés sur ton appareil. Le serveur ne détient aucune clé. Si tu perds ta clé de récupération, personne ne peut t'aider." },
+  { q: "Que se passe-t-il si Discord change ses règles ?", a: "Le code est ouvert et tes fichiers restent à toi : exporte-les à tout moment. Garde une copie de ce qui est vital." },
+  { q: "C'est gratuit ?", a: "Oui : pas d'abonnement, pas de carte bancaire. Le projet est open source et soutenu par ses mécènes." },
+  { q: "Puis-je l'utiliser depuis mon propre site ?", a: "Oui, avec le SDK : un bouton d'upload et une visionneuse chiffrés, ou l'API v2 avec un jeton personnel." },
+];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function Landing() {
@@ -114,7 +187,7 @@ export function Landing() {
 
       <main className="flex flex-1 flex-col">
         {/* ── Hero ── */}
-        <section className="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden px-5 py-20 text-center sm:py-28">
+        <section className="relative flex flex-col items-center justify-center overflow-hidden px-5 pb-24 pt-20 text-center sm:pt-28">
           <DarkVeil
             className="-z-10"
             hueShift={0}
@@ -199,6 +272,9 @@ export function Landing() {
               </Link>
             </motion.div>
           </motion.div>
+          <motion.div variants={v ?? reveal} initial="hidden" animate="show" className="w-full">
+            <ProductMock />
+          </motion.div>
         </section>
 
         {/* ── How it works ── */}
@@ -244,7 +320,7 @@ export function Landing() {
                   variants={v ?? item}
                   whileHover={reduce ? {} : { y: -4 }}
                   transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                  className="group rounded-2xl border border-border/50 bg-card/40 p-6 transition-colors hover:border-primary/40 hover:bg-card/80"
+                  className={`group rounded-3xl border border-border/50 bg-gradient-to-br from-card/60 to-card/20 p-6 transition-colors hover:border-primary/40 hover:bg-card/80`}
                 >
                   <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
                     <Icon className="size-5" />
@@ -298,6 +374,24 @@ dc.mountUploader(el, {
           </div>
         </section>
 
+        {/* ── FAQ ── */}
+        <section className="px-5 py-20 sm:px-6">
+          <div className="mx-auto max-w-3xl">
+            <SectionHeading kicker="Questions" title="Tu te demandes…" />
+            <div className="divide-y divide-border/50 rounded-3xl border border-border/50 bg-card/30">
+              {faq.map((f) => (
+                <details key={f.q} className="group px-6 py-4 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
+                    {f.q}
+                    <span className="text-xl leading-none text-muted-foreground transition-transform group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="mt-2 text-sm text-muted-foreground">{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── CTA ── */}
         <section className="border-t border-border/40 bg-card/20 px-5 py-20 sm:px-6">
           <motion.div
@@ -305,7 +399,7 @@ dc.mountUploader(el, {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-80px" }}
-            className="mx-auto max-w-2xl text-center"
+            className="relative mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-border/50 bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-fuchsia-500/15 px-6 py-14 text-center"
           >
             <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">Commence maintenant</h2>
             <p className="mb-8 text-muted-foreground">
