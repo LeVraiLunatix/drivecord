@@ -35,12 +35,12 @@ export function AudioStage({
   const clean = name.replace(/\.[^.]+$/, "");
 
   return (
-    <div className="relative flex w-[min(26rem,calc(100vw-2rem))] flex-col items-center gap-5">
+    <div className="relative flex w-[min(26rem,calc(100vw-2rem))] flex-col items-center gap-5 px-2">
       {/* Halo qui pulse avec la lecture */}
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute -top-10 left-1/2 size-72 -translate-x-1/2 rounded-full bg-gradient-to-br from-indigo-500/40 via-fuchsia-500/30 to-transparent blur-3xl transition-opacity duration-700",
+          "pointer-events-none absolute -top-2 left-1/2 size-64 -translate-x-1/2 rounded-full bg-gradient-to-br from-indigo-500/40 via-fuchsia-500/30 to-transparent blur-2xl transition-opacity duration-700",
           s.playing ? "animate-pulse opacity-100" : "opacity-40",
         )}
       />

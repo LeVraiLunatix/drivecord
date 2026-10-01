@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Music, Pause, Play, X } from "lucide-react";
-import { formatClock, registerAudioElement, useAudioPlayer } from "@/lib/audio-player";
+import { formatClock, registerAudioElement, resumeAudioContext, useAudioPlayer } from "@/lib/audio-player";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,6 +13,8 @@ import { cn } from "@/lib/utils";
 export function GlobalAudioPlayer() {
   const ref = React.useRef<HTMLAudioElement>(null);
   const s = useAudioPlayer();
+  const router = useRouter();
+  const pathname = usePathname();
 
   React.useEffect(() => {
     registerAudioElement(ref.current);
@@ -24,7 +27,23 @@ export function GlobalAudioPlayer() {
     if (!el || !s.url) return;
     el.src = s.url;
     el.playbackRate = s.rate;
-    void el.play().catch(() => {});
+    const target = useAudioPlayer.getState().volume;
+    el.volume = 0;
+    void el
+      .play()
+      .then(() => {
+        let t0 = 0;
+        const up = (now: number) => {
+          t0 ||= now;
+          const p = Math.min(1, (now - t0) / 350);
+          el.volume = target * p;
+          if (p < 1) requestAnimationFrame(up);
+        };
+        requestAnimationFrame(up);
+      })
+      .catch(() => {
+        el.volume = target;
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.url]);
 
@@ -54,6 +73,12 @@ export function GlobalAudioPlayer() {
     }
   }, [s.track]);
 
+  const openFromMini = () => {
+    useAudioPlayer.getState().requestOpen();
+    // Hors du drive : on y retourne, la page rouvre alors le lecteur (demande en attente).
+    if (!pathname.startsWith("/drive")) router.push("/drive");
+  };
+
   const patch = s._patch;
   const show = s.track && !s.stageOpen;
   const pct = s.duration > 0 ? (s.currentTime / s.duration) * 100 : 0;
@@ -63,10 +88,14 @@ export function GlobalAudioPlayer() {
       <audio
         ref={ref}
         preload="auto"
-        onPlay={() => patch({ playing: true })}
+        onPlay={() => {
+          resumeAudioContext();
+          patch({ playing: true });
+        }}
         onPause={() => patch({ playing: false })}
         onTimeUpdate={(e) => patch({ currentTime: e.currentTarget.currentTime })}
         onDurationChange={(e) => patch({ duration: e.currentTarget.duration || 0 })}
+        onError={() => patch({ playing: false })}
         onEnded={() => patch({ playing: false, endedTick: useAudioPlayer.getState().endedTick + 1 })}
       />
 
@@ -86,15 +115,24 @@ export function GlobalAudioPlayer() {
               )}
             />
             <div className="relative flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/40 to-fuchsia-500/40">
-                {s.playing ? <Equalizer /> : <Music className="size-4 text-white/80" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{s.track!.name.replace(/\.[^.]+$/, "")}</p>
-                <p className="text-[11px] tabular-nums text-white/45">
-                  {formatClock(s.currentTime)} / {formatClock(s.duration)}
-                </p>
-              </div>
+              <button
+                onClick={openFromMini}
+                aria-label="Ouvrir le lecteur"
+                title="Ouvrir le lecteur"
+                className="group/open flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/40 to-fuchsia-500/40 transition-transform group-hover/open:scale-105">
+                  {s.playing ? <Equalizer /> : <Music className="size-4 text-white/80" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium transition-colors group-hover/open:text-fuchsia-300">
+                    {s.track!.name.replace(/\.[^.]+$/, "")}
+                  </span>
+                  <span className="block text-[11px] tabular-nums text-white/45">
+                    {formatClock(s.currentTime)} / {formatClock(s.duration)}
+                  </span>
+                </span>
+              </button>
               <button
                 onClick={s.toggle}
                 aria-label={s.playing ? "Pause" : "Lecture"}

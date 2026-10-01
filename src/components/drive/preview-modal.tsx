@@ -280,7 +280,7 @@ export function PreviewModal({
         const url = URL.createObjectURL(finalBlob);
         setBlobUrl(url);
         if (kindOf(file.filename, file.mimeType) === "audio") {
-          useAudioPlayer.getState().load({ id: file.id, name: file.filename }, finalBlob);
+          useAudioPlayer.getState().load({ id: file.id, name: file.filename, driveId }, finalBlob);
         }
 
         // ── MOV / QuickTime → pre-build mp4 fallback URL ──────────────────
@@ -466,7 +466,7 @@ export function PreviewModal({
 
         {/* Audio — le son est porté par le lecteur global : il continue à la fermeture */}
         {loadState === "done" && kind === "audio" && blobUrl && file && (
-          <div className="max-h-full overflow-y-auto py-2">
+          <div className="max-h-full overflow-x-visible overflow-y-auto px-14 py-14 -mx-14 -my-14">
             <AudioStage name={file.filename} onPrev={hasPrev ? goPrev : undefined} onNext={hasNext ? goNext : undefined} />
           </div>
         )}

@@ -40,15 +40,25 @@ export function Visualizer({ className, bars = 48 }: { className?: string; bars?
       grad.addColorStop(0.5, "#a855f7");
       grad.addColorStop(1, "#ec4899");
       g.fillStyle = grad;
+      // Spectre en miroir : graves au centre, aigus vers les bords, renforcés pour que la
+      // silhouette reste pleine (courbe en cloche) comme un vrai waveform symétrique.
+      const half = Math.ceil(bars / 2);
+      const mid = (bars - 1) / 2;
       for (let i = 0; i < bars; i++) {
-        // Les graves au centre, les aigus vers les bords (symétrique).
-        const k = Math.abs(i - bars / 2) / (bars / 2);
-        const bin = Math.floor(Math.pow(k, 1.2) * (data.length * 0.7));
-        const target = analyser
-          ? (data[bin] ?? 0) / 255
-          : 0.08 + 0.05 * Math.sin(t * 2 + i * 0.5); // au repos : léger souffle
-        smooth[i] += (target - smooth[i]) * 0.35;
-        const bh = Math.max(3, smooth[i] * h);
+        const k = Math.abs(i - mid) / (half - 1 || 1); // 0 au centre → 1 aux bords
+        let target: number;
+        if (analyser) {
+          const lo = Math.floor(Math.pow(k, 1.3) * data.length * 0.5);
+          const hi = Math.max(lo + 1, Math.floor(Math.pow(Math.min(1, k + 1 / half), 1.3) * data.length * 0.5));
+          let sum = 0;
+          for (let j = lo; j < hi; j++) sum += data[j] ?? 0;
+          const v = sum / (hi - lo) / 255;
+          target = Math.min(1, Math.pow(v, 0.85) * (1.4 + k * 1.0));
+        } else {
+          target = 0.1 + 0.05 * Math.sin(t * 2 + k * 6) + (1 - k) * 0.12; // repos : cloche discrète
+        }
+        smooth[i] += (target - smooth[i]) * 0.38;
+        const bh = Math.max(4, smooth[i] * h);
         const x = i * (bw + gap);
         g.beginPath();
         g.roundRect(x, (h - bh) / 2, bw, bh, Math.max(0, Math.min(bw / 2, 4)));

@@ -8,7 +8,7 @@ import { create } from "zustand";
  * ne coupe donc pas le son.
  */
 
-export type AudioTrack = { id: string; name: string };
+export type AudioTrack = { id: string; name: string; driveId?: string | null };
 
 type AudioState = {
   track: AudioTrack | null;
@@ -23,6 +23,10 @@ type AudioState = {
   stageOpen: boolean;
   /** Incrémenté à chaque fin de morceau (l'aperçu enchaîne sur le suivant). */
   endedTick: number;
+  /** Incrémenté quand le mini-lecteur demande à rouvrir la page du lecteur. */
+  pendingOpen: boolean;
+  clearOpen: () => void;
+  requestOpen: () => void;
   /** Charge un morceau (le store possède son URL blob). Lance la lecture. */
   load: (track: AudioTrack, blob: Blob) => void;
   toggle: () => void;
@@ -58,6 +62,8 @@ export function getAnalyser(): AnalyserNode | null {
     analyser.smoothingTimeConstant = 0.82;
     src.connect(analyser);
     analyser.connect(ctx.destination);
+    ctx.onstatechange = () => resumeAudioContext();
+    void ctx.resume().catch(() => {});
   } catch {
     analyser = null;
   }
@@ -65,7 +71,26 @@ export function getAnalyser(): AnalyserNode | null {
 }
 
 export function resumeAudioContext() {
-  if (ctx && ctx.state === "suspended") void ctx.resume().catch(() => {});
+  if (ctx && ctx.state !== "running" && ctx.state !== "closed") void ctx.resume().catch(() => {});
+}
+
+const FADE_MS = 350;
+let fadeRaf = 0;
+
+/** Fondu du volume de l'élément (le volume choisi par l'utilisateur reste dans le store). */
+function fade(to: number, ms: number, done?: () => void) {
+  cancelAnimationFrame(fadeRaf);
+  if (!el) { done?.(); return; }
+  const node = el;
+  const from = node.volume;
+  const t0 = performance.now();
+  const step = (now: number) => {
+    const p = Math.min(1, (now - t0) / ms);
+    node.volume = Math.max(0, Math.min(1, from + (to - from) * (p * p * (3 - 2 * p))));
+    if (p < 1) fadeRaf = requestAnimationFrame(step);
+    else done?.();
+  };
+  fadeRaf = requestAnimationFrame(step);
 }
 
 export const useAudioPlayer = create<AudioState>((set, get) => ({
@@ -79,6 +104,9 @@ export const useAudioPlayer = create<AudioState>((set, get) => ({
   rate: 1,
   stageOpen: false,
   endedTick: 0,
+  pendingOpen: false,
+  clearOpen: () => set({ pendingOpen: false }),
+  requestOpen: () => set({ pendingOpen: true }),
 
   load: (track, blob) => {
     const prev = get().url;
@@ -91,8 +119,17 @@ export const useAudioPlayer = create<AudioState>((set, get) => ({
     if (!el) return;
     getAnalyser();
     resumeAudioContext();
-    if (el.paused) void el.play().catch(() => {});
-    else el.pause();
+    const node = el;
+    if (node.paused) {
+      node.volume = 0;
+      void node.play().then(() => fade(get().volume, FADE_MS)).catch(() => { node.volume = get().volume; });
+    } else {
+      set({ playing: false });
+      fade(0, FADE_MS, () => {
+        node.pause();
+        node.volume = get().volume; // prêt pour la prochaine lecture
+      });
+    }
   },
   seek: (t) => {
     if (!el || !Number.isFinite(t)) return;
@@ -117,9 +154,14 @@ export const useAudioPlayer = create<AudioState>((set, get) => ({
   setStageOpen: (open) => set({ stageOpen: open }),
   stop: () => {
     const url = get().url;
-    if (el) { el.pause(); el.removeAttribute("src"); el.load(); }
-    if (url) URL.revokeObjectURL(url);
-    set({ track: null, url: null, playing: false, currentTime: 0, duration: 0, stageOpen: false });
+    set({ playing: false });
+    const finish = () => {
+      if (el) { el.pause(); el.removeAttribute("src"); el.load(); el.volume = get().volume; }
+      if (url) URL.revokeObjectURL(url);
+      set({ track: null, url: null, playing: false, currentTime: 0, duration: 0, stageOpen: false });
+    };
+    if (el && !el.paused) fade(0, FADE_MS, finish);
+    else finish();
   },
   _patch: (p) => set(p),
 }));

@@ -50,6 +50,8 @@ import { PasskeyManager } from "@/components/auth/passkey-manager";
 import { TwoFactorManager } from "@/components/auth/two-factor-manager";
 import { TrustedDevicesManager } from "@/components/auth/trusted-devices-manager";
 import { ApiKeysManager } from "@/components/settings/api-keys-manager";
+import { ThemeStudio } from "@/components/settings/theme-studio";
+import { DriveBackdrop } from "@/components/drive/drive-backdrop";
 import { PersonalTokensManager } from "@/components/settings/personal-tokens-manager";
 import { EncryptionSettings } from "@/components/e2ee/encryption-settings";
 import { ConnectedApps } from "@/components/settings/connected-apps";
@@ -196,6 +198,7 @@ export default function SettingsPage() {
           "apparence thème theme sombre clair aurora or nocturne vue grille liste patreon abonnement palier gold premium vip",
         render: () => (
           <>
+            <ThemeStudio />
             <PreferencesSection />
             <PatreonSection />
           </>
@@ -273,13 +276,14 @@ export default function SettingsPage() {
 
   return (
     <div
-      className="relative mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col gap-5 tabbar-pad px-4 pb-20 sm:px-6"
+      className="relative isolate mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col gap-5 tabbar-pad px-4 pb-20 sm:px-6"
       style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
     >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.18),transparent_65%)]"
       />
+      <DriveBackdrop />
       <BackButton fallback="/drive" className="w-fit" />
 
       {/* ── En-tête : carte d'identité + recherche ─────────────────────────── */}
@@ -312,7 +316,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="relative w-full sm:w-72">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={searchRef}
               value={query}
@@ -325,12 +329,12 @@ export default function SettingsPage() {
               <button
                 onClick={() => setQuery("")}
                 aria-label="Effacer"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2.5 top-1/2 z-10 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
             ) : (
-              <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-border/60 px-1.5 text-[10px] text-muted-foreground sm:block">
+              <kbd className="pointer-events-none absolute right-2.5 top-1/2 z-10 hidden -translate-y-1/2 rounded border border-border/60 px-1.5 text-[10px] text-muted-foreground sm:block">
                 /
               </kbd>
             )}
