@@ -7,6 +7,7 @@
  *
  * Body: { action: "trash" | "restore", fileIds?: string[], folderIds?: string[] }
  */
+import { recordChanges } from "@/lib/api-v2/drive";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook } from "../../_helpers";
@@ -51,6 +52,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }),
   ]);
 
+  await recordChanges(webhookId, [
+    ...fileIds.map((id) => ({ type: "upsert" as const, kind: "file" as const, id })),
+    ...folderIds.map((id) => ({ type: "upsert" as const, kind: "folder" as const, id })),
+  ]);
   if (files.count > 0) afterCordStatus(result.userId);
   return NextResponse.json({ files: files.count, folders: folders.count });
 }

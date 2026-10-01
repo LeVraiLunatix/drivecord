@@ -71,6 +71,13 @@ export async function recordChange(webhookId: string, type: "upsert" | "delete",
   await prisma.changeLog.create({ data: { webhookId, type, kind, itemId } }).catch(() => {});
 }
 
+export type ChangeEntry = { type: "upsert" | "delete"; kind: "file" | "folder"; id: string };
+/** Batch variant for the web routes (cascades touch many rows). Best-effort: never fails the request. */
+export async function recordChanges(webhookId: string, entries: ChangeEntry[]) {
+  if (entries.length === 0) return;
+  await prisma.changeLog.createMany({ data: entries.map((e) => ({ webhookId, type: e.type, kind: e.kind, itemId: e.id })) }).catch(() => {});
+}
+
 type FileRow = Awaited<ReturnType<typeof findFile>>;
 export function serializeFile(f: FileRow) {
   const pub = f.visibility === "public";

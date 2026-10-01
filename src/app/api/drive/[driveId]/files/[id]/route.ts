@@ -3,6 +3,7 @@
  * PATCH  /api/drive/[driveId]/files/[id]  — partial update
  * DELETE /api/drive/[driveId]/files/[id]  — hard delete
  */
+import { recordChanges } from "@/lib/api-v2/drive";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook, toFileEntry } from "../../../_helpers";
@@ -85,6 +86,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     data,
   });
   if (count === 0) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
+  await recordChanges(result.webhook.id, [{ type: "upsert", kind: "file", id }]);
   // Trash / restore changes the numbers shown on the Cord hub.
   if (body.trashed !== undefined) afterCordStatus(result.userId);
 
@@ -101,6 +103,9 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const { count } = await prisma.driveFile.deleteMany({
     where: { id, webhookId: result.webhook.id },
   });
-  if (count > 0) afterCordStatus(result.userId);
+  if (count > 0) {
+    afterCordStatus(result.userId);
+    await recordChanges(result.webhook.id, [{ type: "delete", kind: "file", id }]);
+  }
   return new NextResponse(null, { status: 204 });
 }

@@ -38,6 +38,7 @@ const j = (r) => r.json().catch(() => ({}));
 
 try {
   await DB.query(`delete from "User" where id='u_v2'`);
+  await DB.query(`delete from "DriveFolder" where id in ('appfolder01','appchild001','outsider001')`);
   await DB.query(`insert into "User"(id,email,name,"updatedAt") values('u_v2','v2@example.com','Dev',now())`);
   await DB.query(`insert into "Webhook"(id,"userId","driveId","encryptedUrl",name,"channelId","e2eeVersion","dkWrapped","updatedAt") values('wh_v2','u_v2','drive_v2',$1,'Mon drive','c',1,'v1.AAAAAAAAAAAAAAAA.AAAA',now())`, [encryptUrl("https://discord.com/api/webhooks/123456789012345678/abcDEF_token-xyz")]);
   for (const [id, parent] of [["appfolder01", ""], ["appchild001", "appfolder01"], ["outsider001", ""]]) {

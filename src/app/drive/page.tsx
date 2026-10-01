@@ -253,7 +253,9 @@ function DriveContent() {
       if (entries.length === 0) return;
       const driveId = activeDrive.id;
       const base = parentOverride ?? currentFolderId;
-      const onUploaded = (item: { fileName: string }) =>
+      // Big batches: the upload panel already shows progress — one toast per file just stacks up.
+      const quiet = entries.length > 3;
+      const onUploaded = quiet ? undefined : (item: { fileName: string }) =>
         toast.success(`« ${item.fileName} » uploadé`);
 
       // In the vault section, uploads must be encrypted — which needs the
@@ -272,7 +274,7 @@ function DriveContent() {
           driveId, parentId: base, client,
           encryptKey: vaultKey,
           locked: true,
-          onUploaded: (item) => toast.success(`« ${item.fileName} » chiffré 🔒`),
+          onUploaded: quiet ? undefined : (item) => toast.success(`« ${item.fileName} » chiffré 🔒`),
         });
         return;
       }

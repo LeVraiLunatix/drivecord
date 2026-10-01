@@ -8,6 +8,7 @@
  *    sealed name/type/size into `encMeta`. The server stores `filename = ""` and
  *    `mimeType = application/octet-stream` for those — it never learns either.
  */
+import { recordChanges } from "@/lib/api-v2/drive";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -88,6 +89,7 @@ export async function POST(
         noncePrefix: b.cryptoVersion >= 1 ? b.noncePrefix : null,
       },
     });
+    await recordChanges(webhook.id, [{ type: "upsert", kind: "file", id: row.id }]);
     return NextResponse.json(toFileEntry(row), { status: 201 });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

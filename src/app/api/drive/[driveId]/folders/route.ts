@@ -2,6 +2,7 @@
  * POST /api/drive/[driveId]/folders  — create a folder
  * GET  /api/drive/[driveId]/folders  — list ALL non-trashed folders (for move dialog)
  */
+import { recordChanges } from "@/lib/api-v2/drive";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook, toFolderEntry } from "../../_helpers";
@@ -47,5 +48,6 @@ export async function POST(
       encName: body.encName ?? null,
     },
   });
+  await recordChanges(webhook.id, [{ type: "upsert", kind: "folder", id: row.id }]);
   return NextResponse.json(toFolderEntry(row), { status: 201 });
 }
