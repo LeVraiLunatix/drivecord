@@ -8,7 +8,7 @@ Everything below was implemented and tested on branch `claude/zealous-cannon-wk2
 2. **Env vars** (see `.env.example`):
    - `USERCONTENT_ORIGIN` — a separate domain that serves public files (see `docs/usercontent-domain.md`). Without it public links are served from the main origin.
    - `MAX_API_GIB_PER_DAY`, `MAX_API_FILES_PER_DRIVE` — optional quotas.
-   - `INTERNAL_ORIGIN` — only if the public URL is not routable from inside the deployment (used by the proxy to read an app's embed origins).
+   - `INTERNAL_ORIGIN` — how the server reaches itself (default `http://127.0.0.1:$PORT`); set it if you listen on another port/host.
 3. **TLS terminator** must forward `X-Forwarded-Proto: https` (Auth.js secure cookies; embed token bridge).
 4. **Packages** — `node packages/sdk/build.mjs` (prints the SRI hash) and `node packages/node/build.mjs`; publish `@drivecord/sdk` / `@drivecord/node` to npm when ready.
 

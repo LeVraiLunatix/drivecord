@@ -49,8 +49,8 @@ async function embedResponse(req: NextRequest): Promise<NextResponse> {
   let origins: string[] = [];
   if (/^app_[A-Za-z0-9_-]{8,64}$/.test(clientId)) {
     try {
-      // INTERNAL_ORIGIN: how this server reaches itself when the public URL is not routable from inside (rare).
-      const r = await fetch(new URL(`/api/embed/origins?client_id=${clientId}`, process.env.INTERNAL_ORIGIN ?? req.nextUrl.origin));
+      // Never derived from the request (Host header → SSRF): INTERNAL_ORIGIN, else loopback on our own port.
+      const r = await fetch(new URL(`/api/embed/origins?client_id=${clientId}`, process.env.INTERNAL_ORIGIN ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`));
       if (r.ok) origins = ((await r.json()) as { origins?: string[] }).origins ?? [];
     } catch {
       /* no origins → nobody may frame it */

@@ -17,7 +17,7 @@ export const runtime = "nodejs";
 export const OPTIONS = preflight("PUT, OPTIONS");
 
 export const PUT = v2Route<{ uploadId: string; index: string }>(
-  { cap: "write", bucket: BUCKETS.chunks, route: "/api/v2/uploads/[uploadId]/chunks/[index]", idempotent: true },
+  { cap: "write", bucket: BUCKETS.chunks, route: "/api/v2/uploads/[uploadId]/chunks/[index]" },
   async ({ req, principal, params }) => {
     const s = await ownedSession(principal, params.uploadId);
     const index = /^\d{1,5}$/.test(params.index) ? Number(params.index) : -1;
