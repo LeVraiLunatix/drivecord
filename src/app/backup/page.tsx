@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/back-button";
 import { cn } from "@/lib/utils";
 import { useIsNativeApp } from "@/lib/use-platform";
+import { keepScreenAwake } from "@/lib/keep-awake";
 import { useAllDrives } from "@/lib/storage";
 import { recordUploadedFile, createFolder, refreshDrive } from "@/lib/storage";
 import { ensureDriveKey } from "@/lib/auth/sync";
@@ -38,6 +39,25 @@ const item: Variants = {
   show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
 };
 
+// The run lives at module level, not in the page: switching tab mid-backup
+// unmounts the page while the run carries on, and the remounted page used to
+// forget it — offering « Sauvegarder maintenant » again, which started a
+// second concurrent run uploading the same media twice.
+type RunState = { running: boolean; progress: { done: number; total: number } | null; driveId: string | null };
+let runState: RunState = { running: false, progress: null, driveId: null };
+const runListeners = new Set<() => void>();
+function setRun(patch: Partial<RunState>) {
+  runState = { ...runState, ...patch };
+  for (const l of runListeners) l();
+}
+function subscribeRun(l: () => void) {
+  runListeners.add(l);
+  return () => { runListeners.delete(l); };
+}
+const getRun = () => runState;
+// Stop request + the media in flight (aborted by « Arrêter »).
+const runCtl = { cancel: false, itemAbort: null as AbortController | null };
+
 export default function BackupPage() {
   const reduce = useReducedMotion();
   const v = reduce ? {} : undefined;
@@ -48,16 +68,12 @@ export default function BackupPage() {
   const native = useIsNativeApp();
 
   const [target, setTarget] = React.useState<string | null>(null);
-  const [running, setRunning] = React.useState(false);
-  const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
+  const { running, progress, driveId: runDriveId } = React.useSyncExternalStore(subscribeRun, getRun, getRun);
   const [backedCount, setBackedCount] = React.useState(0);
-  const cancelRef = React.useRef(false);
-  // Aborts the media in flight when « Arrêter » is pressed.
-  const itemAbortRef = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => {
-    if (!target && drives && drives.length) setTarget(drives[0].id);
-  }, [drives, target]);
+    if (!target && drives && drives.length) setTarget(runDriveId ?? drives[0].id);
+  }, [drives, target, runDriveId]);
 
   // Free disk space on open: delete the plugin's leftover temp copies (these
   // had accumulated to several GB and were filling the device storage).
@@ -120,8 +136,11 @@ export default function BackupPage() {
   const run = async () => {
     const drive = drives?.find((d) => d.id === target);
     if (!drive) { toast.error("Choisis un drive"); return; }
-    setRunning(true);
-    cancelRef.current = false;
+    if (runState.running) return; // one run at a time, even across remounts
+    setRun({ running: true, driveId: drive.id });
+    runCtl.cancel = false;
+    // The phone auto-locking mid-backup suspended the app and killed the run.
+    const releaseAwake = keepScreenAwake();
     try {
       await cleanupCameraTemps(); // clear leftover temp copies from past runs
       const all = await listCameraRoll();
@@ -177,7 +196,7 @@ export default function BackupPage() {
       const client = DiscordClient.fromUrl(drive.webhookUrl);
       const rootId = await ensureRoot(drive.id, existingFolders);
       const folderCache = new Map<string, string>(); // album → folderId
-      setProgress({ done: 0, total: todo.length });
+      setRun({ progress: { done: 0, total: todo.length } });
 
       // DB stores size as a 32-bit Int → hard cap ~2 GB per file.
       const MAX_BYTES = 2_000_000_000;
@@ -282,9 +301,9 @@ export default function BackupPage() {
       };
 
       for (let i = 0; i < todo.length; i++) {
-        if (cancelRef.current) break;
+        if (runCtl.cancel) break;
         const controller = new AbortController();
-        itemAbortRef.current = controller;
+        runCtl.itemAbort = controller;
         // Watchdog: aborts the media after ITEM_TIMEOUT without any progress,
         // and gives up waiting 2 s later if the abort isn't honored (a native
         // call stuck on iCloud can't be cancelled).
@@ -307,14 +326,14 @@ export default function BackupPage() {
           if (res === "ok") ok += 1; else skipped += 1;
         } catch (err) {
           const e = err as Error;
-          if (cancelRef.current) { /* stopped by the user: not an error */ }
+          if (runCtl.cancel) { /* stopped by the user: not an error */ }
           else if (e.message === "__timeout__" || e.name === "AbortError") stuck += 1;
           else if (!firstError) firstError = e.message;
         } finally {
           clearTimeout(timer);
-          itemAbortRef.current = null;
+          runCtl.itemAbort = null;
         }
-        setProgress({ done: i + 1, total: todo.length });
+        setRun({ progress: { done: i + 1, total: todo.length } });
         // Refresh the drive periodically so files show up live and survive an
         // unexpected reload mid-backup.
         if ((i + 1) % 15 === 0) refreshDrive(drive.id);
@@ -337,8 +356,8 @@ export default function BackupPage() {
       toast.error(`Échec : ${(e as Error).message}`);
     } finally {
       await cleanupCameraTemps(); // free any temp copies left by this run
-      setRunning(false);
-      setProgress(null);
+      releaseAwake();
+      setRun({ running: false, progress: null, driveId: null });
     }
   };
 
@@ -423,7 +442,7 @@ export default function BackupPage() {
                   </div>
                 )}
                 {running ? (
-                  <Button variant="outline" className="w-full gap-2" onClick={() => { cancelRef.current = true; itemAbortRef.current?.abort(); }}>
+                  <Button variant="outline" className="w-full gap-2" onClick={() => { runCtl.cancel = true; runCtl.itemAbort?.abort(); }}>
                     <Square className="size-4" /> Arrêter
                   </Button>
                 ) : (

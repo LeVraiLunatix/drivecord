@@ -13,6 +13,12 @@ on:
       - 'package-lock.json'
       - '.github/workflows/ios-build.yml'
 
+# One build at a time: two merges in a row raced on source.json (versions are
+# also numbered by run, so the later one must publish last).
+concurrency:
+  group: ios-build
+  cancel-in-progress: false
+
 permissions:
   contents: write   # needed to create GitHub Releases
 
@@ -165,7 +171,11 @@ jobs:
       # ── Per-version GitHub Release (full history) ────────────────────────────
       # One release per version (tag v1.0.X), marked latest. GitHub's
       # /releases/latest/download/Drivecord.ipa always points to the newest one.
+      # Publishing only from master: a manual run on another branch is a build
+      # check (Swift has no local compiler on the dev machine) and must not
+      # ship anything to AltStore.
       - name: Create versioned release
+        if: github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
           repository: LeVraiLunatix/drivecord-releases
@@ -185,6 +195,7 @@ jobs:
       # Version = MARKETING_VERSION (must match), so AltStore offers the update.
       # downloadURL points at this exact version's release asset.
       - name: Update public source.json
+        if: github.ref == 'refs/heads/master'
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
         run: |
@@ -193,9 +204,10 @@ jobs:
           VERSION="${{ env.app_version }}"
           git clone "https://x-access-token:${GIST_TOKEN}@github.com/LeVraiLunatix/drivecord-releases.git" /tmp/rel
           CHANGELOG_PATH="$GITHUB_WORKSPACE/CHANGELOG.md" \
+          APP_PLIST="${{ steps.app.outputs.path }}/Info.plist" \
           VERSION="$VERSION" SIZE="$SIZE" DATE="$DATE" \
           python3 - <<'PYEOF'
-          import json, os, re
+          import json, os, plistlib, re
 
           notes = "Nouvelle version de Drivecord."
           try:
@@ -225,6 +237,23 @@ jobs:
           # Keep the FULL version history (newest first).
           versions = [v for v in src['apps'][0].get('versions', []) if v.get('version') != ver['version']]
           src['apps'][0]['versions'] = [ver] + versions
+
+          # Declare the app's privacy permissions (Face ID, Photos, camera…)
+          # from the built Info.plist: AltStore checks them against the app,
+          # and the list used to be empty. A failure here must not block the release.
+          try:
+              with open(os.environ['APP_PLIST'], 'rb') as f:
+                  info = plistlib.load(f)
+              privacy = [
+                  {'name': k, 'usageDescription': v}
+                  for k, v in sorted(info.items())
+                  if re.fullmatch(r'NS\w+UsageDescription', k) and isinstance(v, str)
+              ]
+              src['apps'][0].setdefault('appPermissions', {})['privacy'] = privacy
+              print("Privacy permissions:", [p['name'] for p in privacy])
+          except Exception as e:
+              print("privacy permissions skipped:", e)
+
           with open('/tmp/rel/source.json', 'w', encoding='utf-8') as f:
               json.dump(src, f, indent=2, ensure_ascii=False)
           print("Set version", ver['version'])
@@ -234,7 +263,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add source.json
           git diff --staged --quiet || git commit -m "release: ${{ env.app_version }}"
-          git push || true
+          # Was `|| true`: a rejected push left the release out of AltStore
+          # without anyone noticing. Retry once on top of the remote, else fail.
+          git push || { git pull --rebase && git push; }
 
       # ── Artifact (backup) ─────────────────────────────────────────────────────
       - name: Upload artifact

@@ -45,6 +45,13 @@ export function OtpInput({
   const handleChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "");
     const next = digits.slice();
+    // One digit typed into the (wider) first box while it holds one: replace.
+    if (i === 0 && digits[0] && raw.length === 2) {
+      next[0] = raw.replace(digits[0], "") || raw[1];
+      commit(next);
+      refs.current[1]?.focus();
+      return;
+    }
     if (raw.length > 1) {
       // Multiple chars (autofill): spread from the current box.
       raw
@@ -103,7 +110,9 @@ export function OtpInput({
           type="text"
           inputMode="numeric"
           autoComplete={i === 0 ? "one-time-code" : "off"}
-          maxLength={1}
+          // The first box receives iOS's code autofill: with maxLength 1 WebKit
+          // truncated it to one digit. handleChange spreads multi-digit input.
+          maxLength={i === 0 ? length : 1}
           value={d}
           disabled={disabled}
           aria-label={`Chiffre ${i + 1} sur ${length}`}

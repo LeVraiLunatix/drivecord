@@ -9,8 +9,13 @@
  * PRF; callers fall back to passphrase or recovery key.
  */
 import { b64urlDecode, b64urlEncode, PRF_SALT, bs } from "@/lib/crypto/e2ee";
+import { isNativeApp } from "@/lib/use-platform";
 
 export function passkeysAvailable(): boolean {
+  // The iOS app's WebView exposes the WebAuthn API but every call fails: the
+  // app (sideloaded) has no associated domain for drivecord.app. Offering
+  // « Avec ma passkey » there was a dead end.
+  if (isNativeApp()) return false;
   return typeof window !== "undefined" && typeof PublicKeyCredential !== "undefined" && !!navigator.credentials?.get;
 }
 
