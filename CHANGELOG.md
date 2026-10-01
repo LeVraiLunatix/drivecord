@@ -20,6 +20,11 @@
 - Connecte une application à ton Drivecord avec OAuth : elle n'accède qu'à **son dossier**, tu peux la révoquer à tout moment (Réglages › Applications connectées).
 - Nouvelle **API v2** chiffrée, **jetons personnels**, SDK navigateur (`@drivecord/sdk`) et Node (`@drivecord/node`), boutons d'upload et visionneuse en iframe. L'API v1 est dépréciée.
 
+🎨 **Plus beau, plus clair**
+- Nouvelle page d'accueil (qui voit quoi, développeurs, fonctionnalités à jour), aperçus d'images enfin affichés pour les fichiers chiffrés, panneau d'upload qui se range tout seul, page d'erreur claire.
+- **Bannière jaune** si le site, la base de données ou Discord sont temporairement inaccessibles (ou en cas de maintenance).
+- Corbeille : restaurer et vider ; recherche dans tout le drive ; menus qui ne bloquent plus la page après un renommage.
+
 ✨ **La bêta est terminée** — Drivecord passe en version 1.0.
 
 ## API publique v1 : sécurité renforcée

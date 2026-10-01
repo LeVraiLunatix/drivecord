@@ -14,6 +14,9 @@ import {
   ExternalLink,
   ShieldCheck,
   MonitorDown,
+  KeyRound,
+  Code2,
+  Vault,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,18 +26,27 @@ import DarkVeil from "@/components/ui/dark-veil";
 // ── Data ────────────────────────────────────────────────────────────────────
 
 const features = [
-  { icon: Zap, title: "Upload parallèle", description: "Découpage automatique en chunks, upload simultané. Transferts ultra-rapides, sans limite de taille." },
-  { icon: Lock, title: "Chiffrement E2EE", description: "AES-256-GCM côté client. Tes fichiers sont chiffrés avant même de quitter ton appareil." },
-  { icon: Share2, title: "Partage avancé", description: "Liens publics avec mot de passe, expiration et compteur de téléchargements." },
-  { icon: CloudUpload, title: "Preview streaming", description: "Vidéo, PDF, audio, images directement dans l'app — même les .mov et HEIC." },
-  { icon: Smartphone, title: "App native iOS", description: "Vraie app installable. Sync multi-appareils — mêmes fichiers partout." },
-  { icon: Sparkles, title: "UI moderne", description: "Mode sombre, drag & drop, recherche instantanée, dossiers, tags et favoris." },
+  { icon: Lock, title: "Chiffré de bout en bout", description: "Contenu, noms de fichiers et de dossiers : tout est chiffré sur ton appareil. Même nous ne pouvons rien lire." },
+  { icon: KeyRound, title: "Récupération maîtrisée", description: "Clé de récupération, phrase, passkey, ou approbation depuis un autre appareil avec code de vérification." },
+  { icon: Share2, title: "Partage sûr", description: "Liens chiffrés (la clé reste dans le lien), mot de passe optionnel, expiration et compteur." },
+  { icon: Zap, title: "Upload parallèle", description: "Découpage en morceaux de 8 Mio, envoi simultané, reprise propre. Aucune limite de taille de fichier." },
+  { icon: CloudUpload, title: "Aperçus instantanés", description: "Images, vidéo, PDF, audio, texte directement dans l'app — même les .mov et HEIC." },
+  { icon: Smartphone, title: "Partout avec toi", description: "Web, app iPhone, app Windows : mêmes fichiers, mêmes clés, synchronisés." },
+  { icon: Code2, title: "API & SDK", description: "Connecte tes apps avec OAuth : un dossier dédié, des permissions précises, révocable en un clic." },
+  { icon: Vault, title: "Coffre-fort à PIN", description: "Une couche de plus pour tes fichiers sensibles. Le PIN ne quitte jamais ton appareil." },
+  { icon: Sparkles, title: "Fait pour durer", description: "Recherche dans tout le drive, tags, favoris, corbeille, glisser-déposer, raccourcis clavier." },
 ];
 
 const steps = [
   { n: "01", title: "Crée un webhook Discord", description: "Paramètres d'un salon → Intégrations → Webhooks. Gratuit, aucun bot requis." },
-  { n: "02", title: "Connecte-le à Drivecord", description: "On hash l'URL localement pour créer ton drive. Rien n'est envoyé à un serveur tiers." },
-  { n: "03", title: "Upload & partage", description: "Glisse tes fichiers, organise par dossiers, partage par lien. Tes données restent sur Discord." },
+  { n: "02", title: "Crée ton compte", description: "Tes clés de chiffrement sont générées sur ton appareil, avec une clé de récupération à garder." },
+  { n: "03", title: "Upload & partage", description: "Glisse tes fichiers, organise, partage. Discord ne stocke que du chiffré." },
+];
+
+const trust: { who: string; sees: string; tone: string }[] = [
+  { who: "Discord", sees: "Des morceaux chiffrés aux noms opaques. Rien de lisible.", tone: "text-muted-foreground" },
+  { who: "Drivecord", sees: "La structure de tes dossiers, sans leurs noms. Aucune clé, aucun contenu.", tone: "text-muted-foreground" },
+  { who: "Toi", sees: "Tout, sur chaque appareil que tu déverrouilles.", tone: "text-primary" },
 ];
 
 // ── Animation variants ────────────────────────────────────────────────────────
@@ -147,7 +159,7 @@ export function Landing() {
               className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg"
             >
               Stockage illimité via webhooks Discord, chiffrement de bout en bout,
-              partage par lien et app native — sans serveur, sans abonnement.
+              partage par lien et app native — sans abonnement, sans carte bancaire.
             </motion.p>
 
             <motion.div variants={v ?? item} className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
@@ -245,6 +257,47 @@ export function Landing() {
           </div>
         </section>
 
+        {/* ── Trust ── */}
+        <section className="px-5 py-20 sm:px-6">
+          <div className="mx-auto max-w-4xl">
+            <SectionHeading kicker="Confidentialité" title="Qui voit quoi ?" />
+            <div className="grid gap-4 sm:grid-cols-3">
+              {trust.map((t) => (
+                <div key={t.who} className="rounded-2xl border border-border/50 bg-card/40 p-6">
+                  <h3 className={`mb-2 font-semibold ${t.tone}`}>{t.who}</h3>
+                  <p className="text-sm text-muted-foreground">{t.sees}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Code ouvert, primitives standard (AES-256-GCM, Argon2id), modèle de menace publié —{" "}
+              <Link href="/docs/securite/chiffrement" className="text-primary hover:underline">voir comment ça marche</Link>.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Developers ── */}
+        <section className="border-t border-border/40 bg-card/20 px-5 py-20 sm:px-6">
+          <div className="mx-auto grid max-w-5xl items-center gap-8 md:grid-cols-2">
+            <div>
+              <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted-foreground">Développeurs</p>
+              <h2 className="mb-3 text-2xl font-bold tracking-tight sm:text-3xl">Intègre Drivecord dans ton site</h2>
+              <p className="mb-5 text-sm text-muted-foreground">
+                Un bouton d&apos;upload et une visionneuse chiffrés de bout en bout en quelques lignes. Ton site ne voit jamais ni les clés, ni les noms.
+              </p>
+              <Button asChild variant="outline" className="gap-2">
+                <Link href="/docs/technique/sdk">Voir le SDK <ArrowRight className="size-4" /></Link>
+              </Button>
+            </div>
+            <pre className="overflow-x-auto rounded-2xl border border-border/50 bg-background/80 p-5 text-xs leading-relaxed text-muted-foreground"><code>{`const dc = Drivecord.init({ clientId, redirectUri });
+await dc.signIn();
+
+dc.mountUploader(el, {
+  onUploaded: ({ fileId }) => save(fileId),
+});`}</code></pre>
+          </div>
+        </section>
+
         {/* ── CTA ── */}
         <section className="border-t border-border/40 bg-card/20 px-5 py-20 sm:px-6">
           <motion.div
@@ -256,7 +309,7 @@ export function Landing() {
           >
             <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">Commence maintenant</h2>
             <p className="mb-8 text-muted-foreground">
-              Un webhook Discord suffit. Aucune installation, aucune config serveur.
+              Un webhook Discord suffit. Aucune carte bancaire, aucune installation.
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="group w-full gap-2 px-8 sm:w-auto">

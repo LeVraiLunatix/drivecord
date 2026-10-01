@@ -48,6 +48,16 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Baseline hardening for every response.
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+        ],
+      },
+      {
         // The popup that mints an embed ticket is first-party only.
         source: "/embed/connect",
         headers: [
