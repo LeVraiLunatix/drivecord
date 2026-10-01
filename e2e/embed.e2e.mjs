@@ -35,7 +35,7 @@ const server = http.createServer((req, res) => {
   if (req.url === "/sdk.js") { res.writeHead(200, { "content-type": "text/javascript" }); return res.end(sdk); }
   if (req.url?.startsWith("/cb")) { res.writeHead(200, { "content-type": "text/html" }); return res.end(`<script src="/sdk.js"></script><script>Drivecord.completeSignIn()</script>`); }
   res.writeHead(200, { "content-type": "text/html" });
-  res.end(`<!doctype html><div id="box"></div><div id="view"></div><script src="/sdk.js"></script><script>
+  res.end(`<!doctype html><button id="si" onclick="dc.signIn().then(() => __events.push({ t: 'signedin' }), (e) => __events.push({ t: 'signin-error', m: String(e) }))">in</button><div id="box"></div><div id="view"></div><script src="/sdk.js"></script><script>
     window.__events = [];
     window.dc = Drivecord.init({ clientId: new URLSearchParams(location.search).get("c"), baseUrl: "${BASE}", redirectUri: "${HOST}/cb" });
     window.mountUp = () => dc.mountUploader(document.getElementById("box"), { onReady: () => __events.push({ t: "ready" }), onUploaded: (f) => __events.push({ t: "uploaded", ...f }), onProgress: (p) => __events.push({ t: "progress" }), onError: (c) => __events.push({ t: "error", c }) });
@@ -82,9 +82,6 @@ try {
   step("register app + grant");
   let r = await web("/api/developers/apps", { method: "POST", body: JSON.stringify({ name: "Wavecast", homepageUrl: "https://app.example", redirectUris: [`${HOST}/cb`], allowedOrigins: [HOST] }) });
   const reg = await r.json(); if (!reg.app) console.log("register failed", r.status, JSON.stringify(reg)); const app = reg.app;
-  await DB.query(`insert into "DriveFolder"(id,"webhookId","driveId","parentId",name,"encName","updatedAt") values('appfolder_e','${wh.id}','${wh.driveId}','','','v1.AAAAAAAAAAAAAAAA.AAAA',now())`);
-  await DB.query(`insert into "AppGrant"(id,"appId","userId","webhookId","appFolderId",scopes) values('g1',$1,'u_emb',$2,'appfolder_e',$3)`, [app.id, wh.id, ["app_folder:read", "app_folder:write"]]);
-
   step("frame-ancestors is per client_id");
   const csp = async (q) => (await fetch(`${BASE}/embed/upload?client_id=${q}`)).headers.get("content-security-policy");
   ok((await csp(app.id)) === `frame-ancestors ${HOST}`, "allowed origin only");
@@ -99,6 +96,22 @@ try {
   host.on("requestfailed", (r) => console.log("  [requestfailed]", r.url().slice(0, 140), r.failure()?.errorText));
   host.on("request", (r) => { if (r.frame() !== host.mainFrame() && /_next|api/.test(r.url())) console.log("  [iframe req]", r.url().slice(0, 100), r.headers()["sec-fetch-site"]); });
   await host.goto(`${HOST}/?c=${app.id}`);
+  step("SDK sign-in: real consent screen creates the app folder");
+  const [consent] = await Promise.all([ctx.waitForEvent("page"), host.click("#si")]);
+  await consent.getByTestId("authorize-consent").waitFor();
+  ok((await consent.getByTestId("app-name").innerText()) === "Wavecast", "consent screen shows the app");
+  await consent.getByTestId("allow").click();
+  await host.waitForFunction(() => window.__events.some((e) => e.t === "signedin" || e.t === "signin-error"), null, { timeout: 20000 }).catch(async () => {
+    console.log("  consent url:", consent.url(), consent.isClosed() ? "(closed)" : (await consent.evaluate(() => document.body.innerText).catch(() => "?")).replace(/\s+/g, " ").slice(0, 900));
+    throw new Error("sign-in did not complete");
+  });
+  const evs = await host.evaluate(() => window.__events);
+  ok(evs.some((e) => e.t === "signedin"), "popup → redirect → code exchange → SDK holds a token " + JSON.stringify(evs.filter((e) => e.t === "signin-error")));
+  const me = await host.evaluate(() => dc.api("/me"));
+  ok(me.principal.type === "app" && Boolean(me.principal.appFolderId), "dc.api('/me') works with the app token");
+  const grant = (await DB.query(`select "appFolderId" from "AppGrant" where "appId"=$1`, [app.id])).rows[0];
+  ok(grant && grant.appFolderId, "grant bound to a freshly created Apps/<name> folder");
+  await DB.query(`update "AppGrant" set "appFolderId"=$2 where "appId"=$1`, [app.id, grant.appFolderId]);
   await host.evaluate(() => window.mountUp());
   const frame = host.frameLocator("iframe");
   await frame.getByRole("button", { name: "Se connecter" }).waitFor({ timeout: 120000 }).catch(async () => {
@@ -144,34 +157,45 @@ try {
   const up = await host.evaluate(() => window.__events.find((e) => e.t === "uploaded"));
   ok(Object.keys(up).sort().join() === "fileId,size,t", `host receives only {fileId,size} (${Object.keys(up).join(",")})`);
   const row = (await DB.query(`select * from "DriveFile" where id=$1`, [up.fileId])).rows[0];
-  ok(row?.parentId === "appfolder_e" && row.cryptoVersion === 1 && row.filename === "", "file landed encrypted inside the app folder");
+  ok(row?.parentId === grant.appFolderId && row.cryptoVersion === 1 && row.filename === "", "file landed encrypted inside the app folder");
   ok(![...discord.attachments.values()].some((a) => a.buf.includes(Buffer.from(secret))), "Discord holds ciphertext only");
 
+  const openViewer = async (id) => {
+    await host.evaluate((fid) => { document.getElementById("view").innerHTML = ""; window.mountView(fid); }, id);
+    const vf = host.frameLocator("#view iframe");
+    await vf.getByRole("button", { name: "Se connecter" }).waitFor();
+    const [pp] = await Promise.all([ctx.waitForEvent("page"), vf.getByRole("button", { name: "Se connecter" }).click()]);
+    await pp.waitForEvent("close").catch(() => {});
+    return vf;
+  };
+  const unlockIfAsked = async (vf, expected) => {
+    const vUnlock = vf.getByTestId("unlock-screen");
+    await Promise.race([vUnlock.waitFor(), expected.waitFor()]);
+    if (await vUnlock.isVisible()) {
+      await vf.getByTestId("unlock-recovery-btn").click();
+      await vf.getByTestId("unlock-input").fill(recoveryKey);
+      await vf.getByTestId("unlock-submit").click();
+    }
+  };
+
   step("viewer");
-  await host.evaluate((id) => window.mountView(id), up.fileId);
-  const vf = host.frameLocator("#view iframe");
-  await vf.getByRole("button", { name: "Se connecter" }).waitFor();
-  const [popup2] = await Promise.all([ctx.waitForEvent("page"), vf.getByRole("button", { name: "Se connecter" }).click()]);
-  await popup2.waitForEvent("close").catch(() => {});
-  const vUnlock = vf.getByTestId("unlock-screen");
-  const vShown = vf.getByText(secret);
-  await Promise.race([vUnlock.waitFor(), vShown.waitFor()]);
-  if (await vUnlock.isVisible()) {
-    await vf.getByTestId("unlock-recovery-btn").click();
-    await vf.getByTestId("unlock-input").fill(recoveryKey);
-    await vf.getByTestId("unlock-submit").click();
-  }
+  let vf = await openViewer(up.fileId);
+  await unlockIfAsked(vf, vf.getByText(secret));
   await vf.getByText(secret).waitFor();
   ok(true, "viewer decrypts and shows the text");
   await vf.getByText("note-secrète.txt").waitFor();
   ok(true, "decrypted file name shown in the viewer footer");
 
   step("viewer refuses files outside the app folder");
-  const other = (await DB.query(`select id from "DriveFile" where id<>$1 limit 1`, [up.fileId])).rows[0];
-  ok(!other, "(no other file to probe — confinement covered by the API e2e)");
+  const outsider = "outsideFile0000000001";
+  await DB.query(`insert into "DriveFile"(id,"webhookId","driveId","parentId",filename,size,"mimeType","chunkSize",chunks,tags,"updatedAt") values($1,$2,$3,'','x',1,'text/plain',1,'[]',$4,now())`, [outsider, wh.id, wh.driveId, []]);
+  vf = await openViewer(outsider);
+  await unlockIfAsked(vf, vf.getByText("n'appartient pas"));
+  await vf.getByText("n'appartient pas").waitFor();
+  ok(true, "a file outside the app folder is refused by the viewer");
 
   step("revoked grant");
-  await DB.query(`update "AppGrant" set "revokedAt"=now() where id='g1'`);
+  await DB.query(`update "AppGrant" set "revokedAt"=now() where "appId"='${app.id}'`);
   r = await web("/api/embed/ticket", { method: "POST", body: JSON.stringify({ client_id: app.id }) });
   ok(r.status === 403, "no ticket for a revoked grant");
 } catch (e) { console.error(e); failures++; } finally {

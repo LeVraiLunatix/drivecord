@@ -2,6 +2,7 @@
  * POST /api/embed/ticket { client_id } — first-party only (session cookie, from the /embed/connect popup).
  * Returns a 60-second, single-use ticket the framed embed trades for an in-memory session token.
  */
+import { isSameOriginRequest } from "@/lib/same-origin";
 import { NextRequest, NextResponse } from "next/server";
 import { encode } from "next-auth/jwt";
 import { z } from "zod";
@@ -14,8 +15,7 @@ export const TICKET_SALT = "drivecord-embed-ticket";
 
 export async function POST(req: NextRequest) {
   // CSRF: only our own pages (the popup) may mint a ticket.
-  const origin = req.headers.get("origin");
-  if (!origin || new URL(origin).host !== (req.headers.get("x-forwarded-host") ?? req.headers.get("host"))) return NextResponse.json({ error: "Origine refusée." }, { status: 403 });
+  if (!isSameOriginRequest(req, true)) return NextResponse.json({ error: "Origine refusée." }, { status: 403 });
   const u = await requireUser();
   if (isResponse(u)) return u;
   const b = await readBody(req, z.object({ client_id: z.string().max(80) }));

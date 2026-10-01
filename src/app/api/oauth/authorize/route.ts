@@ -8,6 +8,7 @@
  *
  * Session only (never reachable with an API key), same-origin POST only.
  */
+import { isSameOriginRequest } from "@/lib/same-origin";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -72,8 +73,7 @@ const bodySchema = z.object({
 
 export async function POST(req: NextRequest) {
   // A consent click must come from OUR page: refuse cross-site form posts outright.
-  const origin = req.headers.get("origin");
-  if (origin && new URL(origin).host !== req.nextUrl.host) {
+  if (!isSameOriginRequest(req)) {
     return NextResponse.json({ error: "Origine refusée." }, { status: 403 });
   }
   const u = await requireUser();
