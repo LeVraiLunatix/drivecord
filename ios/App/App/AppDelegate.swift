@@ -1,5 +1,6 @@
 import UIKit
 import WebKit
+import AVFoundation
 import Network
 import Capacitor
 
@@ -493,7 +494,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // The web app's audio player (with lock-screen controls via Media
+        // Session) stopped as soon as the phone locked: background audio needs
+        // the "audio" background mode (Info.plist) and a playback session.
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         return true
     }
 

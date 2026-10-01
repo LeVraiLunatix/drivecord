@@ -23,7 +23,8 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] flex-col">
       {/* ── En-tête ── */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/70 backdrop-blur-xl">
+      {/* Safe-area padding: in the iOS app (edge to edge) the header sat under the status bar; 0 elsewhere. */}
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/70 backdrop-blur-xl" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <div className="mx-auto flex h-14 max-w-[88rem] items-center gap-2 px-4 sm:px-6">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -84,7 +85,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* Contenu */}
-        <main className="min-w-0 flex-1 px-4 py-8 sm:px-0 lg:px-10">
+        <main className="tabbar-pad min-w-0 flex-1 px-4 py-8 sm:px-0 lg:px-10">
           <div className="mx-auto max-w-3xl">
             <DocsBreadcrumb />
             {children}

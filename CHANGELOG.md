@@ -7,6 +7,23 @@
   à chaque changement notable.
 -->
 
+## App iPhone : encore des corrections
+
+📶 **Sans réseau** : ouvrir l'app hors connexion affichait un écran noir pour de bon. Un écran « Pas de connexion » s'affiche maintenant, et l'app se recharge toute seule dès que le réseau revient.
+
+🎵 **Musique** : le lecteur audio continue quand l'iPhone se verrouille ou que tu changes d'app, avec les commandes sur l'écran verrouillé.
+
+📸 **Pellicule**
+- Changer d'onglet pendant une sauvegarde ne permet plus d'en lancer une deuxième en même temps (les médias partaient en double) : la progression est retrouvée en revenant.
+- L'écran ne se met plus en veille pendant la sauvegarde (le verrouillage automatique l'arrêtait).
+
+🔑 **Connexion et sécurité**
+- Le code reçu par e-mail ou SMS se remplit d'un coup depuis le clavier (seul le premier chiffre passait).
+- Les passkeys ne sont plus proposées là où elles ne peuvent pas marcher dans l'app (déverrouillage, ajout) : « Ajouter » ouvre Safari.
+- Les demandes de connexion et la liste des appareils affichent « App Drivecord sur iOS » (et Chrome / Firefox sur iPhone) au lieu de « Safari sur iOS ».
+
+🛠️ **Divers** : la documentation ne passe plus sous la barre d'état ni sous la barre d'onglets, et AltStore affiche les autorisations demandées par l'app.
+
 ## App iPhone : corrections
 
 🔐 **Connexion plus sûre**

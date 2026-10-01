@@ -47,11 +47,15 @@ export function deviceLabel(ua: string | null): string {
           : /Linux/.test(ua)
             ? "Linux"
             : "un appareil";
-  const browser = /Edg\//.test(ua)
+  // The iOS app sends a Safari user-agent tagged DrivecordNative: it used to
+  // be listed as « Safari sur iOS » in approvals and trusted devices. Chrome,
+  // Firefox and Edge on iOS (CriOS / FxiOS / EdgiOS) aren't Safari either.
+  if (/DrivecordNative/.test(ua)) return `App Drivecord sur ${os}`;
+  const browser = /Edg\/|EdgiOS\//.test(ua)
     ? "Edge"
-    : /Chrome\//.test(ua)
+    : /Chrome\/|CriOS\//.test(ua)
       ? "Chrome"
-      : /Firefox\//.test(ua)
+      : /Firefox\/|FxiOS\//.test(ua)
         ? "Firefox"
         : /Safari\//.test(ua)
           ? "Safari"
