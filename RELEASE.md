@@ -13,13 +13,13 @@ Everything below was implemented and tested on branch `claude/zealous-cannon-wk2
 4. **Packages** — `node packages/sdk/build.mjs` (prints the SRI hash) and `node packages/node/build.mjs`; publish `@drivecord/sdk` / `@drivecord/node` to npm when ready.
 
 ## Known limits to communicate
-- The **Windows/Tauri client** cannot read E2EE files yet: it must adopt `src/lib/crypto/e2ee` (same code the web uses).
+- The **Windows/Tauri client** reuses this web UI (static export, `node scripts/build-desktop.mjs` builds), so it shares the E2EE code — rebuild and ship it with the release; not tested on a real Windows machine.
 - iOS: device key lives in IndexedDB (no Keychain plugin yet).
 - v1 API listing still exposes chunk references; v1 is deprecated (`Sunset: 30 Sep 2027`).
 - In third-party iframes (SDK embeds) browsers partition storage: users may have to re-enter their recovery key/phrase inside the iframe.
 
 ## Phase 6 cleanup — only after you validate
-Drop `Webhook.encKey`, the legacy chunk-finalize path and `src/lib/crypto/file-server-crypto.ts` once every drive is migrated (`e2eeVersion >= 1`).
+Drop `Webhook.encKey`, the legacy chunk-finalize path and `src/lib/crypto/file-server-crypto.ts` only when `DATABASE_URL=… node scripts/e2ee-migration-status.mjs` prints READY (every drive migrated). Doing it earlier would make unmigrated users' files unreadable, so it is intentionally NOT part of this release.
 
 ## Done in this release (highlights)
 - Real E2EE (names, folders, content), recovery key / passphrase / passkey / device approval, vault PIN never sent.
