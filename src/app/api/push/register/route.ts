@@ -4,6 +4,12 @@
  * Enregistre le jeton APNs de l'appareil natif pour le compte connecté (session
  * full). Le jeton est unique : s'il existait pour un autre compte (changement
  * d'utilisateur sur le même téléphone), il est réassigné au compte courant.
+ *
+ * DELETE /api/push/register   body: { token }
+ *
+ * Appelé à la déconnexion dans l'app : sans ça, le téléphone continuait de
+ * recevoir les demandes de connexion (avec leur code) du compte qu'on venait
+ * de quitter.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
@@ -37,5 +43,19 @@ export async function POST(req: NextRequest) {
     update: { userId, deviceId },
   });
 
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+  }
+  const { token } = (await req.json().catch(() => ({}))) as { token?: string };
+  if (!token || token.length > 512) {
+    return NextResponse.json({ error: "Jeton invalide." }, { status: 400 });
+  }
+  // Only this account's copy: a token re-assigned to someone else stays theirs.
+  await prisma.pushToken.deleteMany({ where: { token, userId: session.user.id } });
   return NextResponse.json({ ok: true });
 }

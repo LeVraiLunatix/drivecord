@@ -2,10 +2,16 @@
 
 import * as React from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { hasNativeTabBar } from "@/lib/use-platform";
 
 // Pages where the native bar should be hidden (auth / public / onboarding).
-const HIDDEN_PREFIXES = ["/login", "/register", "/setup", "/s/", "/install", "/conditions", "/native"];
+// Includes the step-up / sign-out screens: tabs there led to pages a pending
+// session can't open.
+const HIDDEN_PREFIXES = [
+  "/login", "/register", "/setup", "/s/", "/install", "/conditions", "/native",
+  "/embed", "/auth/", "/secure-account", "/logout", "/oauth",
+];
 
 /** Map the current location to the native tab index (-1 = no selection). */
 function activeIndex(pathname: string, section: string | null): number {
@@ -24,7 +30,12 @@ function activeIndex(pathname: string, section: string | null): number {
 
 type WebkitWindow = Window & {
   __drivecordNavigate?: (path: string) => void;
-  webkit?: { messageHandlers?: { nativeTabs?: { postMessage: (msg: unknown) => void } } };
+  webkit?: {
+    messageHandlers?: {
+      nativeTabs?: { postMessage: (msg: unknown) => void };
+      nativeShell?: { postMessage: (msg: unknown) => void };
+    };
+  };
 };
 
 function Inner() {
@@ -38,7 +49,12 @@ function Inner() {
   React.useEffect(() => {
     if (!hasNativeTabBar()) return;
     const w = window as WebkitWindow;
-    w.__drivecordNavigate = (path: string) => router.push(path);
+    w.__drivecordNavigate = (path: string) => {
+      // Lets the page react to a re-tap of the tab it's already on (same URL →
+      // the router does nothing), see the drive page's section handling.
+      window.dispatchEvent(new CustomEvent("drivecord:tab", { detail: path }));
+      router.push(path);
+    };
     document.documentElement.classList.add("native-tabs");
     return () => { delete w.__drivecordNavigate; };
   }, [router]);
@@ -51,6 +67,15 @@ function Inner() {
     const w = window as WebkitWindow;
     w.webkit?.messageHandlers?.nativeTabs?.postMessage({ index, visible: !hidden });
   }, [pathname, section]);
+
+  // The shell styles the status bar, tab bar and native sheets after the app's
+  // theme, not the phone's (dark app + light iPhone = invisible status bar).
+  const { resolvedTheme } = useTheme();
+  React.useEffect(() => {
+    if (!hasNativeTabBar() || !resolvedTheme) return;
+    const w = window as WebkitWindow;
+    w.webkit?.messageHandlers?.nativeShell?.postMessage({ theme: resolvedTheme });
+  }, [resolvedTheme]);
 
   return null;
 }

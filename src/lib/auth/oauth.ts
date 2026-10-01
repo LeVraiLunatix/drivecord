@@ -3,6 +3,7 @@
 import { signIn, signOut } from "next-auth/react";
 import { isNativeApp } from "@/lib/use-platform";
 import { cordAuthParams } from "@/lib/auth/cord-shared";
+import { newNativeNonce } from "@/lib/auth/native-nonce";
 
 export type OAuthProvider = "google" | "discord" | "cord";
 
@@ -72,7 +73,8 @@ export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive", cor
     // Domaine courant du WebView (drivecord.app sur les builds récents) : le
     // navigateur système reste sur le même domaine que l'app → cookies et
     // redirect URIs OAuth cohérents.
-    const url = `${window.location.origin}/native-login?${new URLSearchParams({ provider, ...params })}`;
+    // `n`: nonce the code coming back via drivecord:// will be bound to.
+    const url = `${window.location.origin}/native-login?${new URLSearchParams({ provider, ...params, n: newNativeNonce() })}`;
     // Capacitor routes target "_system" to the external browser.
     window.open(url, "_system");
   } else {

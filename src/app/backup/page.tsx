@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/back-button";
 import { cn } from "@/lib/utils";
+import { useIsNativeApp } from "@/lib/use-platform";
 import { useAllDrives } from "@/lib/storage";
 import { recordUploadedFile, createFolder, refreshDrive } from "@/lib/storage";
 import { ensureDriveKey } from "@/lib/auth/sync";
@@ -41,13 +42,18 @@ export default function BackupPage() {
   const reduce = useReducedMotion();
   const v = reduce ? {} : undefined;
   const drives = useAllDrives();
-  const native = cameraRollAvailable();
+  // Read after mount (camera-roll access = the native app): the server render
+  // can't know it's the app, and reading it during render made SSR and
+  // hydration disagree (the "app only" card flashed, then a hydration error).
+  const native = useIsNativeApp();
 
   const [target, setTarget] = React.useState<string | null>(null);
   const [running, setRunning] = React.useState(false);
   const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
   const [backedCount, setBackedCount] = React.useState(0);
   const cancelRef = React.useRef(false);
+  // Aborts the media in flight when « Arrêter » is pressed.
+  const itemAbortRef = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => {
     if (!target && drives && drives.length) setTarget(drives[0].id);
@@ -123,16 +129,32 @@ export default function BackupPage() {
       // Which folders still exist on the server (so we don't upload into a
       // deleted folder and orphan the files).
       const existingFolders = new Set<string>();
+      let foldersKnown = false;
       try {
         const fr = await fetch(`/api/drive/${drive.id}/folders`);
-        if (fr.ok) { const { folders } = await fr.json(); for (const f of folders ?? []) existingFolders.add(f.id); }
-      } catch { /* offline → cached ids used as-is */ }
+        if (fr.ok) {
+          const { folders } = await fr.json();
+          for (const f of folders ?? []) existingFolders.add(f.id);
+          foldersKnown = true;
+        }
+      } catch { /* offline */ }
+      // Folder list unavailable → trust the cached ids. Treating them as
+      // deleted used to wipe the tracker and re-upload the whole library into
+      // a duplicate « Pellicule » after a single failed request.
+      if (!foldersKnown) {
+        for (let k = 0; k < localStorage.length; k++) {
+          const key = localStorage.key(k);
+          if (!key?.startsWith(FOLDER_KEY(drive.id))) continue;
+          const id = localStorage.getItem(key);
+          if (id) existingFolders.add(id);
+        }
+      }
 
       // If the cached "Pellicule" root no longer exists on the server, every
       // previously-uploaded media is orphaned (invisible). Reset the tracker so
       // the whole library re-uploads into a fresh, visible folder.
       const cachedRoot = localStorage.getItem(FOLDER_KEY(drive.id));
-      const rootStale = Boolean(cachedRoot) && !existingFolders.has(cachedRoot as string);
+      const rootStale = foldersKnown && Boolean(cachedRoot) && !existingFolders.has(cachedRoot as string);
       if (rootStale) clearTracker(drive.id);
 
       // Reconcile the tracker with what's actually still in the drive — anything
@@ -161,16 +183,28 @@ export default function BackupPage() {
       const MAX_BYTES = 2_000_000_000;
       const CHUNK = DEFAULT_CHUNK_SIZE;
       // Skip any media that hangs (e.g. iCloud photo not downloaded locally).
+      // This is an INACTIVITY limit, reset by upload progress: a fixed total
+      // budget aborted every large video whose upload simply took > 2 min.
       const ITEM_TIMEOUT = 120_000;
       let ok = 0;
       let skipped = 0;
       let stuck = 0;
       let firstError = "";
 
+      // Delete the chunks a failed/aborted upload already sent (no manifest yet).
+      const deletePartial = async (err: unknown, identifier: string) => {
+        const partial = (err as DiscordApiError)?.partialChunks;
+        if (!partial?.length) return;
+        await client
+          .deleteFile({ size: 0, mimeType: "", filename: identifier, chunkSize: 0, chunks: partial })
+          .catch(() => {});
+      };
+
       // Upload one media. Returns "ok" | "skipped"; throws on error/abort.
       const processItem = async (
         it: { identifier: string; album: string | null },
         signal: AbortSignal,
+        onProgress: () => void,
       ): Promise<"ok" | "skipped"> => {
         const albumKey = it.album ?? "";
         let parentId = folderCache.get(albumKey);
@@ -197,23 +231,21 @@ export default function BackupPage() {
               });
               manifest = await client.uploadStream(prep.stream, {
                 filename: prep.discordName, mimeType: "application/octet-stream",
-                totalSize: s.size ? prep.cipherSize : undefined, chunkSize: prep.chunkSize, signal,
+                totalSize: s.size ? prep.cipherSize : undefined, chunkSize: prep.chunkSize, signal, onProgress,
               });
               e2ee = { fileId: prep.fileId, ...(await prep.finalize(manifest.size)) };
             } else {
               await s.stream.cancel().catch(() => {}); // fall through to whole-file read
             }
           } catch (streamErr) {
-            if ((streamErr as Error).name === "AbortError") throw streamErr;
-            if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
             // Whatever chunks the failed ranged attempt already uploaded would
-            // otherwise be orphaned once we fall through to the whole-file path.
-            const partial = (streamErr as DiscordApiError)?.partialChunks;
-            if (partial?.length) {
-              await client
-                .deleteFile({ size: 0, mimeType: "", filename: it.identifier, chunkSize: 0, chunks: partial })
-                .catch(() => {});
-            }
+            // otherwise be orphaned (on abort as on a fallback to the whole-file path).
+            await deletePartial(streamErr, it.identifier);
+            // uploadStream wraps every error (aborts included) in a
+            // DiscordApiError, so check the signal rather than the error name:
+            // a timed-out video used to fall through to the whole-file read.
+            if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+            if (!firstError) firstError = `stream: ${(streamErr as Error).message}`;
           }
           // 2) Whole-file read → upload (the temp copy is deleted afterwards so
           //    the disk no longer fills up; only truly huge files are skipped).
@@ -223,10 +255,15 @@ export default function BackupPage() {
             if (r.blob.size > MAX_BYTES) return "skipped";
             const file = new File([r.blob], r.filename, { type: r.mimeType });
             const prep = await prepareEncryptedUpload(dk, file);
-            manifest = await client.uploadStream(prep.stream, {
-              filename: prep.discordName, mimeType: "application/octet-stream",
-              totalSize: prep.cipherSize, chunkSize: prep.chunkSize, signal,
-            });
+            try {
+              manifest = await client.uploadStream(prep.stream, {
+                filename: prep.discordName, mimeType: "application/octet-stream",
+                totalSize: prep.cipherSize, chunkSize: prep.chunkSize, signal, onProgress,
+              });
+            } catch (err) {
+              await deletePartial(err, it.identifier);
+              throw signal.aborted ? new DOMException("Aborted", "AbortError") : err;
+            }
             e2ee = { fileId: prep.fileId, ...(await prep.finalize(manifest.size)) };
           }
           try {
@@ -247,19 +284,35 @@ export default function BackupPage() {
       for (let i = 0; i < todo.length; i++) {
         if (cancelRef.current) break;
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), ITEM_TIMEOUT);
+        itemAbortRef.current = controller;
+        // Watchdog: aborts the media after ITEM_TIMEOUT without any progress,
+        // and gives up waiting 2 s later if the abort isn't honored (a native
+        // call stuck on iCloud can't be cancelled).
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        let rejectStuck: (e: Error) => void = () => {};
+        const stuckPromise = new Promise<never>((_, rej) => { rejectStuck = rej; });
+        const arm = () => {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            controller.abort();
+            timer = setTimeout(() => rejectStuck(new Error("__timeout__")), 2000);
+          }, ITEM_TIMEOUT);
+        };
+        arm();
         try {
           const res = await Promise.race<"ok" | "skipped">([
-            processItem(todo[i], controller.signal),
-            new Promise<never>((_, rej) => setTimeout(() => rej(new Error("__timeout__")), ITEM_TIMEOUT + 2000)),
+            processItem(todo[i], controller.signal, arm),
+            stuckPromise,
           ]);
           if (res === "ok") ok += 1; else skipped += 1;
         } catch (err) {
           const e = err as Error;
-          if (e.message === "__timeout__" || e.name === "AbortError") stuck += 1;
+          if (cancelRef.current) { /* stopped by the user: not an error */ }
+          else if (e.message === "__timeout__" || e.name === "AbortError") stuck += 1;
           else if (!firstError) firstError = e.message;
         } finally {
           clearTimeout(timer);
+          itemAbortRef.current = null;
         }
         setProgress({ done: i + 1, total: todo.length });
         // Refresh the drive periodically so files show up live and survive an
@@ -370,7 +423,7 @@ export default function BackupPage() {
                   </div>
                 )}
                 {running ? (
-                  <Button variant="outline" className="w-full gap-2" onClick={() => { cancelRef.current = true; }}>
+                  <Button variant="outline" className="w-full gap-2" onClick={() => { cancelRef.current = true; itemAbortRef.current?.abort(); }}>
                     <Square className="size-4" /> Arrêter
                   </Button>
                 ) : (

@@ -3,6 +3,32 @@
 import * as React from "react";
 
 /**
+ * Why an item's `onItemClick` fired, beyond a plain click/tap: "toggle" = its
+ * selection checkbox, "hold" = a long press (enters multi-select on touch).
+ */
+export type ItemClickIntent = "toggle" | "hold";
+
+const TOUCH_ONLY = "(hover: none) and (pointer: coarse)";
+const subscribeTouchOnly = (cb: () => void) => {
+  const m = window.matchMedia(TOUCH_ONLY);
+  m.addEventListener("change", cb);
+  return () => m.removeEventListener("change", cb);
+};
+
+/**
+ * True on touch-only screens (phones, the iOS app). There a long press selects
+ * the item, so the right-click context menu — which Radix also opens on a long
+ * touch — is turned off to avoid both firing; the ⋮ button carries the menu.
+ */
+export function useTouchOnly(): boolean {
+  return React.useSyncExternalStore(
+    subscribeTouchOnly,
+    () => window.matchMedia(TOUCH_ONLY).matches,
+    () => false,
+  );
+}
+
+/**
  * Detects a long press (hold left mouse button ≥ `delay` ms).
  *
  * Usage:

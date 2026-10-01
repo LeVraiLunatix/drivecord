@@ -27,6 +27,8 @@ import { CordRedirecting } from "@/components/auth/cord-hero";
 function NativeLoginInner() {
   const query = useSearchParams();
   const provider = query.get("provider") ?? "discord";
+  // Nonce from the app, carried to /native-handoff (the code gets bound to it).
+  const handoff = `/native-handoff?${new URLSearchParams({ n: query.get("n") ?? "" })}`;
   // Cord: `prompt=create` (sign-up) and `login_hint` (pre-filled email), validated.
   const cordParams = provider === "cord" ? cordAuthParamsFromQuery(query) : {};
   const prompt = cordParams.prompt;
@@ -40,16 +42,16 @@ function NativeLoginInner() {
       await signOut({ redirect: false }).catch(() => {});
       signIn(
         p,
-        { callbackUrl: "/native-handoff" },
+        { callbackUrl: handoff },
         {
           ...(prompt ? { prompt } : {}),
           ...(loginHint ? { login_hint: loginHint } : {}),
         },
       );
     })();
-  }, [provider, prompt, loginHint]);
+  }, [provider, prompt, loginHint, handoff]);
 
-  if (provider === "passkey") return <PasskeyStep />;
+  if (provider === "passkey") return <PasskeyStep handoff={handoff} />;
   if (provider === "cord") return <CordRedirecting create={prompt === "create"} />;
 
   return (
@@ -60,7 +62,7 @@ function NativeLoginInner() {
   );
 }
 
-function PasskeyStep() {
+function PasskeyStep({ handoff }: { handoff: string }) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -70,7 +72,7 @@ function PasskeyStep() {
     await signOut({ redirect: false }).catch(() => {});
     const r = await loginWithPasskey();
     if (r.ok) {
-      window.location.assign("/native-handoff");
+      window.location.assign(handoff);
       return;
     }
     setBusy(false);

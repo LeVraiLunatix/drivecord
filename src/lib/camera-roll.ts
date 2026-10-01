@@ -32,6 +32,9 @@ export async function listCameraRoll(): Promise<CamItem[]> {
   if (!isNativeApp()) return [];
   const { Media } = await import("@capacitor-community/media");
 
+  const all = await Media.getMedias({ types: "all", quantity: 100_000, ...THUMB });
+  const total = all.medias?.length ?? 0;
+
   // identifier → user album name.
   const albumOf = new Map<string, string>();
   try {
@@ -39,15 +42,21 @@ export async function listCameraRoll(): Promise<CamItem[]> {
     const userAlbums = (albums ?? []).filter((a) => a.type === "user" || a.type == null);
     for (const al of userAlbums) {
       try {
-        const r = await Media.getMedias({ albumIdentifier: al.identifier, quantity: 100_000, ...THUMB });
-        for (const m of r.medias ?? []) {
+        // `types` defaults to photos only: without it, videos never landed in
+        // their album folder.
+        const r = await Media.getMedias({ albumIdentifier: al.identifier, types: "all", quantity: 100_000, ...THUMB });
+        const medias = r.medias ?? [];
+        // Photos *folders* are listed among user albums too; the plugin can't
+        // open them as an album and silently returns the WHOLE library, which
+        // filed every media under the folder's name. Skip that result.
+        if (total > 0 && medias.length === total) continue;
+        for (const m of medias) {
           if (!albumOf.has(m.identifier)) albumOf.set(m.identifier, sanitizeAlbum(al.name));
         }
       } catch { /* skip album */ }
     }
   } catch { /* getAlbums unsupported → no album mapping */ }
 
-  const all = await Media.getMedias({ types: "all", quantity: 100_000, ...THUMB });
   return (all.medias ?? []).map((m) => ({
     identifier: m.identifier,
     album: albumOf.get(m.identifier) ?? null,
@@ -82,7 +91,10 @@ export async function readCameraItem(
     const res = await fetch(src, { cache: "no-store", signal });
     if (!res.ok) throw new Error("fetch failed");
     blob = await res.blob();
-  } catch {
+  } catch (err) {
+    // Aborted (stop / watchdog): don't start a whole-file base64 read, which
+    // is exactly what OOM-crashes on the big videos that time out.
+    if (signal?.aborted) throw err;
     // Fallback: base64 read (heavier on memory, but reliable for smaller files).
     const { Filesystem } = await import("@capacitor/filesystem");
     const read = await Filesystem.readFile({ path });
@@ -153,16 +165,23 @@ export async function streamCameraItemRanged(
       const end = offset + chunkSize - 1;
       const res = await fetch(src, { headers: { Range: `bytes=${offset}-${end}` }, cache: "no-store", signal });
       if (!res.ok && res.status !== 206) { controller.error(new Error(`range ${res.status}`)); return; }
-      // Learn the real total from the first response's Content-Range.
+      // Learn the real total from the first response's Content-Range. Stays -1
+      // (unknown) if absent: Content-Length of a 206 is the CHUNK size, and a
+      // 0 here used to end the stream after the first chunk (truncated file).
       if (total < 0) {
         const cr = res.headers.get("Content-Range"); // "bytes 0-9999/123456"
-        total = cr ? Number(cr.split("/")[1]) || 0 : Number(res.headers.get("Content-Length")) || 0;
+        const n = cr ? Number(cr.split("/")[1]) : NaN;
+        if (n > 0) total = n;
+        else if (res.status === 200) total = Number(res.headers.get("Content-Length")) || -1;
       }
       const buf = new Uint8Array(await res.arrayBuffer());
       if (buf.length === 0) { controller.close(); return; }
       offset += buf.length;
       controller.enqueue(buf);
-      if (total >= 0 && offset >= total) controller.close();
+      // Range ignored (200 = whole file) or short read at the end → done.
+      if (res.status === 200 || (total >= 0 && offset >= total) || (total < 0 && buf.length < chunkSize)) {
+        controller.close();
+      }
     },
   });
 

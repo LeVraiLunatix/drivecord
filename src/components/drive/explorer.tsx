@@ -17,6 +17,7 @@ import { SelectionActionsMenu } from "./selection-actions-menu";
 import { cn } from "@/lib/utils";
 import { kindOf } from "@/lib/utils/file-icons";
 import type { ItemAction } from "./item-menu";
+import type { ItemClickIntent } from "./use-long-press";
 import type { DriveItem } from "@/lib/storage";
 import type { FilterKind, SortDir, SortField, ViewMode } from "@/lib/view-prefs";
 
@@ -161,6 +162,14 @@ export function DriveExplorer({
   const [lastSelectedId, setLastSelectedId] = React.useState<string | null>(null);
   // Tap-to-multi-select mode (for touch — no Ctrl/Shift available).
   const [selectMode, setSelectMode] = React.useState(false);
+  // Kind of the last pointer that went down (a click event doesn't say whether
+  // it came from a finger on iOS).
+  const lastPointerType = React.useRef("mouse");
+  React.useEffect(() => {
+    const onDown = (e: PointerEvent) => { lastPointerType.current = e.pointerType; };
+    window.addEventListener("pointerdown", onDown, { capture: true, passive: true });
+    return () => window.removeEventListener("pointerdown", onDown, { capture: true });
+  }, []);
 
   const clearSelection = React.useCallback(() => {
     setSelectedIds(new Set());
@@ -351,8 +360,33 @@ export function DriveExplorer({
   }
 
   // ── Click handler factory ────────────────────────────────────────────────────
-  const makeClickHandler = (item: DriveItem, index: number) => (e: React.MouseEvent) => {
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setLastSelectedId(id);
+  };
+
+  const openItem = (i: DriveItem) => {
+    clearSelection();
+    if (i.kind === "folder") onOpenFolder(i.id);
+    else onPreviewFile(i.id);
+  };
+
+  const makeClickHandler = (item: DriveItem, index: number) => (e: React.MouseEvent, intent?: ItemClickIntent) => {
     const id = item.id;
+
+    if (intent === "toggle") { toggleSelected(id); return; }
+    // Long press → multi-select mode, starting with this item.
+    if (intent === "hold") {
+      setSelectMode(true);
+      setSelectedIds((prev) => new Set(prev).add(id));
+      setLastSelectedId(id);
+      return;
+    }
 
     if (e.shiftKey && lastSelectedId !== null) {
       const lastIdx = processed.findIndex((i) => i.id === lastSelectedId);
@@ -369,13 +403,15 @@ export function DriveExplorer({
 
     // Ctrl/Cmd-click OR touch "select mode" → toggle this item in the selection.
     if (e.ctrlKey || e.metaKey || selectMode) {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      });
-      setLastSelectedId(id);
+      toggleSelected(id);
+      return;
+    }
+
+    // Touch: a tap opens, like the Files app (it used to only select, and
+    // opening took a double-tap). While a selection exists, taps extend it.
+    if (lastPointerType.current === "touch") {
+      if (selectedIds.size > 0) toggleSelected(id);
+      else openItem(item);
       return;
     }
 
@@ -396,11 +432,7 @@ export function DriveExplorer({
     selected: selectedIds.has(item.id),
     onItemClick: onBulkAction ? makeClickHandler(item, index) : undefined,
     onAction,
-    onDoubleClick: (i: DriveItem) => {
-      clearSelection();
-      if (i.kind === "folder") onOpenFolder(i.id);
-      else onPreviewFile(i.id);
-    },
+    onDoubleClick: openItem,
     onDropItem,
     onDropExternalFiles,
   });

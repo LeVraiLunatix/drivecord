@@ -21,6 +21,7 @@ import { useFile } from "@/lib/storage";
 import { useDiscordClient } from "@/lib/discord/context";
 import { RichTextPreview } from "@/components/drive/rich-text-preview";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
+import { saveBlobWithToast } from "@/lib/native-save";
 import { useAudioPlayer } from "@/lib/audio-player";
 import { AudioStage } from "@/components/audio/audio-stage";
 
@@ -154,6 +155,9 @@ export function PreviewModal({
   const client = useDiscordClient();
 
   const [blobUrl, setBlobUrl] = React.useState<string | null>(null);
+  // The file as stored (decrypted), before any preview-only conversion: the
+  // HEIC → JPEG step used to make « Télécharger » save a JPEG named .heic.
+  const originalRef = React.useRef<Blob | null>(null);
   /** Pre-built video/mp4-typed URL for .mov fallback (null if not applicable). */
   const [mp4FallbackUrl, setMp4FallbackUrl] = React.useState<string | null>(null);
   const [text, setText] = React.useState<string | null>(null);
@@ -233,6 +237,7 @@ export function PreviewModal({
 
     setBlobUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
     setMp4FallbackUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    originalRef.current = null;
     setText(null);
     setErrorMsg("");
     setConvertingHeic(false);
@@ -261,6 +266,7 @@ export function PreviewModal({
 
         // Decrypt vault files transparently (no-op for normal files).
         const blob = await maybeDecrypt(downloaded, file);
+        originalRef.current = blob;
         let finalBlob = blob;
         const ext = getExt(file.filename);
 
@@ -341,12 +347,12 @@ export function PreviewModal({
   const canPreview = PREVIEWABLE_KINDS.has(kind);
   const isLoading = loadState === "loading" || convertingHeic;
 
-  const handleDownload = () => {
+  // Through saveBlob: in the iOS app an <a download> does nothing at all.
+  const handleDownload = async () => {
     if (!blobUrl || !file) return;
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = file.filename;
-    a.click();
+    const original = originalRef.current;
+    const blob: Blob = original ? original : await (await fetch(blobUrl)).blob();
+    await saveBlobWithToast(blob, file.filename, file.mimeType);
   };
 
   return (

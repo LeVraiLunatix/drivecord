@@ -7,6 +7,41 @@
   à chaque changement notable.
 -->
 
+## App iPhone : corrections
+
+🔐 **Connexion plus sûre**
+- Le lien qui te ramène de Safari dans l'app ne fonctionne plus que dans l'app qui a lancé la connexion : une autre app ne peut plus s'en servir pour ouvrir ton compte.
+- À la déconnexion, ton iPhone ne reçoit plus les demandes de connexion de l'ancien compte.
+- « Approuver » n'affiche plus « Connexion approuvée » si la demande a en fait échoué (expirée, réseau).
+
+📱 **Connexion et navigation**
+- La connexion avec Cord depuis l'app ouvre bien Safari à chaque fois (elle restait parfois bloquée sans rien faire).
+- Un toucher ouvre le fichier ou le dossier (avant, il fallait toucher deux fois) ; un appui long lance la sélection, sans ouvrir en plus le menu par-dessus.
+- Fini l'écran blanc avec le logo Capacitor au lancement.
+- L'heure et la batterie restent lisibles quand l'iPhone est en mode clair, et la barre d'onglets et les menus suivent le thème de l'app.
+- La barre d'onglets n'apparaît plus par-dessus l'écran de connexion ni sur les étapes de vérification du compte.
+- Toucher « Fichiers » quand le coffre-fort ou les favoris sont ouverts ramène bien à tes fichiers.
+- Les menus du haut (drive, tri) ne bloquent plus les touches sous une fenêtre ouverte, après un défilement ou après un rechargement de la page.
+
+📸 **Pellicule et téléchargements**
+- Les grosses vidéos ne sont plus abandonnées au bout de 2 minutes d'envoi : seule une vraie panne de plus de 2 minutes arrête un média.
+- « Arrêter » interrompt tout de suite le média en cours.
+- Les vidéos rangées dans un album vont dans le bon sous-dossier, et un dossier de l'app Photos ne range plus toute la pellicule à son nom.
+- Un souci réseau au lancement ne relance plus l'envoi de toute la pellicule en double.
+- Les formats que Photos refuse (SVG, WebM, MKV…) sont enregistrés dans Fichiers › Drivecord au lieu d'échouer, sans écraser un fichier du même nom ; les gros fichiers ne font plus planter l'app.
+
+🔐 **Coffre-fort**
+- Face ID ne se relance plus en boucle, et n'ouvre plus le coffre-fort si sa clé n'est pas disponible (le code est alors demandé).
+
+💾 **Enregistrer pour de vrai**
+- Télécharger ta clé de récupération, tes codes de secours 2FA, un fichier depuis l'aperçu ou depuis un lien partagé ne faisait rien dans l'app : ils sont maintenant enregistrés dans Fichiers › Drivecord (ou Photos).
+- Une photo HEIC téléchargée depuis l'aperçu est bien l'original, et non une copie JPEG portant le nom .heic.
+
+🛠️ **Divers**
+- Prendre une photo ou une vidéo depuis l'envoi de fichiers ne fait plus planter l'app.
+- L'écran d'accueil ne passe plus sous l'encoche, et une nouvelle demande de connexion n'affiche plus de bannière en double quand l'app est déjà ouverte.
+- Le bouton ⋮ des fichiers est visible sur écran tactile.
+
 ## Drivecord 1.0 : chiffrement de bout en bout et API v2
 
 🔒 **Vrai chiffrement de bout en bout**

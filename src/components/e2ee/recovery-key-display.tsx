@@ -4,6 +4,7 @@ import * as React from "react";
 import { Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { saveBlobWithToast } from "@/lib/native-save";
 
 /** The recovery key as 13 groups of 4, with copy / download helpers. Shown ONCE. */
 export function RecoveryKeyDisplay({ groups }: { groups: string[] }) {
@@ -21,12 +22,9 @@ export function RecoveryKeyDisplay({ groups }: { groups: string[] }) {
       [`Clé de récupération Drivecord\n\n${text}\n\nConserve ce fichier hors de ton ordinateur (coffre de mots de passe, papier).\nSans cette clé, tes fichiers sont perdus si tu perds tous tes appareils.\n`],
       { type: "text/plain" },
     );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "drivecord-cle-de-recuperation.txt";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    // saveBlob: in the iOS app an <a download> silently did nothing — the
+    // recovery key was never saved while the user believed it was.
+    void saveBlobWithToast(blob, "drivecord-cle-de-recuperation.txt", "text/plain");
   };
   return (
     <div className="space-y-3">

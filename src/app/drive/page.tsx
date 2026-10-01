@@ -92,12 +92,28 @@ function DriveContent() {
   const enqueue = useUploadQueue((s) => s.enqueue);
 
   const [section, setSection] = React.useState<Section>("files");
-  // Bottom tab bar deep-links: /drive?section=vault → open the vault section.
+  // Bottom tab bar deep-links: /drive?section=vault → open the vault section,
+  // and back to /drive (no param) → files. Only reacts when `section` itself
+  // changes, so other params (?open=…) don't reset Favoris/Corbeille.
+  const lastSectionParam = React.useRef<string | null>(null);
   React.useEffect(() => {
     const sec = searchParams.get("section");
-    if (sec === "vault") setSection("vault");
-    else if (sec === "files") setSection("files");
+    if (sec === lastSectionParam.current) return;
+    lastSectionParam.current = sec;
+    setSection(sec === "vault" ? "vault" : "files");
   }, [searchParams]);
+  // A tab tap on the URL already shown changes nothing in the router (e.g.
+  // « Fichiers » while in Favoris via the drive menu): the native bridge
+  // announces every tap so the section still follows the tab.
+  React.useEffect(() => {
+    const onTab = (e: Event) => {
+      const path = (e as CustomEvent<string>).detail;
+      if (typeof path !== "string" || !path.startsWith("/drive")) return;
+      setSection(new URL(path, window.location.origin).searchParams.get("section") === "vault" ? "vault" : "files");
+    };
+    window.addEventListener("drivecord:tab", onTab);
+    return () => window.removeEventListener("drivecord:tab", onTab);
+  }, []);
   const [currentFolderId, setCurrentFolderId] =
     React.useState<ParentId>(ROOT_PARENT);
   const [search, setSearch] = React.useState("");

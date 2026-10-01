@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OtpInput } from "@/components/auth/otp-input";
 import { useIsNativeApp } from "@/lib/use-platform";
+import { saveBlobWithToast } from "@/lib/native-save";
 
 type Method = "totp" | "email" | "device";
 
@@ -49,14 +50,11 @@ function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void 
     void navigator.clipboard.writeText(codes.join("\n"));
     toast.success("Codes copiés.");
   };
+  // saveBlob: works in the iOS app (Files) where <a download> does nothing,
+  // and doesn't revoke the URL before the browser has read it.
   const download = () => {
     const blob = new Blob([codes.join("\n")], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "drivecord-recovery-codes.txt";
-    a.click();
-    URL.revokeObjectURL(url);
+    void saveBlobWithToast(blob, "drivecord-recovery-codes.txt", "text/plain");
   };
   return (
     <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">

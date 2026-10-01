@@ -30,7 +30,7 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
@@ -49,6 +49,10 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Drivecord utilise Face ID pour déverrouiller ton coffre-fort.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Drivecord utilise l’appareil photo quand tu prends une photo ou une vidéo à envoyer dans ton drive.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Drivecord utilise le micro pour le son des vidéos que tu filmes depuis l’app.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Drivecord enregistre les images et vidéos téléchargées dans ta galerie.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

@@ -15,14 +15,36 @@ import { isNativeApp } from "@/lib/use-platform";
  * l'app au premier plan ; le LoginApprovalWatcher (déjà monté globalement)
  * détecte la demande par polling et affiche la fenêtre d'approbation.
  */
+const TOKEN_KEY = "drivecord:push-token";
+
+/**
+ * À la déconnexion : retire le jeton de cet appareil du compte qu'on quitte,
+ * pour qu'il ne reçoive plus ses demandes de connexion. À appeler AVANT de
+ * fermer la session (la route exige d'être connecté).
+ */
+export async function unregisterNativePush(): Promise<void> {
+  let token: string | null = null;
+  try { token = localStorage.getItem(TOKEN_KEY); } catch { /* storage off */ }
+  if (!token) return;
+  await authFetch("/api/push/register", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  }).catch(() => {});
+}
+
 export function NativePushRegister() {
   const { data: session, status } = useSession();
   const isFull = status === "authenticated" && session?.level === "full";
-  const doneRef = React.useRef(false);
+  const userId = isFull ? session?.user?.id ?? null : null;
+  // Account the device was last registered for: logging into another
+  // account without a reload (logout → /login are client-side) must register
+  // the token for the new one too.
+  const doneFor = React.useRef<string | null>(null);
 
   React.useEffect(() => {
-    if (!isFull || doneRef.current || !isNativeApp()) return;
-    doneRef.current = true;
+    if (!userId || doneFor.current === userId || !isNativeApp()) return;
+    doneFor.current = userId;
 
     let cleanup: (() => void) | undefined;
     (async () => {
@@ -34,6 +56,7 @@ export function NativePushRegister() {
         const reg = await PushNotifications.addListener(
           "registration",
           (token) => {
+            try { localStorage.setItem(TOKEN_KEY, token.value); } catch { /* storage off */ }
             void authFetch("/api/push/register", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -64,7 +87,7 @@ export function NativePushRegister() {
     })();
 
     return () => cleanup?.();
-  }, [isFull]);
+  }, [userId]);
 
   return null;
 }

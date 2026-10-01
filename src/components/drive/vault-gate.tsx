@@ -36,17 +36,28 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
     return () => { cancelled = true; };
   }, []);
 
+  // The parent passes an inline `onUnlock`: keep it in a ref so a re-render of
+  // the drive page doesn't recreate `tryBiometric` and re-trigger the prompt.
+  const onUnlockRef = React.useRef(onUnlock);
+  React.useEffect(() => { onUnlockRef.current = onUnlock; });
+
   const tryBiometric = React.useCallback(async () => {
     const ok = await runBiometric();
     if (!ok) return;
     // With the storage unlocked, the vault key is available from its Master-Key-wrapped copy.
-    await unlockVaultWithMk().catch(() => false);
-    onUnlock();
-  }, [onUnlock]);
+    // Without it the vault would open but none of its files could be decrypted.
+    const unlocked = await unlockVaultWithMk().catch(() => false);
+    if (!unlocked) { toast.error("Face ID ne suffit pas ici : entre ton code."); return; }
+    onUnlockRef.current();
+  }, []);
 
-  // Once we know a PIN exists and biometrics are available, offer Face ID first.
+  // Once we know a PIN exists and biometrics are available, offer Face ID first
+  // — once per opening of the gate (cancelling must not bring it straight back).
+  const autoPrompted = React.useRef(false);
   React.useEffect(() => {
-    if (data?.hasPin && bioAvailable) void tryBiometric();
+    if (!data?.hasPin || !bioAvailable || autoPrompted.current) return;
+    autoPrompted.current = true;
+    void tryBiometric();
   }, [data?.hasPin, bioAvailable, tryBiometric]);
 
   if (isLoading || !data) {

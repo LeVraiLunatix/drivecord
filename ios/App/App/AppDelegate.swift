@@ -17,6 +17,7 @@ import Capacitor
 //        ({ index: Int, visible: Bool })
 //   • Native pushes the measured bar height to CSS var --native-tabbar-h so the
 //     web content reserves room (it scrolls *behind* the translucent bar).
+//     It is re-sent on every new document (nativeShell "documentStart").
 class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMessageHandler {
 
     private let nativeTabBar = UITabBar()
@@ -30,15 +31,40 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
     ]
     private var lastBarHeight: CGFloat = 0
 
+    // WKWebView silently drops window.open() unless it runs inside a direct tap.
+    // The Cord / OAuth / passkey flows call window.open(url, "_system") from an
+    // effect (/login?via=cord) or after an await, so without this the system
+    // browser never opened. Capacitor routes the new window to Safari.
+    override func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
+        let config = super.webViewConfiguration(for: instanceConfiguration)
+        config.preferences.javaScriptCanOpenWindowsAutomatically = true
+        return config
+    }
+
+    // Called before the first page load, so the handlers exist when the web app
+    // boots. A weak proxy avoids WKUserContentController retaining self.
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        guard let controller = webView?.configuration.userContentController else { return }
+        let proxy = WeakScriptMessageHandler(self)
+        // Selected-tab / visibility updates from the web app.
+        controller.add(proxy, name: "nativeTabs")
+        // Requests to present native (Liquid Glass) action sheets.
+        controller.add(proxy, name: "nativeMenu")
+        // Requests to anchor native pull-down menus to web buttons.
+        controller.add(proxy, name: "nativeAnchorMenu")
+        // Signals each new document (full load / reload), see handleDocumentStart.
+        controller.add(proxy, name: "nativeShell")
+        controller.addUserScript(WKUserScript(
+            source: "window.webkit.messageHandlers.nativeShell.postMessage('documentStart')",
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupTabBar()
-        // Receive selected-tab / visibility updates from the web app.
-        webView?.configuration.userContentController.add(self, name: "nativeTabs")
-        // Receive requests to present native (Liquid Glass) action sheets.
-        webView?.configuration.userContentController.add(self, name: "nativeMenu")
-        // Receive requests to anchor native pull-down menus to web buttons.
-        webView?.configuration.userContentController.add(self, name: "nativeAnchorMenu")
     }
 
     // Transparent native buttons overlaid on web trigger buttons; each hosts a
@@ -57,6 +83,11 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         }
         nativeTabBar.setItems(items, animated: false)
         nativeTabBar.selectedItem = items.first
+        // Hidden until the web app says the current page wants it: the first
+        // page is often /login or the welcome screen, where the bar used to sit
+        // on top of the sign-in UI until hydration.
+        nativeTabBar.isHidden = true
+        nativeTabBar.overrideUserInterfaceStyle = nativeStyle
         view.addSubview(nativeTabBar)
         NSLayoutConstraint.activate([
             nativeTabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -76,19 +107,29 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         let h = max(nativeTabBar.frame.height, view.bounds.maxY - nativeTabBar.frame.minY)
         if h > 0 && abs(h - lastBarHeight) > 0.5 {
             lastBarHeight = h
-            webView?.evaluateJavaScript(
-                "document.documentElement.style.setProperty('--native-tabbar-h','\(Int(h))px')",
-                completionHandler: nil
-            )
+            pushBarHeight()
         }
+    }
+
+    // The CSS var lives on the current document, so it is lost on every full
+    // load. The first layout pass also runs before the remote page exists, so
+    // re-send it whenever a document starts (and when the web reports a route).
+    private func pushBarHeight() {
+        guard lastBarHeight > 0 else { return }
+        let value = jsString("\(Int(lastBarHeight))px")
+        let js = """
+        (function(){var s=function(){document.documentElement.style.setProperty('--native-tabbar-h',\(value))};\
+        if(document.documentElement){s()}else{document.addEventListener('DOMContentLoaded',s,{once:true})}})()
+        """
+        webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 
     // Tab tapped → navigate the web app (client-side route, no reload).
     func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
         let i = item.tag
         guard i >= 0 && i < routes.count else { return }
-        let path = routes[i]
-        let js = "if(window.__drivecordNavigate){window.__drivecordNavigate('\(path)')}else{window.location.href='\(path)'}"
+        let path = jsString(routes[i])
+        let js = "if(window.__drivecordNavigate){window.__drivecordNavigate(\(path))}else{window.location.href=\(path)}"
         webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 
@@ -101,8 +142,51 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
             handleMenuMessage(message.body)
         case "nativeAnchorMenu":
             handleAnchorMenuMessage(message.body)
+        case "nativeShell":
+            if let body = message.body as? [String: Any], let theme = body["theme"] as? String {
+                applyTheme(theme)
+            } else {
+                handleDocumentStart()
+            }
         default:
             break
+        }
+    }
+
+    // Follow the web app's theme ("light", or a dark one) rather than the
+    // phone's appearance: the app is dark by default, so on an iPhone in light
+    // mode the status bar text was black on black, and the tab bar, sheets and
+    // menus came up light over a dark app.
+    // Only the NATIVE pieces get the style — overriding the web view (or the
+    // window) would also change its prefers-color-scheme and lock the app's
+    // « Système » theme to dark.
+    private var nativeStyle: UIUserInterfaceStyle = .dark
+
+    private func applyTheme(_ theme: String) {
+        DispatchQueue.main.async {
+            let light = theme == "light"
+            self.nativeStyle = light ? .light : .dark
+            self.nativeTabBar.overrideUserInterfaceStyle = self.nativeStyle
+            for (_, btn) in self.anchorButtons { btn.overrideUserInterfaceStyle = self.nativeStyle }
+            self.statusBarStyle = light ? .darkContent : .lightContent
+            self.setNeedsStatusBarAppearanceUpdate()
+        }
+    }
+
+    // Before the page reports its theme: match the dark launch background.
+    override func setStatusBarDefaults() {
+        super.setStatusBarDefaults()
+        statusBarStyle = .lightContent
+    }
+
+    // A new document replaced the page (reload, logout, OAuth exchange…). React
+    // cleanups never ran, so the anchored overlays of the old page would stay on
+    // screen as invisible buttons swallowing taps: drop them all.
+    private func handleDocumentStart() {
+        DispatchQueue.main.async {
+            for (_, btn) in self.anchorButtons { btn.removeFromSuperview() }
+            self.anchorButtons.removeAll()
+            self.pushBarHeight()
         }
     }
 
@@ -137,6 +221,8 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
                 self.anchorButtons[id] = btn
             }
             btn.frame = frame
+            btn.overrideUserInterfaceStyle = self.nativeStyle
+            btn.accessibilityLabel = title.isEmpty ? "Menu" : title
 
             var actions: [UIAction] = []
             for (i, it) in items.enumerated() {
@@ -165,6 +251,8 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
             if let visible = body["visible"] as? Bool {
                 self.nativeTabBar.isHidden = !visible
             }
+            // The web posts this on mount too: make sure the page has the height.
+            self.pushBarHeight()
             if let index = body["index"] as? Int {
                 let items = self.nativeTabBar.items
                 if index >= 0, let items = items, index < items.count {
@@ -187,6 +275,7 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
             let cancel = (body["cancel"] as? String) ?? "Annuler"
 
             let alert = UIAlertController(title: title, message: messageText, preferredStyle: .actionSheet)
+            alert.overrideUserInterfaceStyle = self.nativeStyle
             for (i, it) in items.enumerated() {
                 let selected = (it["selected"] as? Bool) ?? false
                 let label = ((it["label"] as? String) ?? "")
@@ -216,9 +305,31 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
 
     private func reportMenuResult(_ id: String, _ index: Int) {
         webView?.evaluateJavaScript(
-            "window.__drivecordMenuResult && window.__drivecordMenuResult('\(id)', \(index))",
+            "window.__drivecordMenuResult && window.__drivecordMenuResult(\(jsString(id)), \(index))",
             completionHandler: nil
         )
+    }
+
+    /// A string as a JS literal (quotes, backslashes, newlines escaped). Values
+    /// sent by the page must never be spliced raw into evaluated JavaScript.
+    private func jsString(_ s: String) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: s, options: .fragmentsAllowed),
+              let literal = String(data: data, encoding: .utf8) else { return "\"\"" }
+        return literal
+    }
+}
+
+/// Forwards script messages without WKUserContentController retaining the
+/// view controller (it holds its handlers strongly).
+private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    private weak var target: WKScriptMessageHandler?
+
+    init(_ target: WKScriptMessageHandler) {
+        self.target = target
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        target?.userContentController(userContentController, didReceive: message)
     }
 }
 

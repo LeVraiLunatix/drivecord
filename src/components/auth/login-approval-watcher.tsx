@@ -50,13 +50,17 @@ export function LoginApprovalWatcher() {
         if (!next) {
           notifiedRef.current = null;
         } else if (notifiedRef.current !== next.id) {
-          // Nouvelle demande → notification locale (app native, 1re fois).
+          // Nouvelle demande → notification locale (app native, 1re fois),
+          // seulement si l'app n'est pas à l'écran : sinon la fenêtre ci-dessous
+          // s'affiche déjà, et la bannière iOS faisait doublon par-dessus.
           notifiedRef.current = next.id;
-          void notifyLoginRequest({
-            deviceLabel: next.requestingDeviceLabel,
-            location: next.requestingLocation,
-            shortCode: next.shortCode,
-          });
+          if (document.visibilityState !== "visible") {
+            void notifyLoginRequest({
+              deviceLabel: next.requestingDeviceLabel,
+              location: next.requestingLocation,
+              shortCode: next.shortCode,
+            });
+          }
         }
         setPending((prev) => {
           if (!next) return null;
@@ -78,13 +82,20 @@ export function LoginApprovalWatcher() {
     if (!pending) return;
     setBusy(true);
     try {
-      await authFetch(`/api/auth/login-requests/${pending.id}`, {
+      const res = await authFetch(`/api/auth/login-requests/${pending.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      if (action === "approve") toast.success("Connexion approuvée.");
+      // Never claim an approval/denial that didn't happen (expired request,
+      // network…): the other device would still be waiting.
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error ?? "La demande n’a pas pu être traitée (expirée ?).");
+      } else if (action === "approve") toast.success("Connexion approuvée.");
       else toast("Connexion refusée.");
+    } catch {
+      toast.error("Erreur réseau : la demande n’a pas été traitée.");
     } finally {
       setBusy(false);
       setPending(null);
