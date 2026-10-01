@@ -48,6 +48,11 @@ const dc = new DrivecordNode({ token: process.env.DRIVECORD_TOKEN, driveKey });
 const { fileId } = await dc.upload({ name: "rapport.pdf", type: "application/pdf", data });
 const file = await dc.download(fileId);   // { name, type, data }`}</CodeBlock>
       <p>Le même code de chiffrement que l&apos;application web est utilisé, donc les fichiers sont interchangeables.</p>
+      <Callout variant="warning" title="La clé du drive">
+        <code>driveKey</code> est la clé brute de ton drive (32 octets). Tu l&apos;obtiens dans Réglages › Sécurité › Chiffrement de bout en bout › ton drive › « Exporter la clé »
+        (64 caractères hexadécimaux, à passer par <code>Buffer.from(clé, &quot;hex&quot;)</code>). Elle déchiffre tous les fichiers du drive : garde-la comme
+        un mot de passe. Ce n&apos;est pas la clé de récupération, et si tu renouvelles la clé du drive il faut exporter la nouvelle.
+      </Callout>
     </DocPage>
   );
 }
