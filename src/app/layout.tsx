@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeGuard } from "@/components/theme-guard";
 import { ClickFX } from "@/components/click-fx";
+import { ThemeStudioApplier } from "@/components/theme-studio-applier";
 import { GlobalAudioPlayer } from "@/components/audio/global-audio-player";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { E2eeProvider } from "@/components/e2ee/e2ee-provider";
@@ -208,6 +209,7 @@ export default function RootLayout({
           >
             <TooltipProvider delayDuration={200}>
               <ThemeGuard />
+              <ThemeStudioApplier />
               <E2eeProvider>{children}</E2eeProvider>
 
               <AppTabBar />
