@@ -36,9 +36,8 @@ d'authentification avancé (passkeys, vérif email, 2FA, approbation cross-devic
 
 - `User` possède déjà : `emailVerified`, `password` (bcrypt), `vaultPin` (bcrypt),
   `vaultSalt` (sel PBKDF2). Manquent : `lastLoginAt`, `twoFactorEnabled`, etc.
-- `Webhook.dkWrapped` : clé **par drive**, enveloppée par la Master Key de
-  l'utilisateur (le serveur ne peut pas l'ouvrir). L'ancien `Webhook.encKey`
-  (clé tenue par le serveur) est supprimé par la branche de nettoyage legacy.
+- `Webhook.encKey` : clé de chiffrement **par drive** (AES-256-GCM), stockée
+  chiffrée côté serveur avec `ENCRYPTION_KEY`.
 
 ## Flux de la clé E2EE (point critique)
 
