@@ -22,6 +22,10 @@ type ApiKeyRow = {
   name: string;
   prefix: string;
   scopes: string[];
+  expiresAt: string | null;
+  revokedAt: string | null;
+  ipRestricted: boolean;
+  allowedOrigins: string[];
   driveId: string;
   driveName: string;
   lastUsedAt: string | null;
@@ -29,6 +33,24 @@ type ApiKeyRow = {
 };
 
 type Drive = { driveId: string; name: string };
+
+const SCOPE_LABELS: Record<string, string> = {
+  "files:read": "lecture",
+  "files:write": "envoi",
+  "files:delete": "suppression",
+  "public:manage": "liens publics",
+  "folders:write": "dossiers",
+  // Keys created before the fine-grained scopes existed.
+  read: "lecture (ancienne)",
+  write: "écriture (ancienne)",
+};
+
+const EXPIRY_OPTIONS = [
+  { value: "30", label: "30 jours" },
+  { value: "90", label: "90 jours" },
+  { value: "365", label: "1 an" },
+  { value: "never", label: "Jamais" },
+];
 
 
 function formatDate(iso: string | null): string {
@@ -50,10 +72,16 @@ export function ApiKeysManager() {
   const [showForm, setShowForm] = React.useState(false);
   const [name, setName] = React.useState("");
   const [driveId, setDriveId] = React.useState("");
-  const [scopes, setScopes] = React.useState<{ read: boolean; write: boolean }>({
-    read: true,
-    write: true,
+  const [scopes, setScopes] = React.useState<Record<string, boolean>>({
+    "files:read": true,
+    "files:write": false,
+    "files:delete": false,
+    "folders:write": false,
+    "public:manage": false,
   });
+  const [expiry, setExpiry] = React.useState("90");
+  const [ips, setIps] = React.useState("");
+  const [origins, setOrigins] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [confirmId, setConfirmId] = React.useState<string | null>(null);
   const [revealed, setRevealed] = React.useState<{ key: string; name: string } | null>(null);
@@ -67,21 +95,34 @@ export function ApiKeysManager() {
 
   const create = async () => {
     if (!name.trim() || !driveId) return;
-    const activeScopes = [
-      ...(scopes.read ? ["read"] : []),
-      ...(scopes.write ? ["write"] : []),
-    ];
+    const activeScopes = Object.keys(scopes).filter((s) => scopes[s]);
+    const split = (v: string) =>
+      v
+        .split(/[\s,;]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    const allowedIps = split(ips);
+    const allowedOrigins = split(origins);
     setBusy(true);
     const res = await authFetch("/api/settings/api-keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), driveId, scopes: activeScopes }),
+      body: JSON.stringify({
+        name: name.trim(),
+        driveId,
+        scopes: activeScopes,
+        expiresInDays: expiry === "never" ? null : Number(expiry),
+        allowedIps,
+        allowedOrigins,
+      }),
     });
     setBusy(false);
     if (res.ok) {
       const created = await res.json();
       setRevealed({ key: created.key, name: created.name });
       setName("");
+      setIps("");
+      setOrigins("");
       setShowForm(false);
       mutate();
     } else {
@@ -194,28 +235,66 @@ export function ApiKeysManager() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-1.5 text-sm">
-              <input
-                type="checkbox"
-                checked={scopes.read}
-                onChange={(e) => setScopes((s) => ({ ...s, read: e.target.checked }))}
-              />
-              Lecture
-            </label>
-            <label className="flex items-center gap-1.5 text-sm">
-              <input
-                type="checkbox"
-                checked={scopes.write}
-                onChange={(e) => setScopes((s) => ({ ...s, write: e.target.checked }))}
-              />
-              Écriture (upload + suppression)
-            </label>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            {(
+              [
+                ["files:read", "Lecture"],
+                ["files:write", "Envoi de fichiers"],
+                ["files:delete", "Suppression"],
+                ["folders:write", "Création de dossiers"],
+                ["public:manage", "Liens publics"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={scopes[key]}
+                  onChange={(e) => setScopes((s) => ({ ...s, [key]: e.target.checked }))}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Expiration</Label>
+            <Select value={expiry} onValueChange={setExpiry}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPIRY_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="api-key-ips">Adresses IP autorisées (optionnel)</Label>
+            <Input
+              id="api-key-ips"
+              placeholder="ex. 203.0.113.7, 2001:db8::1 — vide = toutes"
+              value={ips}
+              onChange={(e) => setIps(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="api-key-origins">Origines web autorisées (optionnel)</Label>
+            <Input
+              id="api-key-origins"
+              placeholder="ex. https://monsite.fr — vide = toutes"
+              value={origins}
+              onChange={(e) => setOrigins(e.target.value)}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Si tu appelles l&apos;API depuis un navigateur, restreins la clé à ton site.
+            </p>
           </div>
           <Button
             size="sm"
             onClick={create}
-            disabled={busy || !name.trim() || !driveId || (!scopes.read && !scopes.write)}
+            disabled={busy || !name.trim() || !driveId || !Object.values(scopes).some(Boolean)}
           >
             {busy && <Loader2 className="size-4 animate-spin" />}
             Créer la clé
@@ -234,21 +313,31 @@ export function ApiKeysManager() {
           {keys.map((k) => (
             <li
               key={k.id}
-              className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-3 py-2.5"
+              className={`flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-3 py-2.5 ${k.revokedAt ? "opacity-60" : ""}`}
             >
               <Code2 className="size-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-1.5 truncate text-sm font-medium">
                   {k.name}
+                  {k.revokedAt && (
+                    <Badge variant="destructive" className="text-[10px]">
+                      révoquée
+                    </Badge>
+                  )}
                   {k.scopes.map((s) => (
                     <Badge key={s} variant="secondary" className="text-[10px]">
-                      {s === "read" ? "lecture" : "écriture"}
+                      {SCOPE_LABELS[s] ?? s}
                     </Badge>
                   ))}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {k.prefix}••••••••… · {k.driveName} · utilisée{" "}
                   {k.lastUsedAt ? `le ${formatDate(k.lastUsedAt)}` : "jamais"}
+                  {k.expiresAt
+                    ? ` · ${new Date(k.expiresAt) < new Date() ? "expirée" : "expire"} le ${formatDate(k.expiresAt)}`
+                    : ""}
+                  {k.ipRestricted ? " · IP restreintes" : ""}
+                  {k.allowedOrigins.length > 0 ? ` · ${k.allowedOrigins.length} origine(s)` : ""}
                 </p>
               </div>
 
@@ -261,7 +350,7 @@ export function ApiKeysManager() {
                     className="h-7"
                     onClick={() => revoke(k.id)}
                   >
-                    Révoquer
+                    {k.revokedAt ? "Supprimer" : "Révoquer"}
                   </Button>
                   <Button
                     size="sm"
@@ -278,7 +367,7 @@ export function ApiKeysManager() {
                   variant="ghost"
                   className="size-8 text-red-400 hover:text-red-300"
                   onClick={() => setConfirmId(k.id)}
-                  aria-label={`Révoquer ${k.name}`}
+                  aria-label={`${k.revokedAt ? "Supprimer" : "Révoquer"} ${k.name}`}
                 >
                   <Trash2 className="size-4" />
                 </Button>

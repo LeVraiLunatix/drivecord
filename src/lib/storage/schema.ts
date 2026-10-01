@@ -37,6 +37,10 @@ export type Drive = {
    *  locally only once confirmed server-side, so a key never exists unless
    *  it's safely synced. Use unwrapDriveKeyFromLocalStorage before importing. */
   encKey?: string;
+  /** E2EE: the drive key wrapped by the user's Master Key (`v1.<iv>.<ct>`), as stored on the account. */
+  dkWrapped?: string;
+  /** 0 = legacy server-held key, 1 = end-to-end encrypted (see lib/crypto/e2ee). */
+  e2eeVersion?: number;
 };
 
 /** Sentinel used for `parentId` to mean "drive root".
@@ -58,6 +62,8 @@ export type FolderEntry = {
   trashedAt?: number;
   /** Optional display color key (see FOLDER_COLOR_PRESETS in lib/folder-colors.ts). */
   color?: string;
+  /** Encrypted name (by the drive key). When set, `name` is "" on the wire. */
+  encName?: string;
 };
 
 /** A file is a manifest pointing at one or more Discord messages. */
@@ -86,6 +92,16 @@ export type FileEntry = {
   locked?: boolean;
   /** base64 AES-GCM IV — present iff the file content is E2EE encrypted. */
   encIv?: string;
+  /** E2EE format v1 (see lib/crypto/e2ee). 0/undefined = plaintext or legacy single-IV. */
+  cryptoVersion?: number;
+  /** File key wrapped by the drive key. */
+  fkWrapped?: string;
+  /** Encrypted `{name, mime, size, mtime}`. */
+  encMeta?: string;
+  /** base64 7-byte nonce prefix. */
+  noncePrefix?: string;
+  /** Client-side only: the encrypted name/metadata could not be opened (wrong key or tampering). */
+  undecryptable?: boolean;
   /** Soft delete flag. */
   trashed: boolean;
   trashedAt?: number;

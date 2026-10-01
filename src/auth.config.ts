@@ -15,6 +15,9 @@ const PROTECTED = [
   "/shares",
   "/backup",
   "/approve",
+  "/oauth",
+  "/developers",
+  "/embed/connect",
 ];
 
 export const authConfig = {

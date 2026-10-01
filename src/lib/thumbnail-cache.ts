@@ -48,17 +48,24 @@ type Client = {
  * encode as JPEG, cache by fileId, and return the data URL.
  * Returns null on any error.
  */
+const MAX_THUMB_SOURCE = 30 * 1024 * 1024;
+
 export async function generateThumbnail(
   fileId: string,
   downloadArgs: DownloadArgs,
   client: Client,
   maxPx = 240,
+  /** Opens the downloaded bytes first (end-to-end encrypted files arrive as ciphertext). */
+  open?: (blob: Blob) => Promise<Blob>,
 ): Promise<string | null> {
   const cached = getThumbnail(fileId);
   if (cached) return cached;
 
   try {
-    const blob = await client.downloadFile(downloadArgs);
+    // A thumbnail isn't worth downloading a huge original for.
+    if (downloadArgs.size > MAX_THUMB_SOURCE) return null;
+    const raw = await client.downloadFile(downloadArgs);
+    const blob = open ? await open(raw) : raw;
     if (!blob.type.startsWith("image/")) return null;
 
     const dataUrl = await blobToThumbnail(blob, maxPx);

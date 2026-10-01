@@ -28,7 +28,7 @@ export async function GET() {
   const fileIds = shares.map((s) => s.fileId);
   const files = await prisma.driveFile.findMany({
     where: { id: { in: fileIds } },
-    select: { id: true, filename: true, size: true, trashed: true },
+    select: { id: true, filename: true, size: true, trashed: true, cryptoVersion: true, fkWrapped: true, noncePrefix: true, encMeta: true, encIv: true },
   });
   const fileById = new Map(files.map((f) => [f.id, f]));
 
@@ -44,7 +44,15 @@ export async function GET() {
       filename: f?.filename ?? "(fichier supprimé)",
       size: f?.size ?? 0,
       missing: !f || f.trashed,
-      hasPassword: Boolean(s.passwordHash),
+      hasPassword: Boolean(s.passwordHash || s.fkWrappedForShare),
+      disabled: Boolean(s.disabledAt),
+      // E2EE: the browser decrypts the name and rebuilds the `#k=` link from these (server can't).
+      cryptoVersion: f?.cryptoVersion ?? 0,
+      fkWrapped: f?.fkWrapped ?? null,
+      noncePrefix: f?.noncePrefix ?? null,
+      encMeta: f?.encMeta ?? null,
+      // Legacy encrypted file: its old server-decrypted link can't work any more.
+      needsRegenerate: Boolean(f && f.cryptoVersion === 0 && f.encIv),
       expiresAt: s.expiresAt?.getTime() ?? null,
       expired: s.expiresAt ? s.expiresAt.getTime() < now : false,
       downloads: s.downloads,

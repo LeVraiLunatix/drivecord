@@ -17,6 +17,10 @@ export default function Page() {
       title="API publique"
       lead="Une clé API te permet d'uploader, lister, télécharger et supprimer des fichiers d'un drive directement depuis le serveur d'un autre site — sans passer par cette interface."
     >
+      <Callout variant="warning" title="API dépréciée">
+        La v1 est gelée et sera retirée le 30 septembre 2027. Utilise l&apos;<a href="/docs/technique/api-v2">API v2</a> (chiffrée de bout en bout).
+      </Callout>
+
       <DocH2>Créer une clé</DocH2>
       <p>
         Dans <strong>Réglages → API pour développeurs</strong>, choisis le
@@ -26,12 +30,11 @@ export default function Page() {
         jamais dans du code commité).
       </p>
 
-      <Callout variant="warning" title="Pas de chiffrement de bout en bout">
-        Les fichiers envoyés via l&apos;API sont stockés{" "}
-        <strong>en clair</strong> (contrairement à l&apos;app web, chiffrée
-        côté client) : un appel serveur-à-serveur n&apos;a pas accès à ta
-        clé de chiffrement personnelle. N&apos;utilise pas l&apos;API pour des
-        fichiers sensibles.
+      <Callout variant="danger" title="Les fichiers envoyés via l'API v1 sont stockés en clair">
+        Contrairement à l&apos;app web (chiffrée côté client), un appel
+        serveur-à-serveur n&apos;a pas accès à ta clé de chiffrement. N&apos;utilise
+        pas la v1 pour stocker les fichiers de <strong>tes propres
+        utilisateurs</strong>, ni pour des fichiers sensibles.
       </Callout>
 
       <DocH2>Authentification</DocH2>
@@ -43,11 +46,23 @@ export default function Page() {
         <code>{`Authorization: Bearer dvc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`}</code>
       </pre>
       <p>
-        Chaque clé est liée à <strong>un seul drive</strong> et porte une ou
-        deux permissions : <code>read</code> (lecture) et <code>write</code>{" "}
-        (upload + suppression). Les routes gèrent le CORS — tu peux les
-        appeler directement depuis le navigateur d&apos;un site tiers si tu
-        préfères, mais garder la clé côté serveur reste plus sûr.
+        Chaque clé est liée à <strong>un seul drive</strong> et porte des
+        permissions précises : <code>files:read</code> (lecture et
+        téléchargement), <code>files:write</code> (envoi),{" "}
+        <code>files:delete</code> (suppression), <code>folders:write</code>{" "}
+        (création de dossiers) et <code>public:manage</code> (liens publics).
+        Les anciennes clés <code>read</code> / <code>write</code> continuent de
+        fonctionner : <code>read</code> = <code>files:read</code>,{" "}
+        <code>write</code> = toutes les autres.
+      </p>
+      <p>
+        À la création, tu peux aussi donner une <strong>date d&apos;expiration</strong>,
+        une liste d&apos;<strong>adresses IP</strong> autorisées et une liste
+        d&apos;<strong>origines web</strong> autorisées. Une clé révoquée ou
+        expirée est refusée immédiatement. Si tu appelles l&apos;API depuis un
+        navigateur, restreins la clé à ton site : la réponse CORS renvoie alors
+        l&apos;origine exacte (et non <code>*</code>) et les autres origines sont
+        refusées. Garder la clé côté serveur reste plus sûr.
       </p>
 
       <DocH2>Vérifier la clé</DocH2>
@@ -55,7 +70,7 @@ export default function Page() {
         <code>{`curl https://ton-domaine.tld/api/v1/me \\
   -H "Authorization: Bearer dvc_xxx"
 
-# → { "drive": "Mon site", "driveId": "...", "scopes": ["read", "write"] }`}</code>
+# → { "drive": "Mon site", "driveId": "...", "scopes": ["files:read", "files:write"] }`}</code>
       </pre>
 
       <DocH2>Uploader un fichier</DocH2>
@@ -90,18 +105,24 @@ export default function Page() {
         <code>POST /api/v1/files/chunks</code> (champ{" "}
         <code>chunk</code>, plus <code>index</code> pour l&apos;ordre), puis
         finalise avec un appel JSON à <code>POST /api/v1/files</code>{" "}
-        contenant la liste des morceaux renvoyés. Aucune limite de taille sur
-        ce dernier appel : il ne transporte que des références, jamais les
-        octets du fichier.
+        contenant l&apos;<code>uploadId</code> renvoyé par le premier morceau. Le
+        serveur retient lui-même chaque morceau reçu : la finalisation ne
+        peut référencer que ce que <em>tu</em> as réellement envoyé à <em>ton</em>{" "}
+        drive (une session expire au bout de 24 h, 20 uploads ouverts max par
+        clé). Aucune limite de taille sur ce dernier appel : il ne transporte
+        aucun octet du fichier.
       </p>
       <pre>
         <code>{`# 1. un POST par morceau (~9 Mio chacun)
 curl -X POST https://ton-domaine.tld/api/v1/files/chunks \\
   -H "Authorization: Bearer dvc_xxx" \\
   -F "index=0" -F "chunk=@part-000"
-# → { "index": 0, "size": ..., "messageId": "...", "attachmentId": "...", "url": "...", "expiresAt": ... }
+# → { "uploadId": "...", "index": 0, "size": ..., … }
 
-# … répète pour chaque morceau (index=1, 2, 3…) …
+# … puis les suivants, en réutilisant l'uploadId (index=1, 2, 3…) …
+curl -X POST https://ton-domaine.tld/api/v1/files/chunks \\
+  -H "Authorization: Bearer dvc_xxx" \\
+  -F "uploadId=<uploadId>" -F "index=1" -F "chunk=@part-001"
 
 # 2. finalise avec la liste des morceaux (JSON, pas de fichier)
 curl -X POST https://ton-domaine.tld/api/v1/files \\
@@ -110,7 +131,7 @@ curl -X POST https://ton-domaine.tld/api/v1/files \\
   -d '{
         "filename": "video.mp4",
         "mimeType": "video/mp4",
-        "chunks": [ { "index": 0, "size": 9500000, "messageId": "...", "attachmentId": "...", "url": "..." }, ... ]
+        "uploadId": "<uploadId>"
       }'`}</code>
       </pre>
       <Callout variant="tip" title="Chaque morceau reste sous la limite de requête">

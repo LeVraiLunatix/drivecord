@@ -11,6 +11,8 @@ import {
 import { recordUploadedFile } from "@/lib/storage";
 import type { ParentId } from "@/lib/storage";
 import { encryptBlob } from "@/lib/crypto/vault-crypto";
+import { prepareEncryptedUpload } from "@/lib/e2ee-client/file-crypto";
+import type { DriveKeyMaterial } from "@/lib/e2ee-client/drive-keys";
 import { signalCordSync } from "@/lib/cord-signal";
 
 /**
@@ -57,6 +59,8 @@ type InternalQueueItem = QueueItem & {
   _encryptKey?: CryptoKey;
   /** When true, the file is marked vault-locked in storage. */
   _locked?: boolean;
+  /** End-to-end encrypt (format v1) with this drive key: name, type and bytes never reach the server in clear. */
+  _e2eeKey?: DriveKeyMaterial;
 };
 
 type UploadQueueState = {
@@ -68,6 +72,8 @@ type UploadQueueState = {
     client: DiscordClient;
     /** When provided, the file bytes are AES-GCM encrypted with this key. */
     encryptKey?: CryptoKey;
+    /** End-to-end encrypt with the drive key (format v1). Preferred over `encryptKey` for regular files. */
+    e2eeKey?: DriveKeyMaterial;
     /** Marks the file vault-locked (hidden, PIN-gated) in storage. Independent
      *  from encryption: regular files are encrypted with the drive key but are
      *  NOT locked. */
@@ -109,7 +115,7 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
     });
   },
 
-  enqueue: ({ files, driveId, parentId, client, encryptKey, locked, onUploaded }) => {
+  enqueue: ({ files, driveId, parentId, client, encryptKey, e2eeKey, locked, onUploaded }) => {
     const ids: string[] = [];
     const map = get()._internal;
     for (const f of files) {
@@ -125,6 +131,7 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
         _file: f,
         _abort: new AbortController(),
         _encryptKey: encryptKey,
+        _e2eeKey: e2eeKey,
         _locked: locked,
       };
       map.set(id, item);
@@ -192,7 +199,7 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
 function stripInternal(item: InternalQueueItem): QueueItem {
   // Don't leak File refs / abort controllers into React render trees.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { _file, _abort, _encryptKey, _locked, ...rest } = item;
+  const { _file, _abort, _encryptKey, _locked, _e2eeKey, ...rest } = item;
   return rest;
 }
 
@@ -208,28 +215,51 @@ async function runOne(
   // attachments with no metadata anywhere referencing them.
   let uploadedManifest: FileManifest | undefined;
   try {
-    // E2EE: encrypt the bytes before upload, preserving the original name/type
-    // in the manifest so display + decryption work transparently.
-    let uploadFile = item._file;
-    let encIv: string | undefined;
-    if (item._encryptKey) {
-      const { blob, iv } = await encryptBlob(item._file, item._encryptKey);
-      uploadFile = new File([blob], item._file.name, { type: item._file.type });
-      encIv = iv;
-    }
+    let manifest: FileManifest;
+    let fileEntryId: string;
 
-    const manifest = await client.uploadFile(uploadFile, {
-      signal: item._abort.signal,
-      onProgress: (p) => setItem(item.id, { progress: p }),
-    });
-    uploadedManifest = manifest;
-    const fileEntryId = await recordUploadedFile({
-      driveId: item.driveId,
-      parentId: item.parentId,
-      manifest,
-      locked: item._locked ?? false,
-      encIv,
-    });
+    if (item._e2eeKey) {
+      // End-to-end encrypted (format v1): stream the file through the chunked cipher straight to
+      // Discord — each 8 MiB + 16 ciphertext chunk becomes one attachment, named after the opaque
+      // file id (Discord never sees the real name).
+      const prep = await prepareEncryptedUpload(item._e2eeKey, item._file);
+      manifest = await client.uploadStream(prep.stream, {
+        filename: prep.discordName,
+        mimeType: "application/octet-stream",
+        totalSize: prep.cipherSize,
+        chunkSize: prep.chunkSize,
+        signal: item._abort.signal,
+        onProgress: (p) => setItem(item.id, { progress: { ...p, total: prep.cipherSize } }),
+      });
+      uploadedManifest = manifest;
+      fileEntryId = await recordUploadedFile({
+        driveId: item.driveId,
+        parentId: item.parentId,
+        manifest,
+        e2ee: { fileId: prep.fileId, ...(await prep.finalize(manifest.size)) },
+      });
+    } else {
+      // Vault (PIN key, legacy single-IV format) or plaintext.
+      let uploadFile = item._file;
+      let encIv: string | undefined;
+      if (item._encryptKey) {
+        const { blob, iv } = await encryptBlob(item._file, item._encryptKey);
+        uploadFile = new File([blob], item._file.name, { type: item._file.type });
+        encIv = iv;
+      }
+      manifest = await client.uploadFile(uploadFile, {
+        signal: item._abort.signal,
+        onProgress: (p) => setItem(item.id, { progress: p }),
+      });
+      uploadedManifest = manifest;
+      fileEntryId = await recordUploadedFile({
+        driveId: item.driveId,
+        parentId: item.parentId,
+        manifest,
+        locked: item._locked ?? false,
+        encIv,
+      });
+    }
     setItem(item.id, {
       status: "done",
       endedAt: Date.now(),

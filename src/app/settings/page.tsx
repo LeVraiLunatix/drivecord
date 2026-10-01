@@ -49,6 +49,9 @@ import { PasskeyManager } from "@/components/auth/passkey-manager";
 import { TwoFactorManager } from "@/components/auth/two-factor-manager";
 import { TrustedDevicesManager } from "@/components/auth/trusted-devices-manager";
 import { ApiKeysManager } from "@/components/settings/api-keys-manager";
+import { PersonalTokensManager } from "@/components/settings/personal-tokens-manager";
+import { EncryptionSettings } from "@/components/e2ee/encryption-settings";
+import { ConnectedApps } from "@/components/settings/connected-apps";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,11 +135,24 @@ export default function SettingsPage() {
     <motion.div key="security" variants={v ?? item}>
       <SecuritySection account={account} onUpdate={mutate} />
     </motion.div>,
+    <motion.div key="encryption" variants={v ?? item}>
+      <EncryptionSettings />
+    </motion.div>,
     <motion.div key="drives" variants={v ?? item}>
       <DrivesSection />
     </motion.div>,
+    <motion.div key="connected-apps" variants={v ?? item}>
+      <ConnectedApps />
+    </motion.div>,
     <motion.div key="api-keys" variants={v ?? item}>
       <ApiKeysSection />
+    </motion.div>,
+    <motion.div key="personal-tokens" variants={v ?? item}>
+      <Card>
+        <CardContent className="pt-6">
+          <PersonalTokensManager />
+        </CardContent>
+      </Card>
     </motion.div>,
     ...(account?.isAdmin
       ? [

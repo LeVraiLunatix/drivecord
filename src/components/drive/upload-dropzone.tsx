@@ -71,12 +71,14 @@ export function UploadDropzone({ onEntries, children, className }: Props) {
     >
       {children}
       {isOver && (
-        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/60 bg-primary/10 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-2 rounded-2xl bg-background/80 px-8 py-6 shadow-lg">
-            <UploadCloud className="size-10 text-primary" />
-            <p className="font-medium">Déposez pour uploader</p>
+        <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center rounded-3xl border-2 border-dashed border-primary/70 bg-primary/10 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 rounded-3xl bg-background/90 px-10 py-8 shadow-2xl ring-1 ring-primary/20">
+            <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <UploadCloud className="size-6" />
+            </span>
+            <p className="text-lg font-semibold">Dépose pour envoyer</p>
             <p className="text-xs text-muted-foreground">
-              Les fichiers seront chunkés et envoyés sur Discord
+              Chiffré sur ton appareil, puis envoyé sur ton Discord
             </p>
           </div>
         </div>

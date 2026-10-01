@@ -166,6 +166,7 @@ export default function StatsPage() {
                     {data.fileCount} fichier{data.fileCount > 1 ? "s" : ""}
                   </span>
                 </div>
+                {/* Storage is Discord's, not ours: no real cap — the bar is only a visual scale. */}
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-all"
@@ -173,7 +174,7 @@ export default function StatsPage() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {formatBytes(data.totalBytes)} sur ~{formatBytes(cap)}
+                  Stockage illimité — la barre est seulement une échelle visuelle.
                 </p>
               </CardContent>
             </Card>

@@ -4,4 +4,5 @@ export * from "./webhook";
 export * from "./chunking";
 export * from "./retry";
 export * from "./proxy";
+export * from "./cdn-url";
 export * from "./client";

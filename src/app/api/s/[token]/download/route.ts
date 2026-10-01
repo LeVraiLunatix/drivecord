@@ -10,8 +10,10 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
 import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
+import { fetchDiscordCdn, isDiscordCdnUrl, isSnowflake } from "@/lib/discord";
 import type { ChunkRef } from "@/lib/discord";
 import { auth } from "@/auth";
+import { buildSafeFileHeaders } from "@/lib/safe-file-headers";
 import { afterCordNotify, DRIVECORD_URL } from "@/lib/cord-sync";
 
 export const runtime = "nodejs";
@@ -31,6 +33,7 @@ export async function POST(
     include: { webhook: true },
   });
   if (!share) return NextResponse.json({ error: "Lien introuvable." }, { status: 404 });
+  if (share.disabledAt) return NextResponse.json({ error: "Ce lien a été désactivé." }, { status: 410 });
   if (share.expiresAt && share.expiresAt.getTime() < Date.now()) {
     return NextResponse.json({ error: "Ce lien a expiré." }, { status: 410 });
   }
@@ -45,11 +48,22 @@ export async function POST(
   });
   if (!file) return NextResponse.json({ error: "Fichier supprimé." }, { status: 404 });
 
+  // A legacy encrypted file whose key the server no longer holds can't be served any more.
+  if (file.cryptoVersion === 0 && file.encIv && (file.locked || !share.webhook.encKey || share.webhook.e2eeVersion >= 1)) {
+    return NextResponse.json(
+      { error: "Ce lien doit être régénéré par son propriétaire (le chiffrement a été renforcé).", needsRegenerate: true },
+      { status: 409 },
+    );
+  }
+
   const webhookUrl = decryptUrl(share.webhook.encryptedUrl);
   const chunks = file.chunks as unknown as ChunkRef[];
 
   // Refresh each chunk's CDN URL (signed Discord URLs expire). One message
   // fetch per chunk; messages are cached by id to avoid duplicate calls.
+  if (chunks.some((c) => !isSnowflake(c.messageId) || !isSnowflake(c.attachmentId))) {
+    return NextResponse.json({ error: "Référence de fichier invalide." }, { status: 502 });
+  }
   const cache = new Map<string, DiscordMessage | null>();
   const fresh = await Promise.all(
     chunks.map(async (c) => {
@@ -61,13 +75,18 @@ export async function POST(
           cache.set(c.messageId, msg);
         }
         const att = msg?.attachments.find((a) => a.id === c.attachmentId);
-        if (att) return { ...c, url: att.url };
+        if (att && isDiscordCdnUrl(att.url)) return { ...c, url: att.url };
       } catch {
         /* fall back to stored URL */
       }
       return c;
     }),
   );
+
+  // Whatever we end up handing out or fetching must be a Discord CDN URL.
+  if (fresh.some((c) => !isDiscordCdnUrl(c.url))) {
+    return NextResponse.json({ error: "Référence de fichier invalide." }, { status: 502 });
+  }
 
   const countDownload = async () => {
     const counted = await prisma.share
@@ -81,7 +100,9 @@ export async function POST(
           share.webhook.userId,
           {
             title: "Ton lien de partage a été ouvert",
-            body: `« ${file.filename} » vient d’être téléchargé pour la première fois.`,
+            body: file.filename
+              ? `« ${file.filename} » vient d’être téléchargé pour la première fois.`
+              : "Un fichier que tu as partagé vient d’être téléchargé pour la première fois.",
             url: `${DRIVECORD_URL}/shares`,
           },
           { kind: { key: "share", limit: 10, windowSec: 3600 } },
@@ -90,7 +111,22 @@ export async function POST(
     }
   };
 
-  // Encrypted file → decrypt server-side and serve the plaintext bytes directly.
+  // End-to-end encrypted file: hand out the CIPHERTEXT manifest only. The browser decrypts with
+  // the key from the URL fragment (or the password-derived one); the server never can.
+  if (file.cryptoVersion >= 1) {
+    await countDownload();
+    return NextResponse.json({
+      encrypted: true,
+      fileId: file.id,
+      cryptoVersion: file.cryptoVersion,
+      noncePrefix: file.noncePrefix,
+      encMeta: file.encMeta,
+      size: file.size,
+      chunks: fresh,
+    });
+  }
+
+  // Legacy encrypted file → decrypt server-side and serve the plaintext bytes directly.
   // (Vault-locked files can't be served: the server doesn't hold the PIN key.)
   if (file.encIv) {
     if (file.locked || !share.webhook.encKey) {
@@ -102,7 +138,7 @@ export async function POST(
     const ordered = [...fresh].sort((a, b) => a.index - b.index);
     const parts: Buffer[] = [];
     for (const c of ordered) {
-      const r = await fetch(c.url);
+      const r = await fetchDiscordCdn(c.url);
       if (!r.ok) {
         return NextResponse.json(
           { error: "Téléchargement interrompu." },
@@ -116,11 +152,10 @@ export async function POST(
     // Only count the download once the bytes are actually ready to serve.
     await countDownload();
     return new NextResponse(new Uint8Array(plain), {
-      headers: {
-        "Content-Type": file.mimeType || "application/octet-stream",
-        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
-        "Content-Length": String(plain.length),
-      },
+      headers: buildSafeFileHeaders(
+        { filename: file.filename, mimeType: file.mimeType, size: plain.length },
+        { disposition: "attachment", cacheControl: "private, no-store" },
+      ),
     });
   }
 

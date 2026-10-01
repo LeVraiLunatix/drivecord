@@ -27,6 +27,7 @@ import { useDiscordClient } from "@/lib/discord/context";
 import { getThumbnail, generateThumbnail } from "@/lib/thumbnail-cache";
 import { buildItemMenu, type ItemAction } from "./item-menu";
 import { ItemMenuButton } from "./item-menu-button";
+import { decryptDownloaded } from "@/lib/e2ee-client/file-crypto";
 import { TagBadge } from "./tag-badge";
 import { useLongPress } from "./use-long-press";
 
@@ -83,7 +84,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       filename: item.filename,
       chunkSize: item.chunkSize,
       chunks: item.chunks,
-    }, client).then((url) => {
+    }, client, 240, (raw) => decryptDownloaded(item.driveId, raw, item)).then((url) => {
       if (!cancelled && url) setThumbnailUrl(url);
     });
     return () => { cancelled = true; };
@@ -173,7 +174,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       onDrop={handleDrop}
       data-item-id={item.id}
       className={cn(
-        "group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border/50 bg-card/40 p-3 transition-all hover:border-border hover:bg-card/70",
+        "group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border/40 bg-card/40 p-3 transition-colors duration-150 hover:border-border hover:bg-card/70",
         selected && "border-primary/60 bg-primary/5",
         dragOver &&
           "border-primary scale-[1.02] bg-primary/10 shadow-md ring-2 ring-primary/30",
@@ -193,7 +194,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
           {selected && <Check className="size-3" />}
         </div>
       )}
-      <ContextMenu>
+      <ContextMenu modal={false}>
         <ContextMenuTrigger asChild>
           <div
             role="button"
@@ -211,76 +212,54 @@ export const DriveItemCard = React.memo(function DriveItemCard({
             className="flex flex-1 flex-col gap-2 outline-none focus-visible:outline-2 focus-visible:outline-ring"
             {...longPress.handlers}
           >
-            {/* ── Thumbnail (images) or icon (everything else) ── */}
-            {thumbnailUrl ? (
-              <div className="relative -mx-3 -mt-3 h-28 bg-muted/20">
-                <img
-                  src={thumbnailUrl}
-                  alt={name}
-                  draggable={false}
-                  className="h-full w-full object-cover"
-                />
-                {favorite && (
-                  <Star className="absolute bottom-1.5 left-1.5 size-3.5 fill-amber-400 text-amber-400 drop-shadow" />
-                )}
-                <div className="absolute right-1 top-1">
-                  <ItemMenuButton
-                    item={item}
-                    menu={menu}
-                    name={name}
-                    onAction={onAction}
-                    className="bg-black/30 text-white hover:bg-black/50"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between gap-2">
-                <div
-                  className={cn(
-                    "flex size-9 items-center justify-center rounded-lg",
-                    colorClass,
-                  )}
-                >
+            {isFolder ? (
+              /* ── Folder: compact horizontal card ── */
+              <div className="flex items-center gap-3">
+                <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", colorClass)}>
                   <Icon className="size-4" />
                 </div>
-                <div className="flex items-center gap-0.5">
-                  {favorite && (
-                    <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                  )}
-                  <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold leading-tight" title={name}>{name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {childCount === undefined ? "Dossier" : `${childCount} élément${childCount > 1 ? "s" : ""}`}
+                    {" · "}
+                    {formatRelativeTime(mtime)}
+                  </p>
                 </div>
+                <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} />
               </div>
-            )}
-
-            <div className="space-y-1 pt-1">
-              <p
-                className="truncate text-sm font-medium leading-tight"
-                title={name}
-              >
-                {name}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {isFolder
-                  ? childCount === undefined
-                    ? "Dossier"
-                    : `${childCount} élément${childCount > 1 ? "s" : ""}`
-                  : formatBytes(size ?? 0)}
-                {" · "}
-                {formatRelativeTime(mtime)}
-              </p>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-0.5">
-                  {tags.slice(0, 2).map((t) => (
-                    <TagBadge key={t} tag={t} />
-                  ))}
-                  {tags.length > 2 && (
-                    <span className="text-[10px] text-muted-foreground self-center">
-                      +{tags.length - 2}
-                    </span>
+            ) : (
+              /* ── File: big preview on top, details below ── */
+              <>
+                <div className="relative -mx-3 -mt-3 flex h-28 items-center justify-center overflow-hidden bg-muted/30">
+                  {thumbnailUrl ? (
+                    <img src={thumbnailUrl} alt={name} draggable={false} className="h-full w-full object-cover " />
+                  ) : (
+                    <div className={cn("flex size-10 items-center justify-center rounded-lg", colorClass)}>
+                      <Icon className="size-5" />
+                    </div>
+                  )}
+                  {favorite && <Star className="absolute bottom-2 right-2 size-4 fill-amber-400 text-amber-400 drop-shadow" />}
+                  <div className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                    <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} className="bg-background/70 backdrop-blur hover:bg-background/90" />
+                  </div>
+                </div>
+                <div className="space-y-1 pt-1">
+                  <p className="truncate text-sm font-medium leading-tight" title={name}>{name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatBytes(size ?? 0)}
+                    {" · "}
+                    {formatRelativeTime(mtime)}
+                  </p>
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {tags.slice(0, 2).map((t) => <TagBadge key={t} tag={t} />)}
+                      {tags.length > 2 && <span className="self-center text-[10px] text-muted-foreground">+{tags.length - 2}</span>}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>

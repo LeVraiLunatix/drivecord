@@ -26,6 +26,12 @@ export function apiUrl(path: string): string {
 type TokenGetter = () => string | null | Promise<string | null>;
 let getToken: TokenGetter = () => null;
 
+let embedBearer: string | null = null;
+/** Set by the embed iframe once it holds a session token (kept in memory only). */
+export function setEmbedBearer(token: string | null): void {
+  embedBearer = token;
+}
+
 /** Called once by the desktop shell to supply the bearer token source. */
 export function setDesktopTokenGetter(fn: TokenGetter): void {
   getToken = fn;
@@ -58,6 +64,12 @@ export async function authFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
+  if (embedBearer) {
+    // Framed embed: no cookies (they'd be third-party and ambient) — the in-memory token rides in the header.
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${embedBearer}`);
+    return fetch(path, { ...init, headers, credentials: "omit" });
+  }
   if (!IS_DESKTOP) return fetch(path, init);
 
   const headers = new Headers(init.headers);

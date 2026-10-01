@@ -40,6 +40,32 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Consent / developer / login screens must never be framed (clickjacking of an "Authorize" button).
+        source: "/:path(oauth|developers|login|settings)/:rest*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
+      {
+        // Baseline hardening for every response.
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+        ],
+      },
+      {
+        // The popup that mints an embed ticket is first-party only.
+        source: "/embed/connect",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
+      {
         // Never cache HTML documents / API responses, so the in-app WebView
         // always loads the latest deploy on relaunch. Hashed static assets
         // under /_next/ are excluded and stay immutably cached.

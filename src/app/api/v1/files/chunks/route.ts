@@ -1,87 +1,122 @@
 /**
  * POST /api/v1/files/chunks — upload a single chunk (<=10 MiB) and relay it to
- * Discord immediately, returning a `ChunkRef`.
+ * Discord immediately.
  *
- * Pairs with `POST /api/v1/files` (JSON body): upload the file as a series of
- * small chunk requests here, then finalize with the collected chunk refs.
- * This is how a file of unlimited size gets past the platform's per-request
- * body-size limit — no single request ever carries more than one chunk.
+ * Form fields: `chunk` (file), `index`, and optionally `uploadId` (+ `parentId`,
+ * `expectedChunks` on the first call). Without `uploadId` a session is created.
+ * The chunk reference is recorded SERVER-SIDE; `POST /api/v1/files` with that
+ * `uploadId` then finalizes from those records alone — the client can never
+ * inject a chunk (and so never a URL) of its own. The response keeps the old
+ * `ChunkRef` shape and adds `uploadId`.
  */
-import { NextRequest } from "next/server";
+import { after } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
-import {
-  DiscordApiError,
-  DiscordClient,
-  DISCORD_FREE_UPLOAD_LIMIT,
-  parseCdnExpiry,
-  type ChunkRef,
-} from "@/lib/discord";
-import { authenticateApiKey, checkRateLimit, corsJson, hasScope, preflight } from "../../_helpers";
+import { DISCORD_FREE_UPLOAD_LIMIT, DiscordClient, isDiscordCdnUrl, isSnowflake, parseCdnExpiry } from "@/lib/discord";
+import type { ChunkRef } from "@/lib/discord";
+import { HttpError } from "@/lib/api-v1/errors";
+import { assertParentUsable, consumeByteQuota } from "@/lib/api-v1/guards";
+import { idSchema, parentIdSchema, parse } from "@/lib/api-v1/schemas";
+import { BUCKETS, json, preflight, v1Route } from "@/lib/api-v1/pipeline";
+import { cleanupExpiredSessions, createSession } from "@/lib/upload-sessions";
+import { assertSessionUsable, MAX_CHUNKS, parseChunkIndex } from "@/lib/upload-session-core";
 
 export const runtime = "nodejs";
 
-export async function OPTIONS() {
+export function OPTIONS() {
   return preflight();
 }
 
-export async function POST(req: NextRequest) {
-  const auth = await authenticateApiKey(req);
-  if (!auth) return corsJson({ error: "Clé API invalide ou manquante." }, { status: 401 });
-  if (!hasScope(auth.apiKey, "write")) {
-    return corsJson({ error: "Cette clé n'a pas la permission d'écriture." }, { status: 403 });
-  }
-  // Higher budget than the default 60/min: a large file needs one call per
-  // chunk. Discord's own per-webhook rate limiter (inside DiscordClient)
-  // still paces the actual upload, so this only guards against abuse.
-  const limited = await checkRateLimit(auth.apiKey, { limit: 300, windowSec: 60, bucket: "chunks" });
-  if (limited) return limited;
-
-  let form: FormData;
-  try {
-    form = await req.formData();
-  } catch {
-    return corsJson({ error: "Corps de requête invalide (attendu: multipart/form-data)." }, { status: 400 });
-  }
-
-  const chunk = form.get("chunk");
-  if (!(chunk instanceof File)) {
-    return corsJson({ error: "Champ `chunk` manquant." }, { status: 400 });
-  }
-  if (chunk.size > DISCORD_FREE_UPLOAD_LIMIT) {
-    return corsJson(
-      { error: `Chunk trop volumineux (max ${DISCORD_FREE_UPLOAD_LIMIT / (1024 * 1024)} Mio par morceau).` },
-      { status: 413 },
-    );
-  }
-  const rawIndex = Number(form.get("index"));
-  const index = Number.isFinite(rawIndex) ? rawIndex : 0;
-
-  const webhookUrl = decryptUrl(auth.webhook.encryptedUrl);
-  const client = DiscordClient.fromUrl(webhookUrl);
-
-  try {
-    const msg = await client.uploadChunk(chunk, `part${index}`);
-    const att = msg.attachments[0];
-    if (!att) {
-      return corsJson(
-        { error: "Chunk envoyé mais Discord n'a renvoyé aucune pièce jointe." },
-        { status: 502 },
-      );
+export const POST = v1Route(
+  // Higher budget than the default: a large file needs one call per chunk.
+  { route: "/api/v1/files/chunks", scope: "files:write", bucket: BUCKETS.chunks },
+  async ({ req, auth }) => {
+    let form: FormData;
+    try {
+      form = await req.formData();
+    } catch {
+      throw new HttpError(400, "Corps de requête invalide (attendu: multipart/form-data).");
     }
 
-    const chunkRef: ChunkRef = {
+    const chunk = form.get("chunk");
+    if (!(chunk instanceof File)) throw new HttpError(400, "Champ `chunk` manquant.");
+    if (chunk.size === 0) throw new HttpError(400, "Morceau vide.");
+    if (chunk.size > DISCORD_FREE_UPLOAD_LIMIT) {
+      throw new HttpError(413, `Chunk trop volumineux (max ${DISCORD_FREE_UPLOAD_LIMIT / (1024 * 1024)} Mio par morceau).`);
+    }
+    const index = parseChunkIndex(form.get("index") ?? "0");
+
+    after(() => cleanupExpiredSessions());
+
+    // ── Session: existing (must be ours, open, unexpired) or brand new ─────────
+    const uploadIdRaw = form.get("uploadId");
+    let session;
+    if (typeof uploadIdRaw === "string" && uploadIdRaw !== "") {
+      const uploadId = parse(idSchema, uploadIdRaw);
+      session = await prisma.uploadSession.findUnique({ where: { id: uploadId } });
+      assertSessionUsable(session, { apiKeyId: auth.apiKey.id, webhookId: auth.webhook.id });
+    } else {
+      const parentId = parse(parentIdSchema, String(form.get("parentId") ?? ""));
+      await assertParentUsable(auth.webhook.id, parentId);
+      const expectedRaw = form.get("expectedChunks");
+      const expectedChunks = expectedRaw === null || expectedRaw === "" ? null : Number(expectedRaw);
+      if (expectedChunks !== null && (!Number.isInteger(expectedChunks) || expectedChunks < 1 || expectedChunks > MAX_CHUNKS)) {
+        throw new HttpError(400, "`expectedChunks` invalide.");
+      }
+      session = await createSession({
+        apiKeyId: auth.apiKey.id,
+        userId: auth.apiKey.userId,
+        webhookId: auth.webhook.id,
+        parentId,
+        expectedChunks,
+      });
+    }
+    if (session.expectedChunks !== null && index >= session.expectedChunks) {
+      throw new HttpError(400, "`index` dépasse le nombre de morceaux annoncé.");
+    }
+
+    await consumeByteQuota(auth.apiKey.userId, chunk.size);
+
+    // ── Relay to Discord, then record ──────────────────────────────────────────
+    const client = DiscordClient.fromUrl(decryptUrl(auth.webhook.encryptedUrl));
+    const msg = await client.uploadChunk(chunk, `part${index}`);
+    const att = msg.attachments[0];
+    if (!att || !isSnowflake(msg.id) || !isSnowflake(att.id) || !isDiscordCdnUrl(att.url)) {
+      throw new HttpError(502, "Chunk envoyé mais Discord n'a renvoyé aucune pièce jointe exploitable.");
+    }
+
+    const expiresAt = parseCdnExpiry(att.url);
+    const data = {
+      size: chunk.size,
+      messageId: msg.id,
+      attachmentId: att.id,
+      url: att.url,
+      urlExpiresAt: expiresAt ? new Date(expiresAt) : null,
+    };
+    try {
+      const previous = await prisma.uploadChunk.findUnique({ where: { sessionId_index: { sessionId: session.id, index } } });
+      await prisma.uploadChunk.upsert({
+        where: { sessionId_index: { sessionId: session.id, index } },
+        create: { sessionId: session.id, index, ...data },
+        update: data,
+      });
+      // Re-sending an index replaces it: don't leave the old message orphaned on Discord.
+      if (previous) await client.deleteChunk({ ...previous, expiresAt: 0 }).catch(() => {});
+    } catch (err) {
+      await client.deleteChunk({ index, size: chunk.size, messageId: msg.id, attachmentId: att.id, url: att.url, expiresAt: 0 }).catch(() => {});
+      throw err;
+    }
+
+    const ref: ChunkRef & { uploadId: string } = {
+      uploadId: session.id,
       index,
       size: chunk.size,
       messageId: msg.id,
       attachmentId: att.id,
       url: att.url,
-      expiresAt: parseCdnExpiry(att.url),
+      expiresAt,
     };
-    return corsJson(chunkRef, { status: 201 });
-  } catch (err) {
-    if (err instanceof DiscordApiError) {
-      return corsJson({ error: `Échec de l'envoi du chunk vers Discord : ${err.message}` }, { status: 502 });
-    }
-    throw err;
-  }
-}
+    return json(ref, { status: 201 });
+  },
+);
+

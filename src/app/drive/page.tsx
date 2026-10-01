@@ -10,13 +10,12 @@ import { DriveTopbar } from "@/components/drive/topbar";
 import { CommandPalette } from "@/components/drive/command-palette";
 import { ShareDialog } from "@/components/drive/share-dialog";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
-import { createFolder } from "@/lib/storage";
+import { createFolder, refreshDrive } from "@/lib/storage";
+import { convertFileToE2ee } from "@/lib/e2ee-client/convert";
 import { downloadItemsAsZip } from "@/lib/download-zip";
 import { saveBlob } from "@/lib/native-save";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 import { getVaultKey, clearVaultKey } from "@/lib/crypto/vault-key-store";
-import { setDriveKey } from "@/lib/crypto/drive-key-store";
-import { importDriveKey, unwrapDriveKeyFromLocalStorage } from "@/lib/crypto/drive-crypto";
 import { ensureDriveKey } from "@/lib/auth/sync";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
 import { NewFolderDialog } from "@/components/drive/new-folder-dialog";
@@ -32,6 +31,7 @@ import { UploadDropzone } from "@/components/drive/upload-dropzone";
 import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
 import { Lock, Star, Tag, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { VaultGate } from "@/components/drive/vault-gate";
 import { CordLinkPrompt } from "@/components/auth/cord-link-prompt";
 
@@ -57,6 +57,9 @@ import {
   useActiveDriveId,
   useAllDrives,
   useDriveItems,
+  useDriveIndex,
+  restoreFile,
+  restoreFolder,
   useFavorites,
   useVaultItems,
   useTrashedItems,
@@ -205,25 +208,10 @@ function DriveContent() {
   const driveId = activeDrive?.id ?? null;
   const [vaultUnlocked, setVaultUnlocked] = React.useState(false);
 
-  // Keep the active drive's file key in memory so reads (download, preview, ZIP)
-  // decrypt transparently. Regular files use this key; the vault uses its own
-  // PIN-derived key.
-  React.useEffect(() => {
-    let cancelled = false;
-    if (activeDrive?.encKey) {
-      unwrapDriveKeyFromLocalStorage(activeDrive.encKey)
-        .then((raw) => importDriveKey(raw))
-        .then((k) => {
-          if (!cancelled) setDriveKey(k);
-        });
-    } else {
-      setDriveKey(null);
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [activeDrive?.encKey]);
   const items      = useDriveItems(driveId, currentFolderId);
+  const searching = search.trim() !== "";
+  // While searching "Tous les fichiers", look in the whole drive, not just the open folder.
+  const driveIndex = useDriveIndex(driveId, searching && section === "files");
   const favorites  = useFavorites(driveId);
   const trashed    = useTrashedItems(driveId);
   const taggedItems = useFilesByTag(driveId, activeTag);
@@ -238,7 +226,7 @@ function DriveContent() {
 
   const displayedItems = React.useMemo(() => {
     const base =
-      section === "files" ? items
+      section === "files" ? (searching ? driveIndex : items)
       : section === "favorites" ? favorites
       : section === "vault" ? vaultItems
       : section === "tag" ? taggedItems
@@ -250,7 +238,7 @@ function DriveContent() {
       const name = it.kind === "folder" ? it.name : it.filename;
       return name.toLowerCase().includes(q);
     });
-  }, [section, items, favorites, vaultItems, trashed, taggedItems, search]);
+  }, [section, items, searching, driveIndex, favorites, vaultItems, trashed, taggedItems, search]);
 
   const previewSiblings = React.useMemo(
     () => (displayedItems ?? []).filter((i) => i.kind === "file").map((i) => i.id),
@@ -265,7 +253,9 @@ function DriveContent() {
       if (entries.length === 0) return;
       const driveId = activeDrive.id;
       const base = parentOverride ?? currentFolderId;
-      const onUploaded = (item: { fileName: string }) =>
+      // Big batches: the upload panel already shows progress — one toast per file just stacks up.
+      const quiet = entries.length > 3;
+      const onUploaded = quiet ? undefined : (item: { fileName: string }) =>
         toast.success(`« ${item.fileName} » uploadé`);
 
       // In the vault section, uploads must be encrypted — which needs the
@@ -284,14 +274,17 @@ function DriveContent() {
           driveId, parentId: base, client,
           encryptKey: vaultKey,
           locked: true,
-          onUploaded: (item) => toast.success(`« ${item.fileName} » chiffré 🔒`),
+          onUploaded: quiet ? undefined : (item) => toast.success(`« ${item.fileName} » chiffré 🔒`),
         });
         return;
       }
 
       // Non-vault uploads are encrypted with the drive's key (when signed in;
       // null otherwise → uploaded in clear, exactly as before).
-      const driveKey = await ensureDriveKey(activeDrive);
+      // End-to-end encrypt with the drive key. If it isn't available (storage locked, migration
+      // failed) we refuse to upload rather than silently sending the file in clear.
+      const driveKey = await ensureDriveKey(activeDrive).catch(() => null);
+      if (!driveKey) { toast.error("Déverrouille ton stockage chiffré pour envoyer des fichiers."); return; }
 
       // Flat upload (no folders) — keep the simple path.
       const hasFolders = entries.some((e) => e.path !== "");
@@ -299,7 +292,7 @@ function DriveContent() {
         enqueue({
           files: entries.map((e) => e.file),
           driveId, parentId: base, client,
-          encryptKey: driveKey ?? undefined,
+          e2eeKey: driveKey,
           locked: false,
           onUploaded,
         });
@@ -321,7 +314,7 @@ function DriveContent() {
         for (const [pid, files] of groups) {
           enqueue({
             files, driveId, parentId: pid, client,
-            encryptKey: driveKey ?? undefined,
+            e2eeKey: driveKey,
             locked: false,
             onUploaded,
           });
@@ -393,9 +386,26 @@ function DriveContent() {
       if (action === "tag") { setTagTarget(item); return; }
       if (action === "color") { setColorTarget(item); return; }
       if (action === "share") { setShareTarget(item); return; }
+      if (action === "encrypt" && item.kind === "file") {
+        if (!client) { toast.error("Drive non prêt"); return; }
+        toast.promise(convertFileToE2ee(client, item.driveId, item).then(() => refreshDrive(item.driveId)), {
+          loading: `Chiffrement de « ${item.filename} »…`,
+          success: "Fichier chiffré de bout en bout 🔒",
+          error: (e) => `Chiffrement impossible : ${(e as Error).message}`,
+        });
+        return;
+      }
       if (action === "favorite" && item.kind === "file") {
         try { await setFavorite(item.driveId, item.id, !item.favorite); }
         catch (err) { toast.error((err as Error).message); }
+        return;
+      }
+      if (action === "restore") {
+        try {
+          if (item.kind === "folder") await restoreFolder(item.driveId, item.id);
+          else await restoreFile(item.driveId, item.id);
+          toast.success("Restauré");
+        } catch (err) { toast.error(`Restauration impossible : ${(err as Error).message}`); }
         return;
       }
       if (action === "lock" && item.kind === "file") {
@@ -600,9 +610,18 @@ function DriveContent() {
           {section === "tag" && (displayedItems?.length ?? 0) === 0 && (
             <EmptyState icon={Tag} title={`Aucun fichier avec #${activeTag}`} description="Ajoute ce tag à des fichiers via le menu contextuel." />
           )}
+          {section === "trash" && (trashed?.length ?? 0) > 0 && (
+            <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3 text-sm text-muted-foreground">
+              <span>{trashed!.length} élément{trashed!.length > 1 ? "s" : ""} dans la corbeille</span>
+              <Button variant="outline" size="sm" className="text-red-400 hover:text-red-300" onClick={() => setBulkDeleteItems(trashed!)}>
+                <Trash2 className="size-4" />
+                Vider la corbeille
+              </Button>
+            </div>
+          )}
           {(section === "files" || (section === "vault" && vaultUnlocked && (displayedItems?.length ?? 0) > 0) || ((section === "favorites" || section === "trash" || section === "tag") && (displayedItems?.length ?? 0) > 0)) && (
             <DriveExplorer
-              key={`${section}-${currentFolderId}`}
+              key={`${section}-${currentFolderId}-${searching}`}
               items={displayedItems}
               viewMode={viewMode}
               sortField={sortField}
@@ -610,7 +629,7 @@ function DriveContent() {
               filterKind={filterKind}
               onSortChange={(field, dir) => { setSortField(field); setSortDir(dir); }}
               onAction={handleAction}
-              onOpenFolder={navigateTo}
+              onOpenFolder={(id) => { setSearch(""); navigateTo(id); }}
               onPreviewFile={(id) => setPreviewFileId(id)}
               onDropItem={(sourceId, targetFolder) => {
                 if (targetFolder.kind !== "folder") return;
@@ -621,6 +640,7 @@ function DriveContent() {
                 handleUploadEntries(entriesFromFiles(files), targetFolder.id);
               }}
               onBulkAction={handleBulkAction}
+              onEmptyUpload={section === "files" && !searching ? () => fileInputRef.current?.click() : undefined}
             />
           )}
         </main>
@@ -661,6 +681,7 @@ function DriveContent() {
           if (s === "files") { resetHistory(ROOT_PARENT); }
           setSection(s);
         }}
+        onSearch={setSearch}
       />
 
       <NewFolderDialog
@@ -670,7 +691,7 @@ function DriveContent() {
         parentId={currentFolderId}
       />
       <RenameDialog item={renameTarget} onOpenChange={(open) => !open && setRenameTarget(null)} />
-      <ConfirmDeleteDialog item={deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} onConfirm={handleConfirmDelete} />
+      <ConfirmDeleteDialog permanent={section === "trash"} item={deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} onConfirm={handleConfirmDelete} />
       <MoveDialog
         item={moveTarget}
         items={bulkMoveItems.length > 0 ? bulkMoveItems : undefined}

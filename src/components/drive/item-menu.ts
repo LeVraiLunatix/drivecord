@@ -11,13 +11,15 @@ export type ItemAction =
   | "open"
   | "download"
   | "share"
+  | "encrypt"
   | "rename"
   | "favorite"
   | "lock"
   | "delete"
   | "move"
   | "tag"
-  | "color";
+  | "color"
+  | "restore";
 
 export type MenuEntry =
   | { kind: "item"; label: string; action: ItemAction; destructive?: boolean }
@@ -25,6 +27,14 @@ export type MenuEntry =
 
 export function buildItemMenu(item: DriveItem): MenuEntry[] {
   const isFolder = item.kind === "folder";
+  // In the trash: put it back, or erase it for good — nothing else makes sense there.
+  if (item.trashed) {
+    return [
+      { kind: "item", label: "Restaurer", action: "restore" },
+      { kind: "separator" },
+      { kind: "item", label: "Supprimer définitivement", action: "delete", destructive: true },
+    ];
+  }
   const entries: MenuEntry[] = [
     {
       kind: "item",
@@ -35,6 +45,10 @@ export function buildItemMenu(item: DriveItem): MenuEntry[] {
   if (!isFolder) {
     if (!item.locked) {
       entries.push({ kind: "item", label: "Partager par lien…", action: "share" });
+    }
+    if (!item.locked && !item.cryptoVersion) {
+      // Plaintext (API upload) or legacy single-IV file → re-upload in the end-to-end format.
+      entries.push({ kind: "item", label: "Chiffrer maintenant", action: "encrypt" });
     }
     entries.push({
       kind: "item",

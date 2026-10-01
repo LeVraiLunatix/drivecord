@@ -30,7 +30,11 @@ export async function saveBlob(blob: Blob, filename: string, mimeType = ""): Pro
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    // Attached to the DOM: some browsers (Firefox) ignore clicks on detached anchors.
+    a.style.display = "none";
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
     return "web";
   }

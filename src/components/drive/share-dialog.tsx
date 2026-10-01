@@ -14,7 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import type { DriveItem } from "@/lib/storage";
+import { nanoid } from "nanoid";
+import type { DriveItem, FileEntry } from "@/lib/storage";
+import { b64urlEncode, wrapFileKeyForShare } from "@/lib/crypto/e2ee";
+import { getDriveKeyMaterialById } from "@/lib/e2ee-client/drive-keys";
+import { getFileCipher, isE2eeFile } from "@/lib/e2ee-client/file-crypto";
+import { convertFileToE2ee } from "@/lib/e2ee-client/convert";
+import { DiscordClient } from "@/lib/discord";
+import { getDrive } from "@/lib/storage";
 
 type ShareInfo = { token: string; hasPassword: boolean; expiresAt: number | null };
 
@@ -42,6 +49,25 @@ export function ShareDialog({
 
   const fileId = item?.kind === "file" ? item.id : null;
   const driveId = item?.driveId ?? null;
+  const file: FileEntry | null = item?.kind === "file" ? item : null;
+  const e2ee = file ? isE2eeFile(file) : false;
+  // Legacy single-IV file: its key IS the drive key — it can't be shared as is, it must be re-encrypted first.
+  const legacyEncrypted = Boolean(file && !e2ee && file.encIv);
+  // The file key rides in the URL FRAGMENT (`#k=`): browsers never send it to any server.
+  const [fragmentKey, setFragmentKey] = React.useState<string | null>(null);
+  const [converting, setConverting] = React.useState(false);
+
+  React.useEffect(() => {
+    setFragmentKey(null);
+    if (!open || !file || !driveId || !isE2eeFile(file)) return;
+    let ignore = false;
+    getDriveKeyMaterialById(driveId)
+      .then((dk) => getFileCipher(dk, file))
+      .then((p) => { if (!ignore) setFragmentKey(b64urlEncode(p.raw)); })
+      .catch(() => {});
+    return () => { ignore = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, fileId, driveId]);
 
   React.useEffect(() => {
     if (!open || !fileId || !driveId) return;
@@ -56,16 +82,43 @@ export function ShareDialog({
     return () => { ignore = true; };
   }, [open, fileId, driveId]);
 
-  const shareUrl = share ? `${typeof window !== "undefined" ? window.location.origin : ""}/s/${share.token}` : "";
+  // Password-protected E2EE shares carry no key in the link: the password unwraps it.
+  const shareUrl = share
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/s/${share.token}${e2ee && !share.hasPassword && fragmentKey ? `#k=${fragmentKey}` : ""}`
+    : "";
+
+  const convertThenClose = async () => {
+    if (!file || !driveId) return;
+    setConverting(true);
+    try {
+      const drive = await getDrive(driveId);
+      if (!drive) throw new Error("Drive introuvable.");
+      await convertFileToE2ee(DiscordClient.fromUrl(drive.webhookUrl), driveId, file);
+      toast.success("Fichier rechiffré. Rouvre « Partager » pour créer le lien.");
+      onOpenChange(false);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setConverting(false); }
+  };
 
   const createOrUpdate = async () => {
     if (!fileId || !driveId) return;
     setBusy(true);
     try {
+      let body: Record<string, unknown> = { password: password || undefined, expiresInDays: expiryDays || null };
+      if (e2ee && file) {
+        // The server never sees the password: it stores the file key wrapped by Argon2id(password).
+        const token = nanoid(24);
+        body = { token, expiresInDays: expiryDays || null };
+        if (password) {
+          const p = await getFileCipher(await getDriveKeyMaterialById(driveId), file);
+          const w = await wrapFileKeyForShare(p.raw, token, password);
+          body = { ...body, fkWrappedForShare: w.blob, shareKdf: w.kdf };
+        }
+      }
       const res = await authFetch(`/api/drive/${driveId}/files/${fileId}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: password || undefined, expiresInDays: expiryDays || null }),
+        body: JSON.stringify(body),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Échec");
@@ -141,6 +194,15 @@ export function ShareDialog({
                 <Trash2 className="size-3.5" /> Révoquer
               </Button>
             </div>
+          </div>
+        ) : legacyEncrypted ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ce fichier utilise l&apos;ancien format de chiffrement : pour le partager sans exposer la clé de tout ton drive, il doit d&apos;abord être rechiffré.
+            </p>
+            <Button className="w-full gap-2" onClick={convertThenClose} disabled={converting}>
+              {converting && <Loader2 className="size-4 animate-spin" />} Rechiffrer ce fichier
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">

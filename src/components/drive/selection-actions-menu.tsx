@@ -67,7 +67,7 @@ export function SelectionActionsMenu({ count, onAction, className }: Props) {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="outline" className={cn("h-8 gap-1.5", className)}>
           Actions

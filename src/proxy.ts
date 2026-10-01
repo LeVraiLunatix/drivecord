@@ -13,6 +13,7 @@
 import NextAuth from "next-auth";
 import { NextResponse, type NextRequest } from "next/server";
 import { authConfig } from "@/auth.config";
+import { routeForOrigin } from "@/lib/usercontent";
 
 const { auth } = NextAuth(authConfig);
 
@@ -43,11 +44,40 @@ const CORS_OPTIONS: Record<string, string> = {
   "Access-Control-Max-Age": "86400",
 };
 
+async function embedResponse(req: NextRequest): Promise<NextResponse> {
+  const clientId = req.nextUrl.searchParams.get("client_id") ?? "";
+  let origins: string[] = [];
+  if (/^app_[A-Za-z0-9_-]{8,64}$/.test(clientId)) {
+    try {
+      // Never derived from the request (Host header → SSRF): INTERNAL_ORIGIN, else loopback on our own port.
+      const r = await fetch(new URL(`/api/embed/origins?client_id=${clientId}`, process.env.INTERNAL_ORIGIN ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`));
+      if (r.ok) origins = ((await r.json()) as { origins?: string[] }).origins ?? [];
+    } catch {
+      /* no origins → nobody may frame it */
+    }
+  }
+  const res = NextResponse.next();
+  res.headers.set("Content-Security-Policy", `frame-ancestors ${origins.length ? origins.join(" ") : "'none'"}`);
+  res.headers.set("Referrer-Policy", "no-referrer");
+  return res;
+}
+
 export async function proxy(
   req: NextRequest,
   event: unknown,
 ): Promise<Response | undefined> {
   const { pathname } = req.nextUrl;
+
+  // Content-origin isolation: raw user files only on USERCONTENT_ORIGIN, and
+  // nothing else (no app, no session, no API) there. No-op when it's unset.
+  if (routeForOrigin(req.headers.get("host") ?? req.nextUrl.host, pathname) === "not-found") {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
+  // Embeds may only be framed by the origins the app registered (clickjacking defence).
+  if (pathname.startsWith("/embed/") && !pathname.startsWith("/embed/connect")) {
+    return embedResponse(req);
+  }
 
   if (pathname.startsWith("/api/")) {
     const origin = req.headers.get("origin") ?? "";

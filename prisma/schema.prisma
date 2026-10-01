@@ -13,51 +13,55 @@ datasource db {
 // ── Auth.js required tables ───────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
+  id              String    @id @default(cuid())
+  name            String?
+  email           String    @unique
+  emailVerified   DateTime?
+  image           String?
   /// bcrypt hash — null for OAuth-only accounts
-  password      String?
+  password        String?
   /// bcrypt hash of the vault PIN — null until the user sets one
-  vaultPin      String?
+  vaultPin        String?
   /// base64 PBKDF2 salt used to derive the PIN-based key-encryption-key (KEK)
-  vaultSalt     String?
+  vaultSalt       String?
   /// base64 AES-256-GCM ciphertext of the random vault master key, wrapped
   /// under the PIN-derived KEK. The master key (not the PIN-derived KEK)
   /// actually encrypts vault files, so changing the PIN only re-wraps this
   /// blob — it never touches already-encrypted file content.
   vaultKeyWrapped String?
-  /// base64 IV used for the `vaultKeyWrapped` AES-GCM wrapping
+  /// base64 IV used for the `vaultKeyWrapped` AES-GCM wrapping (legacy PBKDF2 vaults only)
   vaultKeyIv      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  /// Vault v2 (phase 2): Argon2id parameters + salt of the PIN stretching. When set, the PIN never
+  /// reaches the server: `vaultPin` holds bcrypt(verifier) where verifier = HKDF(Argon2id(PIN)),
+  /// and `vaultKeyWrapped` is `v1.<iv>.<ct>` wrapped by a PIN-derived key. Null = legacy vault.
+  vaultKdf        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   /// Dernière connexion réussie (sert à la règle de re-vérification email 24 h).
-  lastLoginAt      DateTime?
+  lastLoginAt           DateTime?
   /// 2FA activée (au moins une méthode active : TOTP et/ou email).
-  twoFactorEnabled Boolean   @default(false)
+  twoFactorEnabled      Boolean   @default(false)
   /// Méthode 2FA PRÉFÉRÉE (présentée en premier au login) : "totp" | "email" | null.
-  twoFactorMethod  String?
+  twoFactorMethod       String?
   /// 2FA par email activée (le statut TOTP est porté par TotpSecret.enabled).
-  emailOtpEnabled  Boolean   @default(false)
+  emailOtpEnabled       Boolean   @default(false)
   /// 2FA par approbation depuis un autre appareil de confiance.
-  deviceApprovalEnabled Boolean @default(false)
+  deviceApprovalEnabled Boolean   @default(false)
 
   /// Palier Patreon débloqué : 0 = aucun, 1 = Gold, 2 = Premium, 3 = VIP.
   /// Calculé depuis l'API Patreon (montant engagé) ; les features premium se
   /// gatent avec `patreonTier >= niveau_requis` (héritage automatique).
-  patreonTier     Int       @default(0)
+  patreonTier        Int       @default(0)
   /// Dernière synchro du palier avec Patreon (null tant que Patreon non lié).
-  patreonSyncedAt DateTime?
+  patreonSyncedAt    DateTime?
   /// true = palier octroyé À LA MAIN par l'admin. Protégé : la synchro/webhook
   /// Patreon ne l'écrase JAMAIS (seul l'admin ou l'expiration peut le retirer).
-  patreonManual   Boolean   @default(false)
+  patreonManual      Boolean   @default(false)
   /// Expiration du palier : null = à vie ; sinon le palier retombe à 0 passée cette date.
-  patreonExpiresAt DateTime?
+  patreonExpiresAt   DateTime?
   /// Opt-out de la page publique « Nos mécènes » (visible par défaut).
-  hideFromSupporters Boolean @default(false)
+  hideFromSupporters Boolean   @default(false)
 
   accounts       Account[]
   sessions       Session[]
@@ -70,6 +74,11 @@ model User {
   loginRequests  LoginRequest[]
   pushTokens     PushToken[]
   apiKeys        ApiKey[]
+  userKeys       UserKeys?
+  keyTransfers   KeyTransferRequest[]
+  ownedApps      App[]
+  appGrants      AppGrant[]
+  personalTokens PersonalToken[]
 }
 
 model Account {
@@ -124,6 +133,11 @@ model Webhook {
   /// AES-256-GCM encrypted per-drive file key (base64) — null until set.
   /// Encrypts all of this drive's regular (non-vault) file uploads.
   encKey       String?
+  /// E2EE (phase 2): the drive key wrapped by the user's Master Key (`v1.<iv>.<ct>`).
+  /// The server cannot open it. Replaces `encKey`, which is nulled at migration.
+  dkWrapped    String?
+  /// 0 = legacy (server-held `encKey`), 1 = end-to-end (`dkWrapped`).
+  e2eeVersion  Int      @default(0)
   name         String
   channelId    String
   guildId      String?
@@ -131,25 +145,35 @@ model Webhook {
   lastOpenedAt DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  files   DriveFile[]
-  folders DriveFolder[]
-  shares  Share[]
-  apiKeys ApiKey[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files          DriveFile[]
+  folders        DriveFolder[]
+  shares         Share[]
+  apiKeys        ApiKey[]
+  uploadSessions UploadSession[]
+  appGrants      AppGrant[]
+  personalTokens PersonalToken[]
 
   @@unique([userId, driveId])
 }
 
 /// A public share link for a single file.
 model Share {
-  token        String    @id
-  webhookId    String
-  fileId       String
+  token             String    @id
+  webhookId         String
+  fileId            String
   /// bcrypt hash of the optional access password (null = no password)
-  passwordHash String?
-  expiresAt    DateTime?
-  downloads    Int       @default(0)
-  createdAt    DateTime  @default(now())
+  passwordHash      String?
+  expiresAt         DateTime?
+  downloads         Int       @default(0)
+  /// Password-protected E2EE share: the file key wrapped by Argon2id(password).
+  /// The server never sees the password (no bcrypt for these shares).
+  fkWrappedForShare String?
+  /// Argon2id parameters + salt for `fkWrappedForShare`.
+  shareKdf          Json?
+  /// Set by an admin after an abuse report: the link stops serving anything.
+  disabledAt        DateTime?
+  createdAt         DateTime  @default(now())
 
   webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
@@ -161,19 +185,30 @@ model Share {
 /// browser session. Only the SHA-256 hash of the raw key is stored — the
 /// plaintext is shown once, at creation time.
 model ApiKey {
-  id         String    @id @default(cuid())
-  userId     String
-  webhookId  String
-  name       String
+  id             String    @id @default(cuid())
+  userId         String
+  webhookId      String
+  name           String
   /// First few chars of the raw key (e.g. "dvc_ab12cd34"), shown in the UI so
   /// the user can tell keys apart without ever re-displaying the secret.
-  keyPrefix  String
+  keyPrefix      String
   /// SHA-256 hex digest of the raw key.
-  keyHash    String    @unique
-  /// Granted capabilities: "read" and/or "write" (write also allows delete).
-  scopes     String[]
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
+  keyHash        String    @unique
+  /// Granted capabilities: "files:read", "files:write", "files:delete",
+  /// "public:manage", "folders:write" — plus the legacy "read" / "write" of older
+  /// keys, expanded at check time (see lib/auth/api-key.ts).
+  scopes         String[]
+  /// Hard expiry — the key is rejected after this instant (null = never).
+  expiresAt      DateTime?
+  /// Set when the owner revokes the key; revoked keys are refused but kept listed.
+  revokedAt      DateTime?
+  /// Exact client IPs allowed to use the key (empty = any IP).
+  allowedIps     String[]  @default([])
+  /// Browser origins allowed to use the key (empty = any). Requests carrying an
+  /// `Origin` header from elsewhere are refused; CORS echoes the exact origin.
+  allowedOrigins String[]  @default([])
+  lastUsedAt     DateTime?
+  createdAt      DateTime  @default(now())
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
@@ -182,33 +217,308 @@ model ApiKey {
   @@index([webhookId])
 }
 
+/// Server-side record of a chunked upload started through `/api/v1/files/chunks`.
+/// Chunk references are stored HERE (never trusted from the client), so the
+/// finalize step can only ever reference messages this server itself posted to
+/// the key's own webhook.
+model UploadSession {
+  id             String   @id @default(cuid())
+  apiKeyId       String
+  userId         String
+  webhookId      String
+  parentId       String   @default("")
+  /// Optional chunk count announced up front; enforced at finalize when set.
+  expectedChunks Int?
+  /// API v2: client-generated file id (bound into every AAD), declared ciphertext size, and kind.
+  fileId         String?
+  cipherSize     BigInt?
+  visibility     String   @default("private")
+  /// "open" | "completed" | "aborted"
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  webhook Webhook       @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  chunks  UploadChunk[]
+
+  @@index([apiKeyId])
+  @@index([status, expiresAt])
+}
+
+model UploadChunk {
+  sessionId    String
+  index        Int
+  size         Int
+  messageId    String
+  attachmentId String
+  url          String
+  /// Unix ms expiry parsed from the CDN URL; null when unknown.
+  urlExpiresAt DateTime?
+  /// SHA-256 (hex) of the bytes relayed for this chunk — lets `complete` verify client-supplied hashes.
+  sha256       String?
+
+  session UploadSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, index])
+}
+
+/// One row per authenticated API call (best-effort, purged after 30 days).
+/// `ip` is truncated (IPv4 /24, IPv6 /48) — enough to spot abuse, not to track people.
+model ApiAuditLog {
+  id        String   @id @default(cuid())
+  apiKeyId  String?
+  /// Reserved for OAuth apps (phase 3).
+  appId     String?
+  userId    String?
+  /// Route pattern, never the concrete URL (ids stay out of the log).
+  route     String
+  method    String
+  status    Int
+  ip        String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([apiKeyId, createdAt])
+}
+
+/// Abuse report filed against a public link (`/s/:token`, `/api/v1/public/:token`).
+model LinkReport {
+  id        String    @id @default(cuid())
+  token     String
+  reason    String
+  /// Truncated reporter IP.
+  ip        String
+  createdAt DateTime  @default(now())
+  /// Set once an admin dealt with it (link disabled or report dismissed).
+  handledAt DateTime?
+
+  @@index([token])
+  @@index([handledAt, createdAt])
+}
+
+// ── End-to-end encryption (phase 2) ──────────────────────────────────────────
+
+/// Key material the server stores but CANNOT open: every blob is wrapped by a
+/// key that only the user's devices hold (passkey PRF, passphrase, recovery key).
+model UserKeys {
+  userId            String   @id
+  version           Int      @default(1)
+  /// Master Key wrapped by the recovery key.
+  mkWrappedRecovery String
+  /// Master Key wrapped by Argon2id(passphrase), and the KDF parameters.
+  mkWrappedPhrase   String?
+  phraseKdf         Json?
+  /// credentialId (base64url) → Master Key wrapped by the passkey's PRF output.
+  mkWrappedPasskey  Json     @default("{}")
+  /// X25519 public key (base64) and its private key wrapped by the Master Key.
+  publicKeyX25519   String
+  privateKeyWrapped String
+  /// Vault key wrapped by the Master Key (so recovery doesn't lose the vault).
+  vaultKeyWrapped   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A signed-in device without the Master Key asks an unlocked device for it.
+/// The server relays two public keys and one sealed blob — nothing it can read.
+model KeyTransferRequest {
+  id                 String   @id @default(cuid())
+  userId             String
+  label              String
+  /// Commit-reveal SAS (see lib/crypto/e2ee/keys.ts): H(K_req ‖ r1), then r2, then K_req + r1.
+  commitment         String
+  approverNonce      String?
+  requesterPublicKey String?
+  requesterNonce     String?
+  /// "pending" | "approved" | "denied"
+  status             String   @default("pending")
+  /// Approver's ephemeral public key and the Master Key sealed to the shared secret.
+  approverPublicKey  String?
+  sealedMk           String?
+  expiresAt          DateTime
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+// ── Applications (phase 3: OAuth 2.1 + PKCE) ─────────────────────────────────
+
+/// A third-party application registered by a developer. Public client by default (PKCE mandatory
+/// for everyone); `clientSecretHash` set = confidential client.
+model App {
+  id               String    @id
+  ownerUserId      String
+  name             String
+  iconUrl          String?
+  homepageUrl      String
+  /// Exact-match redirect URIs.
+  redirectUris     String[]
+  /// Exact web origins allowed to embed the SDK iframe / call the token endpoint from a browser.
+  allowedOrigins   String[]  @default([])
+  clientSecretHash String?
+  verified         Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  revokedAt        DateTime?
+
+  owner  User       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  grants AppGrant[]
+
+  @@index([ownerUserId])
+}
+
+/// A user's consent for an app: which drive, which folder ("Apps/<name>"), which scopes.
+model AppGrant {
+  id          String    @id @default(cuid())
+  appId       String
+  userId      String
+  webhookId   String
+  /// Folder the app is confined to. Its name is encrypted client-side; the server only knows the id.
+  appFolderId String
+  scopes      String[]
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  app     App          @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webhook Webhook      @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  tokens  OAuthToken[]
+
+  @@unique([appId, userId])
+  @@index([userId])
+}
+
+/// Single-use authorization code (60 s), bound to a PKCE challenge and a redirect URI.
+model OAuthCode {
+  codeHash      String    @id
+  appId         String
+  userId        String
+  grantId       String
+  redirectUri   String
+  codeChallenge String
+  scopes        String[]
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+/// One access+refresh pair. Refresh tokens rotate on every use; replaying a used one revokes the whole family.
+model OAuthToken {
+  id               String    @id @default(cuid())
+  grantId          String
+  appId            String
+  userId           String
+  /// All tokens descending from one authorization code share a family.
+  familyId         String
+  accessTokenHash  String    @unique
+  accessExpiresAt  DateTime
+  refreshTokenHash String    @unique
+  refreshExpiresAt DateTime
+  refreshUsedAt    DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  grant AppGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([grantId])
+}
+
+// ── API v2 (phase 4) ─────────────────────────────────────────────────────────
+
+/// Personal access token for the owner's own drive (`dvc_pat_…`). Only the hash is stored.
+model PersonalToken {
+  id             String    @id @default(cuid())
+  userId         String
+  webhookId      String
+  name           String
+  keyPrefix      String
+  keyHash        String    @unique
+  /// "drive:read" | "drive:write" | "drive:delete" | "drive:share"
+  scopes         String[]
+  allowedOrigins String[]  @default([])
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Replay protection for `POST` with an `Idempotency-Key` (24 h).
+model IdempotencyRecord {
+  id           String   @id @default(cuid())
+  /// "<principal>:<key>"
+  scopeKey     String   @unique
+  requestHash  String
+  status       Int
+  responseBody Json
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@index([expiresAt])
+}
+
+/// Change journal (with tombstones) for sync clients.
+model ChangeLog {
+  id        BigInt   @id @default(autoincrement())
+  webhookId String
+  /// "upsert" | "delete"
+  type      String
+  /// "file" | "folder"
+  kind      String
+  itemId    String
+  at        DateTime @default(now())
+
+  @@index([webhookId, id])
+}
+
 // ── Drive content (files + folders) ──────────────────────────────────────────
 
 /// A file uploaded via a webhook. `chunks` is a JSON array of ChunkRef objects.
 model DriveFile {
-  id        String    @id
-  webhookId String
-  driveId   String
-  parentId  String    @default("")
-  filename  String
+  id            String    @id
+  webhookId     String
+  driveId       String
+  parentId      String    @default("")
+  filename      String
   /// Total byte size (sum of chunks). BigInt in the DB (chunking targets
   /// unlimited file size; Int would overflow past ~2 GiB) — exposed as a
   /// plain JS `number` everywhere else via the Prisma client extension in
   /// lib/prisma.ts (safe: max safe integer is ~9 PB, far past any real file).
-  size      BigInt
-  mimeType  String    @default("")
-  chunkSize Int
+  size          BigInt
+  mimeType      String    @default("")
+  chunkSize     Int
   /// ChunkRef[] — ordered list of Discord message references.
-  chunks    Json
-  tags      String[]
-  favorite  Boolean   @default(false)
-  locked    Boolean   @default(false)
+  chunks        Json
+  tags          String[]
+  favorite      Boolean   @default(false)
+  locked        Boolean   @default(false)
   /// base64 AES-GCM IV — present iff the file content is E2EE encrypted
-  encIv     String?
-  trashed   Boolean   @default(false)
-  trashedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  /// (legacy single-IV format, `cryptoVersion` 0)
+  encIv         String?
+  /// File key wrapped by the drive key (`v1.<iv>.<ct>`). cryptoVersion >= 1 only.
+  fkWrapped     String?
+  /// Encrypted metadata `{name, mime, size, mtime}` (`v1.<iv>.<ct>`). cryptoVersion >= 1 only.
+  encMeta       String?
+  /// 0 = plaintext or legacy single-IV, 1 = chunked E2EE format v1.
+  cryptoVersion Int       @default(0)
+  /// base64 7-byte nonce prefix of the chunked format.
+  noncePrefix   String?
+  /// "private" (default: E2EE) | "public" (deliberately stored in clear, for hotlinks — API v2).
+  visibility    String    @default("private")
+  trashed       Boolean   @default(false)
+  trashedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
@@ -224,6 +534,8 @@ model DriveFolder {
   driveId   String
   parentId  String    @default("")
   name      String
+  /// Encrypted name (`v1.<iv>.<ct>`, by the drive key). When set, `name` is "".
+  encName   String?
   color     String?
   trashed   Boolean   @default(false)
   trashedAt DateTime?

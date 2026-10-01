@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import DarkVeil from "@/components/ui/dark-veil";
-import { BetaBanner } from "@/components/beta-banner";
 
 /**
  * Dedicated home screen for the NATIVE APP (logged-out users).
@@ -53,8 +52,7 @@ export function AppHome() {
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-64 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
-      {/* Beta banner (top) + theme toggle */}
-      <BetaBanner />
+      {/* Theme toggle */}
       <div className="flex justify-end px-3 pt-2">
         <ThemeToggle />
       </div>

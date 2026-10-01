@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { fetchAndDecryptFile } from "@/lib/serve-file";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ChunkRef } from "@/lib/discord";
+import { buildSafeFileHeaders } from "@/lib/safe-file-headers";
 
 export const runtime = "nodejs";
 
@@ -31,15 +32,14 @@ function fileHeaders(file: {
 }) {
   return {
     ...CORS_HEADERS,
+    // Content-Type / Content-Disposition / CSP / nosniff: one audited place.
+    // Only passive media is ever shown inline; everything else downloads as
+    // application/octet-stream (see lib/safe-file-headers.ts).
+    ...buildSafeFileHeaders(file, { disposition: "inline", isPublic: true, cacheControl: "public, max-age=3600" }),
     "Accept-Ranges": "bytes",
-    "Content-Type": file.mimeType || "application/octet-stream",
-    "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
-    "Content-Length": String(file.size),
     "Last-Modified": file.updatedAt.toUTCString(),
     ETag: `"${file.id}-${file.updatedAt.getTime()}-${file.size}"`,
-    // Browsers may cache the immutable file, but the CDN must not mix a cached
-    // 200 response with a later byte-range request for the same public URL.
-    "Cache-Control": "public, max-age=3600",
+    // The CDN must not mix a cached 200 with a later byte-range request for the same public URL.
     "CDN-Cache-Control": "no-store",
   };
 }
@@ -93,6 +93,9 @@ async function servePublicFile(
   if (!share) {
     return NextResponse.json({ error: "Lien introuvable." }, { status: 404, headers: CORS_HEADERS });
   }
+  if (share.disabledAt) {
+    return NextResponse.json({ error: "Ce lien a été désactivé." }, { status: 410, headers: CORS_HEADERS });
+  }
   if (share.expiresAt && share.expiresAt.getTime() < Date.now()) {
     return NextResponse.json({ error: "Ce lien a expiré." }, { status: 410, headers: CORS_HEADERS });
   }
@@ -112,6 +115,15 @@ async function servePublicFile(
     return NextResponse.json({ error: "Fichier supprimé." }, { status: 404, headers: CORS_HEADERS });
   }
 
+  // Hotlinks serve plaintext only. An end-to-end encrypted file can't be shown by an <img>,
+  // and the server can't decrypt it — the link is dead until the owner publishes a plaintext copy.
+  if (file.cryptoVersion >= 1 || (file.encIv && share.webhook.e2eeVersion >= 1)) {
+    return NextResponse.json(
+      { error: "Ce fichier est chiffré de bout en bout : il ne peut pas être servi en lien public." },
+      { status: 410, headers: CORS_HEADERS },
+    );
+  }
+
   const baseHeaders = fileHeaders(file);
   if (headOnly) {
     return new NextResponse(null, { status: 200, headers: baseHeaders });
@@ -123,6 +135,8 @@ async function servePublicFile(
     chunks: file.chunks as unknown as ChunkRef[],
     encIv: file.encIv,
     locked: file.locked,
+    cryptoVersion: file.cryptoVersion,
+    e2eeVersion: share.webhook.e2eeVersion,
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status, headers: CORS_HEADERS });

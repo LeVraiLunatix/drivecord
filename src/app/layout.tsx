@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
+import { E2eeProvider } from "@/components/e2ee/e2ee-provider";
 import { LoginApprovalWatcher } from "@/components/auth/login-approval-watcher";
 import { BfcacheAuthGuard } from "@/components/auth/bfcache-guard";
 import { NativeDeepLink } from "@/components/native-deep-link";
@@ -17,6 +18,7 @@ import { DesktopTokenBridge } from "@/components/auth/desktop-token-bridge";
 import { WindowChrome } from "@/components/window-chrome";
 import { CloseConfirm } from "@/components/close-confirm";
 import { UpdateBanner } from "@/components/update-banner";
+import { StatusBanner } from "@/components/status-banner";
 import "./globals.css";
 
 // Self-hosted (vendored in src/app/fonts/) — no build-time Google Fonts fetch,
@@ -188,6 +190,7 @@ export default function RootLayout({
         <WindowChrome />
         <CloseConfirm />
         <UpdateBanner />
+        <StatusBanner />
         <NativeDeepLink />
         <NativeClass />
         <NativeBackdrop />
@@ -201,7 +204,7 @@ export default function RootLayout({
             themes={["light", "dark", "system", "aurora", "or-nocturne"]}
           >
             <TooltipProvider delayDuration={200}>
-              {children}
+              <E2eeProvider>{children}</E2eeProvider>
 
               <AppTabBar />
 

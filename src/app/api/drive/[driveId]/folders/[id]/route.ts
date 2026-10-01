@@ -6,9 +6,11 @@
  * PATCH  /api/drive/[driveId]/folders/[id]  — update name/color/parentId/trashed
  * DELETE /api/drive/[driveId]/folders/[id]  — hard-delete subtree; returns deleted file entries
  */
+import { recordChanges } from "@/lib/api-v2/drive";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthorizedWebhook, toFileEntry, toFolderEntry } from "../../../_helpers";
+import { wrappedBlob } from "@/lib/e2ee-server";
 
 type RouteParams = { params: Promise<{ driveId: string; id: string }> };
 
@@ -39,6 +41,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { webhook } = result;
 
   const body = (await req.json()) as {
+    /** Encrypted name (rename of an E2EE folder). */
+    encName?: string;
     name?: string;
     color?: string | null;
     parentId?: string;
@@ -71,7 +75,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 
   const data: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.name !== undefined) data.name = body.name.trim();
+  if (body.encName !== undefined) {
+    if (webhook.e2eeVersion < 1 || !wrappedBlob.safeParse(body.encName).success) {
+      return NextResponse.json({ error: "Nom chiffré invalide." }, { status: 400 });
+    }
+    data.encName = body.encName;
+    data.name = "";
+  } else if (body.name !== undefined) data.name = body.name.trim();
   if ("color" in body) data.color = body.color ?? null;
   if (body.parentId !== undefined) data.parentId = body.parentId;
   if (body.trashed !== undefined) {
@@ -88,6 +98,11 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         data: { trashed: body.trashed, trashedAt: body.trashed ? now : null, updatedAt: now },
       }),
     ]);
+    const touched = await prisma.driveFile.findMany({ where: { webhookId: webhook.id, parentId: { in: subtreeIds } }, select: { id: true } });
+    await recordChanges(webhook.id, [
+      ...subtreeIds.map((fid) => ({ type: "upsert" as const, kind: "folder" as const, id: fid })),
+      ...touched.map((f) => ({ type: "upsert" as const, kind: "file" as const, id: f.id })),
+    ]);
     const row = await prisma.driveFolder.findFirst({ where: { id, webhookId: webhook.id } });
     if (!row) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
     return NextResponse.json(toFolderEntry(row));
@@ -98,6 +113,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     data,
   });
   if (count === 0) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
+  await recordChanges(webhook.id, [{ type: "upsert", kind: "folder", id }]);
 
   const row = await prisma.driveFolder.findFirst({ where: { id, webhookId: webhook.id } });
   if (!row) return NextResponse.json({ error: "Introuvable." }, { status: 404 });
@@ -126,6 +142,10 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     }),
   ]);
 
+  await recordChanges(webhook.id, [
+    ...subtreeIds.map((fid) => ({ type: "delete" as const, kind: "folder" as const, id: fid })),
+    ...fileRows.map((f) => ({ type: "delete" as const, kind: "file" as const, id: f.id })),
+  ]);
   return NextResponse.json({
     deletedFolderIds: subtreeIds,
     deletedFiles: fileRows.map(toFileEntry),

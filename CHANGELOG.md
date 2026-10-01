@@ -7,6 +7,35 @@
   à chaque changement notable.
 -->
 
+## Drivecord 1.0 : chiffrement de bout en bout et API v2
+
+🔒 **Vrai chiffrement de bout en bout**
+- Tes fichiers, leurs **noms**, leur type et le nom de tes dossiers sont chiffrés sur ton appareil. Le serveur ne détient plus aucune clé : même une fuite de sa base ne révèle rien.
+- **Clé de récupération** affichée à la création, phrase de chiffrement optionnelle, passkey, et **approbation depuis un autre appareil** avec code de vérification.
+- Tes drives existants sont migrés automatiquement ; un bouton « Chiffrer maintenant » traite les anciens fichiers.
+- Liens de partage chiffrés (la clé reste dans le lien, jamais envoyée au serveur), mot de passe optionnel.
+- Coffre-fort : le PIN n'est plus jamais envoyé au serveur.
+
+🧩 **Applications et API v2**
+- Connecte une application à ton Drivecord avec OAuth : elle n'accède qu'à **son dossier**, tu peux la révoquer à tout moment (Réglages › Applications connectées).
+- Nouvelle **API v2** chiffrée, **jetons personnels**, SDK navigateur (`@drivecord/sdk`) et Node (`@drivecord/node`), boutons d'upload et visionneuse en iframe. L'API v1 est dépréciée.
+
+🎨 **Plus beau, plus clair**
+- Nouvelle page d'accueil (qui voit quoi, développeurs, fonctionnalités à jour), aperçus d'images enfin affichés pour les fichiers chiffrés, panneau d'upload qui se range tout seul, page d'erreur claire.
+- **Bannière jaune** si le site, la base de données ou Discord sont temporairement inaccessibles (ou en cas de maintenance).
+- Corbeille : restaurer et vider ; recherche dans tout le drive ; menus qui ne bloquent plus la page après un renommage.
+
+✨ **La bêta est terminée** — Drivecord passe en version 1.0.
+
+## API publique v1 : sécurité renforcée
+
+🔐 **L'API v1 (intégrations, client Windows) est durcie**
+- Upload par morceaux sécurisé : le serveur retient lui-même chaque morceau reçu, et la finalisation ne peut plus référencer que ce que tu as réellement envoyé à ton drive.
+- Les fichiers ne sont plus servis en « affichage direct » que pour les images, vidéos, sons et PDF : un HTML ou un SVG envoyé par quelqu'un est toujours téléchargé, jamais exécuté.
+- Clés API : **permissions plus fines** (lecture, envoi, suppression, dossiers, liens publics), **expiration**, **révocation**, **adresses IP** et **origines web** autorisées. Les anciennes clés continuent de fonctionner.
+- Protection contre le brute-force, limites de débit annoncées dans les en-têtes, quota d'envoi quotidien.
+- **Signaler ce fichier** sur les pages de partage ; l'admin peut désactiver un lien signalé.
+
 ## Cord d'abord
 
 🟣 **Le Compte Cord devient LA façon d'entrer dans Drivecord**
