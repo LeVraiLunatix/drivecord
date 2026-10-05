@@ -5,6 +5,8 @@ import { isNativeApp } from "@/lib/use-platform";
 import { cordAuthParams } from "@/lib/auth/cord-shared";
 import { newNativeNonce } from "@/lib/auth/native-nonce";
 import { openNativeSignIn } from "@/lib/native-auth";
+import { IS_DESKTOP } from "@/lib/api-base";
+import { SITE_ORIGIN, openInBrowser } from "@/lib/site-link";
 
 export type OAuthProvider = "google" | "discord" | "cord";
 
@@ -95,6 +97,11 @@ export function oauthSignIn(provider: OAuthProvider, callbackUrl = "/drive", cor
  * Au retour, l'événement `linkAccount` (auth.ts) synchronise le palier.
  */
 export function linkPatreon(callbackUrl = "/settings") {
+  if (IS_DESKTOP) {
+    // App Windows : pas d'OAuth dans le shell embarqué → on lie depuis le site.
+    openInBrowser(`${SITE_ORIGIN}${callbackUrl}`);
+    return;
+  }
   if (isNativeApp()) {
     // Dans l'app native, on ouvre les réglages dans le navigateur système où
     // la session web est active, pour y faire le linking.
@@ -110,6 +117,10 @@ export function linkPatreon(callbackUrl = "/settings") {
  * préalable, on veut rattacher Discord au compte déjà connecté.
  */
 export function linkDiscord(callbackUrl = "/setup") {
+  if (IS_DESKTOP) {
+    openInBrowser(`${SITE_ORIGIN}${callbackUrl}`);
+    return;
+  }
   if (isNativeApp()) {
     window.open(`${window.location.origin}${callbackUrl}`, "_system");
     return;

@@ -15,6 +15,7 @@ import {
   SunMoon,
   Link2,
   Images,
+  FolderSync,
   LogOut,
   Search,
   CornerDownLeft,
@@ -24,6 +25,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useAllDrives, setActiveDriveId } from "@/lib/storage";
 import { fullSignOut } from "@/lib/auth/logout";
+import { isDesktopApp } from "@/lib/use-platform";
 
 type Section = "files" | "favorites" | "trash";
 
@@ -88,8 +90,13 @@ export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: P
       { id: "shares", label: "Liens partagés", group: "Aller à", icon: Link2, keywords: "partage lien share", run: () => act(() => router.push("/shares")) },
       { id: "trash", label: "Corbeille", group: "Aller à", icon: Trash2, run: () => act(() => onSection("trash")) },
       { id: "settings", label: "Paramètres", group: "Aller à", icon: Settings, run: () => act(() => router.push("/settings")) },
-      { id: "backup", label: "Sauvegarde pellicule", group: "Aller à", icon: Images, keywords: "photos pellicule backup", run: () => act(() => router.push("/backup")) },
-      { id: "install", label: "Installer l'app", group: "Aller à", icon: Smartphone, run: () => act(() => router.push("/install")) },
+      // Desktop app: folder sync replaces camera-roll backup, and there is no app to install.
+      ...(isDesktopApp()
+        ? [{ id: "desktopsync", label: "Synchro de dossier", group: "Aller à", icon: FolderSync, keywords: "synchro dossier explorateur windows", run: () => act(() => router.push("/desktop-sync")) }]
+        : [
+            { id: "backup", label: "Sauvegarde pellicule", group: "Aller à", icon: Images, keywords: "photos pellicule backup", run: () => act(() => router.push("/backup")) },
+            { id: "install", label: "Installer l'app", group: "Aller à", icon: Smartphone, run: () => act(() => router.push("/install")) },
+          ]),
       { id: "adddrive", label: "Ajouter un drive", group: "Actions", icon: FolderPlus, keywords: "webhook nouveau", run: () => act(() => router.push("/setup")) },
       { id: "theme", label: "Basculer le thème (clair/sombre)", group: "Préférences", icon: SunMoon, keywords: "dark light mode", run: () => act(() => setTheme(theme === "dark" ? "light" : "dark")) },
       { id: "logout", label: "Se déconnecter", group: "Compte", icon: LogOut, keywords: "quitter signout", run: () => act(() => fullSignOut()) },

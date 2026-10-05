@@ -21,6 +21,7 @@ import { NativePushRegister } from "@/components/native-push-register";
 import { DesktopTokenBridge } from "@/components/auth/desktop-token-bridge";
 import { WindowChrome } from "@/components/window-chrome";
 import { CloseConfirm } from "@/components/close-confirm";
+import { DesktopLinkGuard } from "@/components/desktop-link-guard";
 import { UpdateBanner } from "@/components/update-banner";
 import { StatusBanner } from "@/components/status-banner";
 import "./globals.css";
@@ -193,6 +194,7 @@ export default function RootLayout({
         />
         <WindowChrome />
         <CloseConfirm />
+        <DesktopLinkGuard />
         <UpdateBanner />
         <StatusBanner />
         <NativeDeepLink />
