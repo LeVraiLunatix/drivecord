@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/back-button";
 import { formatBytes } from "@/lib/utils/format";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
+import { publicOrigin } from "@/lib/site-link";
 import { b64urlEncode } from "@/lib/crypto/e2ee";
 import { getDriveKeyMaterialById } from "@/lib/e2ee-client/drive-keys";
 import { getFileCipher, readFileMeta } from "@/lib/e2ee-client/file-crypto";
@@ -112,7 +113,7 @@ export default function SharesPage() {
     const frag = e2ee[s.token]?.fragment;
     return `${origin}/s/${s.token}${frag && !s.hasPassword ? `#k=${frag}` : ""}`;
   };
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin = publicOrigin();
 
   const totalDownloads = shares.reduce((a, s) => a + s.downloads, 0);
   const activeCount = shares.filter((s) => !s.expired && !s.missing).length;

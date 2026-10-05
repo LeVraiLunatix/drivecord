@@ -1,5 +1,6 @@
 "use client";
 
+import { IS_DESKTOP } from "@/lib/api-base";
 import { isDesktopApp, tauriInvoke } from "@/lib/use-platform";
 
 /** Public origin of the website (the desktop shell only embeds part of it). */
@@ -46,4 +47,13 @@ export function openSitePage(path: string): void {
     return;
   }
   window.location.href = path;
+}
+
+/**
+ * Origin for links meant to be shared (public `/s/<token>` pages). In the desktop
+ * shell `location.origin` is tauri.localhost, which means nothing to anyone else.
+ */
+export function publicOrigin(): string {
+  if (typeof window === "undefined") return "";
+  return IS_DESKTOP ? SITE_ORIGIN : window.location.origin;
 }

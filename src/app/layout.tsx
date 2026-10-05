@@ -9,6 +9,7 @@ import { ThemeStudioApplier } from "@/components/theme-studio-applier";
 import { GlobalAudioPlayer } from "@/components/audio/global-audio-player";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { E2eeProvider } from "@/components/e2ee/e2ee-provider";
+import { DesktopDriveKeysBridge } from "@/components/e2ee/desktop-drive-keys-bridge";
 import { LoginApprovalWatcher } from "@/components/auth/login-approval-watcher";
 import { BfcacheAuthGuard } from "@/components/auth/bfcache-guard";
 import { NativeDeepLink } from "@/components/native-deep-link";
@@ -225,6 +226,9 @@ export default function RootLayout({
               <NativePushRegister />
 
               <DesktopTokenBridge />
+
+
+              <DesktopDriveKeysBridge />
 
               <AnnouncementPopup />
 

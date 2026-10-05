@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { authFetch } from "@/lib/api-base";
+import { publicOrigin } from "@/lib/site-link";
 import { Copy, Check, Link2, Loader2, Trash2, ExternalLink } from "lucide-react";
 import {
   Dialog,
@@ -84,7 +85,7 @@ export function ShareDialog({
 
   // Password-protected E2EE shares carry no key in the link: the password unwraps it.
   const shareUrl = share
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/s/${share.token}${e2ee && !share.hasPassword && fragmentKey ? `#k=${fragmentKey}` : ""}`
+    ? `${publicOrigin()}/s/${share.token}${e2ee && !share.hasPassword && fragmentKey ? `#k=${fragmentKey}` : ""}`
     : "";
 
   const convertThenClose = async () => {
