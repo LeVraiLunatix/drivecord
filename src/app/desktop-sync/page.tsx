@@ -32,6 +32,8 @@ type DriveStatus = {
   name: string;
   enabled: boolean;
   fileCount: number;
+  /** End-to-end encrypted drive whose key the engine doesn't have yet. */
+  locked?: boolean;
 };
 
 type SyncStatus = {
@@ -244,7 +246,9 @@ export default function DesktopSyncPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{d.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {d.fileCount} fichier{d.fileCount !== 1 ? "s" : ""}
+                    {d.locked
+                      ? "Chiffré : déverrouille ton stockage dans l'app pour le synchroniser."
+                      : `${d.fileCount} fichier${d.fileCount !== 1 ? "s" : ""}`}
                   </p>
                 </div>
                 <Button

@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { registerPasskey } from "@/lib/auth/passkey-client";
 import { isNativeApp } from "@/lib/use-platform";
+import { IS_DESKTOP } from "@/lib/api-base";
+import { openSitePage } from "@/lib/site-link";
 
 type Passkey = {
   id: string;
@@ -56,6 +58,12 @@ export function PasskeyManager() {
     if (isNativeApp()) {
       toast("Ajoute ta passkey depuis Safari : elle servira ensuite à te connecter.");
       window.open(`${window.location.origin}/settings`, "_system");
+      return;
+    }
+    // Windows app: same story (shell origin ≠ drivecord.app) → the site, in the browser.
+    if (IS_DESKTOP) {
+      toast("Ajoute ta passkey depuis le site, dans ton navigateur.");
+      openSitePage("/settings");
       return;
     }
     setAdding(true);

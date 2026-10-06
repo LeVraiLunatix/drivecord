@@ -147,7 +147,7 @@ function Passkeys({ passkeys, enrolled }: { passkeys: { credentialId: string; na
       <h3 className="text-sm font-medium">Déverrouiller avec une passkey</h3>
       {!passkeysAvailable() && (
         <p className="text-xs text-muted-foreground">
-          Les passkeys ne marchent pas sur ce navigateur ni dans l&apos;app iPhone : active-les depuis Safari ou un ordinateur.
+          Les passkeys ne marchent pas sur ce navigateur ni dans les apps iPhone et Windows : active-les depuis le site dans ton navigateur.
         </p>
       )}
       {passkeys.map((p) => {

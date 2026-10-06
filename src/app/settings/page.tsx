@@ -70,6 +70,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BackButton } from "@/components/back-button";
 import { fullSignOut } from "@/lib/auth/logout";
+import { openSitePage } from "@/lib/site-link";
 import { linkPatreon } from "@/lib/auth/oauth";
 import { TierBadge, useTier, type PatreonTier } from "@/components/patreon/tier";
 import { cn } from "@/lib/utils";
@@ -811,7 +812,6 @@ function DriveRow({ drive }: { drive: Drive }) {
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 function AdminSection() {
-  const router = useRouter();
   return (
     <Card className="border-primary/30">
       <CardHeader className="pb-3">
@@ -824,7 +824,7 @@ function AdminSection() {
         <p className="text-sm text-muted-foreground">
           Tu es administrateur. Gère tous les comptes du site.
         </p>
-        <Button className="w-full gap-2 sm:w-auto" onClick={() => router.push("/admin")}>
+        <Button className="w-full gap-2 sm:w-auto" onClick={() => openSitePage("/admin")}>
           <ShieldCheck className="size-4" />
           Gérer les comptes
         </Button>

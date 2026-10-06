@@ -6,6 +6,8 @@
  * already allow CORS and do NOT need this wrapper.
  */
 
+import { apiUrl } from "@/lib/api-base";
+
 const PROXIED_HOSTS = new Set(["cdn.discordapp.com", "media.discordapp.net"]);
 
 /** Wrap a Discord CDN URL with our proxy. Non-proxied URLs are returned as-is. */
@@ -17,7 +19,8 @@ export function proxyUrl(cdnUrl: string): string {
     return cdnUrl;
   }
   if (!PROXIED_HOSTS.has(u.host)) return cdnUrl;
-  return `/api/proxy?u=${encodeURIComponent(cdnUrl)}`;
+  // Desktop shell: rebased onto drivecord.app (the shell has no /api of its own).
+  return apiUrl(`/api/proxy?u=${encodeURIComponent(cdnUrl)}`);
 }
 
 /** True if the given URL needs to go through the proxy. */
