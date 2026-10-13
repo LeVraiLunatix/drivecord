@@ -85,8 +85,8 @@ const container: Variants = {
 };
 
 const item: Variants = {
-  hidden: { opacity: 0, y: 24, filter: "blur(6px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.6, ease: EASE } },
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
 };
 
 const reveal: Variants = {
@@ -234,20 +234,26 @@ function AuthCard({ id, compact = false }: { id?: string; compact?: boolean }) {
 
 // ── Decoration ──────────────────────────────────────────────────────────────
 
-/** Slow drifting colour blobs behind the whole page. */
+/**
+ * Slow drifting colour blobs behind the whole page. Soft by construction
+ * (radial gradient), NOT a blurred disc: an animated `filter: blur(110px)` on
+ * layers this big made iPhone Safari re-blur huge buffers every frame and
+ * crash the page (« un problème est survenu de façon répétée »).
+ */
 function Aurora() {
   const reduce = useReducedMotion();
   const blobs = [
-    { c: "bg-violet-500", pos: "left-[-10%] top-[-8%] size-[34rem]", x: [0, 80, -40, 0], y: [0, 50, 90, 0], d: 26 },
-    { c: "bg-fuchsia-500", pos: "right-[-12%] top-[10%] size-[30rem]", x: [0, -90, 30, 0], y: [0, 70, -30, 0], d: 32 },
-    { c: "bg-sky-500", pos: "left-[25%] top-[45%] size-[28rem]", x: [0, 60, -60, 0], y: [0, -50, 40, 0], d: 38 },
+    { c: "#8b5cf6", pos: "left-[-18%] top-[-16%] size-[46rem]", x: [0, 80, -40, 0], y: [0, 50, 90, 0], d: 26 },
+    { c: "#d946ef", pos: "right-[-20%] top-[3%] size-[41rem]", x: [0, -90, 30, 0], y: [0, 70, -30, 0], d: 32 },
+    { c: "#0ea5e9", pos: "left-[18%] top-[38%] size-[38rem]", x: [0, 60, -60, 0], y: [0, -50, 40, 0], d: 38 },
   ];
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       {blobs.map((b, i) => (
         <motion.div
           key={i}
-          className={`absolute rounded-full opacity-[0.16] blur-[110px] dark:opacity-[0.22] ${b.c} ${b.pos}`}
+          style={{ background: `radial-gradient(circle closest-side, ${b.c}, transparent)` }}
+          className={`absolute rounded-full opacity-[0.16] dark:opacity-[0.22] ${b.pos}`}
           animate={reduce ? undefined : { x: b.x, y: b.y }}
           transition={{ duration: b.d, repeat: Infinity, ease: "easeInOut" }}
         />

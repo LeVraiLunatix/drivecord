@@ -71,8 +71,8 @@ const container: Variants = {
   show: { transition: { staggerChildren: 0.05, delayChildren: 0.03 } },
 };
 const item: Variants = {
-  hidden: { opacity: 0, y: 16, filter: "blur(4px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
 };
 
 export default function SharesPage() {

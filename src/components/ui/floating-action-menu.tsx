@@ -47,9 +47,9 @@ const FloatingActionMenu = ({ options, className }: FloatingActionMenuProps) => 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, x: 10, y: 10, filter: "blur(10px)" }}
-            animate={{ opacity: 1, x: 0, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, x: 10, y: 10, filter: "blur(10px)" }}
+            initial={{ opacity: 0, x: 10, y: 10 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, x: 10, y: 10 }}
             transition={{
               duration: 0.6,
               type: "spring",
