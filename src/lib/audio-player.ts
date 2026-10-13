@@ -76,7 +76,11 @@ export function getAnalyser(): AnalyserNode | null {
     const src = ctx.createMediaElementSource(el);
     analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.82;
+    analyser.smoothingTimeConstant = 0.8;
+    // Plage qui laisse de la marge : avec celle par défaut (-100…-30 dB), une
+    // musique masterisée remplissait l'échelle en permanence (barres à fond).
+    analyser.minDecibels = -85;
+    analyser.maxDecibels = -15;
     src.connect(analyser);
     analyser.connect(ctx.destination);
     ctx.onstatechange = () => resumeAudioContext();

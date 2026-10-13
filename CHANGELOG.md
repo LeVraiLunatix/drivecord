@@ -18,6 +18,7 @@
 - Fini le son qui grésille ou se coupe sur iPhone (écran verrouillé, arrière-plan, après un appel) : le son ne passe plus par le circuit du visualiseur, qui reste animé.
 - Pause et lecture depuis l'écran verrouillé fonctionnent à chaque fois, avec le bon état et la bonne position affichés.
 - Déplacer la barre de lecture ne hache plus le son : la position s'applique quand tu relâches.
+- Le visualiseur n'est plus bloqué à fond : les barres suivent vraiment la musique (graves plus hautes que les aigus), et retombent en douceur.
 - Le curseur de volume, sans effet sur iPhone (ce sont les boutons du téléphone qui règlent le son), est masqué.
 
 ## App iPhone : connexion sans quitter l'app
