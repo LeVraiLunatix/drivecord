@@ -23,6 +23,57 @@ function base64ToBlob(b64: string, type: string): Blob {
 
 const THUMB = { thumbnailWidth: 1, thumbnailHeight: 1, thumbnailQuality: 1 } as const;
 
+// ── App-local plugin (AppDelegate.swift › DrivecordMediaPlugin) ──────────────
+// Streams originals to disk instead of reading whole videos into memory (what
+// crashed the backup on big videos) and lists the library without rendering
+// thumbnails. Older app builds don't have it: they keep the community plugin.
+
+type ExportedAsset = { path: string; size: number; filename: string; mimeType: string };
+type DrivecordMediaPlugin = {
+  listAssets(): Promise<{ items: { identifier: string; album?: string }[] }>;
+  exportAsset(opts: { identifier: string }): Promise<ExportedAsset>;
+  clearExports(): Promise<{ removed: number }>;
+};
+
+// Wrapped in an object: a Capacitor plugin proxy must not be awaited directly.
+let localPlugin: Promise<{ media: DrivecordMediaPlugin } | null> | null = null;
+function drivecordMedia(): Promise<{ media: DrivecordMediaPlugin } | null> {
+  localPlugin ??= (async () => {
+    try {
+      const { Capacitor, registerPlugin } = await import("@capacitor/core");
+      if (!Capacitor.isPluginAvailable("DrivecordMedia")) return null;
+      return { media: registerPlugin<DrivecordMediaPlugin>("DrivecordMedia") };
+    } catch {
+      return null;
+    }
+  })();
+  return localPlugin;
+}
+
+/** The asset as a file on disk (original name and type when the app provides them). */
+async function exportCameraItem(identifier: string): Promise<{ path: string; filename: string; mimeType: string; size: number }> {
+  const local = await drivecordMedia();
+  if (local) {
+    const e = await local.media.exportAsset({ identifier });
+    const ext = (e.filename.split(".").pop() ?? "").toLowerCase();
+    return {
+      path: e.path,
+      filename: e.filename || `media-${identifier.slice(0, 8)}`,
+      mimeType: e.mimeType || MIME_BY_EXT[ext] || "application/octet-stream",
+      size: e.size,
+    };
+  }
+  const { Media } = await import("@capacitor-community/media");
+  const { path } = await Media.getMediaByIdentifier({ identifier });
+  const ext = (path.split(".").pop() ?? "jpg").toLowerCase();
+  return {
+    path,
+    filename: path.split("/").pop() ?? `media-${identifier.slice(0, 8)}.${ext}`,
+    mimeType: MIME_BY_EXT[ext] ?? "application/octet-stream",
+    size: 0,
+  };
+}
+
 /**
  * List every photo/video in the library, each tagged with the USER album it
  * belongs to (first match wins) so the backup can mirror albums as folders.
@@ -30,6 +81,11 @@ const THUMB = { thumbnailWidth: 1, thumbnailHeight: 1, thumbnailQuality: 1 } as 
  */
 export async function listCameraRoll(): Promise<CamItem[]> {
   if (!isNativeApp()) return [];
+  const local = await drivecordMedia();
+  if (local) {
+    const { items } = await local.media.listAssets();
+    return items.map((m) => ({ identifier: m.identifier, album: m.album ? sanitizeAlbum(m.album) : null }));
+  }
   const { Media } = await import("@capacitor-community/media");
 
   const all = await Media.getMedias({ types: "all", quantity: 100_000, ...THUMB });
@@ -78,11 +134,7 @@ export async function readCameraItem(
   identifier: string,
   signal?: AbortSignal,
 ): Promise<{ blob: Blob; filename: string; mimeType: string; path: string }> {
-  const { Media } = await import("@capacitor-community/media");
-  const { path } = await Media.getMediaByIdentifier({ identifier });
-  const ext = (path.split(".").pop() ?? "jpg").toLowerCase();
-  const mimeType = MIME_BY_EXT[ext] ?? "application/octet-stream";
-  const filename = path.split("/").pop() ?? `media-${identifier.slice(0, 8)}.${ext}`;
+  const { path, filename, mimeType } = await exportCameraItem(identifier);
 
   let blob: Blob;
   try {
@@ -120,6 +172,11 @@ export async function deleteCameraTemp(path: string): Promise<void> {
 /** Remove leftover temp copies from previous (crashed) runs. Returns how many. */
 export async function cleanupCameraTemps(): Promise<number> {
   let removed = 0;
+  // Exports of the app plugin (Caches/dc-export).
+  try {
+    const local = await drivecordMedia();
+    if (local) removed += (await local.media.clearExports()).removed;
+  } catch { /* best effort */ }
   try {
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
     const { files } = await Filesystem.readdir({ directory: Directory.Cache, path: "" });
@@ -147,16 +204,14 @@ export async function streamCameraItemRanged(
   chunkSize: number,
   signal?: AbortSignal,
 ): Promise<{ stream: ReadableStream<Uint8Array>; size: number; ranged: boolean; filename: string; mimeType: string; path: string }> {
-  const { Media } = await import("@capacitor-community/media");
   const { Capacitor } = await import("@capacitor/core");
-  const { path } = await Media.getMediaByIdentifier({ identifier });
-  const ext = (path.split(".").pop() ?? "jpg").toLowerCase();
-  const mimeType = MIME_BY_EXT[ext] ?? "application/octet-stream";
-  const filename = path.split("/").pop() ?? `media-${identifier.slice(0, 8)}.${ext}`;
+  const exported = await exportCameraItem(identifier);
+  const { path, filename, mimeType } = exported;
   const src = Capacitor.convertFileSrc(path);
 
   let offset = 0;
-  let total = -1;
+  // Known up front from the app plugin; otherwise learned from Content-Range.
+  let total = exported.size > 0 ? exported.size : -1;
 
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {

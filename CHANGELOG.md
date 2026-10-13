@@ -7,6 +7,19 @@
   à chaque changement notable.
 -->
 
+## App iPhone : sauvegarde de la pellicule et lecteur de musique
+
+📸 **Sauvegarde de la pellicule**
+- Plus de plantage sur les grosses vidéos : l'app les copiait entièrement en mémoire avant de les envoyer (une vidéo 4K de plusieurs Go faisait fermer l'app). Elles sont maintenant copiées sur le disque morceau par morceau.
+- Les vidéos au ralenti sont enfin sauvegardées.
+- La lecture de la pellicule au lancement est beaucoup plus rapide (plus de miniature générée pour chaque photo), et les fichiers gardent leur vrai nom (IMG_1234.HEIC).
+
+🎵 **Lecteur de musique**
+- Fini le son qui grésille ou se coupe sur iPhone (écran verrouillé, arrière-plan, après un appel) : le son ne passe plus par le circuit du visualiseur, qui reste animé.
+- Pause et lecture depuis l'écran verrouillé fonctionnent à chaque fois, avec le bon état et la bonne position affichés.
+- Déplacer la barre de lecture ne hache plus le son : la position s'applique quand tu relâches.
+- Le curseur de volume, sans effet sur iPhone (ce sont les boutons du téléphone qui règlent le son), est masqué.
+
 ## App iPhone : connexion sans quitter l'app
 
 🔐 **Connexion dans l'app** : Cord, Google, Discord et passkey s'ouvrent maintenant dans la fenêtre de connexion d'iOS, par-dessus l'app (« Drivecord souhaite utiliser drivecord.app pour se connecter »), au lieu de basculer dans Safari. Tu restes dans Drivecord du début à la fin.

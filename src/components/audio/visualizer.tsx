@@ -21,7 +21,7 @@ export function Visualizer({ className, bars = 48 }: { className?: string; bars?
     let t = 0;
 
     const draw = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
       if (w < bars * 4 || h < 4) { raf = requestAnimationFrame(draw); return; }
@@ -54,6 +54,11 @@ export function Visualizer({ className, bars = 48 }: { className?: string; bars?
           for (let j = lo; j < hi; j++) sum += data[j] ?? 0;
           const v = sum / (hi - lo) / 255;
           target = Math.min(1, Math.pow(v, 0.85) * (1.4 + k * 1.0));
+        } else if (playing) {
+          // Pas d'analyseur (iPhone : le son ne passe pas par Web Audio, voir
+          // isIOSAudio) : animation de lecture plausible, sans lire le signal.
+          const wave = 0.5 + 0.5 * Math.sin(t * 5.3 + i * 0.9) * Math.sin(t * 2.1 + k * 4);
+          target = Math.min(1, (0.22 + 0.5 * wave) * (1.15 - k * 0.55));
         } else {
           target = 0.1 + 0.05 * Math.sin(t * 2 + k * 6) + (1 - k) * 0.12; // repos : cloche discrète
         }
