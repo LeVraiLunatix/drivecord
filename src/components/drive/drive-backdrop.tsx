@@ -19,6 +19,9 @@ type Palette = { blobs: [string, string, string]; dots: string[]; line: string }
 
 const hsl = (h: number, s: number, l: number, a = 1) => `hsl(${Math.round(h) % 360} ${s}% ${l}% / ${a})`;
 
+/** A soft blob that is soft by itself (no blur filter to recompute each frame). */
+const blobFill = (color: string) => `radial-gradient(circle closest-side, ${color}, transparent)`;
+
 function paletteFromHue(h1: number, h2: number, k: number): Palette {
   return {
     blobs: [hsl(h1, 85, 60, 0.2 * k), hsl(h2, 85, 60, 0.15 * k), hsl(h1 + 150, 80, 60, 0.1 * k)],
@@ -65,17 +68,18 @@ export function DriveBackdrop({ forceTier, previewStyle }: { forceTier?: number;
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      {/* Radial gradients, not blurred discs: see .dc-blob in globals.css. */}
       <div
-        className="dc-blob left-[-10vw] top-[-12vh] size-[48vw] min-h-72 min-w-72"
-        style={{ background: pal.blobs[0], animation: `dc-drift-a ${dur(26)} ease-in-out infinite` }}
+        className="dc-blob left-[-17vw] top-[-20vh] size-[62vw] min-h-96 min-w-96"
+        style={{ background: blobFill(pal.blobs[0]), animation: `dc-drift-a ${dur(26)} ease-in-out infinite` }}
       />
       <div
-        className="dc-blob bottom-[-14vh] right-[-8vw] size-[44vw] min-h-72 min-w-72"
-        style={{ background: pal.blobs[1], animation: `dc-drift-b ${dur(32)} ease-in-out infinite` }}
+        className="dc-blob bottom-[-22vh] right-[-15vw] size-[58vw] min-h-96 min-w-96"
+        style={{ background: blobFill(pal.blobs[1]), animation: `dc-drift-b ${dur(32)} ease-in-out infinite` }}
       />
       <div
-        className="dc-blob left-[30vw] top-[35vh] size-[34vw] min-h-60 min-w-60"
-        style={{ background: pal.blobs[2], animation: `dc-drift-c ${dur(38)} ease-in-out infinite` }}
+        className="dc-blob left-[24vw] top-[29vh] size-[46vw] min-h-80 min-w-80"
+        style={{ background: blobFill(pal.blobs[2]), animation: `dc-drift-c ${dur(38)} ease-in-out infinite` }}
       />
       {style === "ribbons" && <Ribbons hue={eff.enabled ? eff.hue : 45} speed={eff.speed} k={k} />}
       {style === "grid" && <NeonGrid pal={pal} speed={eff.speed} k={k} />}

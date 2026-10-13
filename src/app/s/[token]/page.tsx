@@ -211,8 +211,8 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-6">
       <motion.div
-        initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-sm space-y-6 text-center"
       >

@@ -405,8 +405,8 @@ export default function SettingsPage() {
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={q ? "search" : active}
-              initial={reduce ? false : { opacity: 0, y: 12, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              initial={reduce ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={reduce ? undefined : { opacity: 0, y: -8 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               className="flex flex-col gap-5"

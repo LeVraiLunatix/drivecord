@@ -35,8 +35,8 @@ const FOLDER_KEY = (driveId: string) => `drivecord:camroll-folder:${driveId}`;
 
 const container: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item: Variants = {
-  hidden: { opacity: 0, y: 16, filter: "blur(4px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
 };
 
 // The run lives at module level, not in the page: switching tab mid-backup

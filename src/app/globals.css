@@ -374,10 +374,12 @@ html.is-native body { background: #06060d !important; }
     radial-gradient(120% 80% at 50% -10%, rgba(99, 102, 241, 0.10), transparent 60%),
     #06060d;
 }
+/* No `filter: blur` on these: the radial gradients are already soft, and
+   re-blurring 70vw layers every animation frame is what makes iOS WebKit run
+   out of graphics memory and kill the page. */
 .native-blob {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(70px);
   opacity: 0.55;
   will-change: transform;
 }
@@ -704,7 +706,9 @@ html.is-desktop .drive-topbar-row { padding-right: 5.25rem; }
 .dc-fx-dot { background: var(--c); box-shadow: 0 0 8px var(--c); }
 
 /* Fond animé du drive (version gratuite) : trois nappes qui dérivent lentement. */
-.dc-blob { position: absolute; border-radius: 9999px; filter: blur(80px); will-change: transform; }
+/* Soft by their radial-gradient background (drive-backdrop.tsx), not by a
+   `filter: blur(80px)`: animated, that blur crashed iPhone Safari. */
+.dc-blob { position: absolute; border-radius: 9999px; will-change: transform; }
 @keyframes dc-drift-a { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(8vw,6vh,0) scale(1.15); } }
 @keyframes dc-drift-b { 0%,100% { transform: translate3d(0,0,0) scale(1.1); } 50% { transform: translate3d(-9vw,-5vh,0) scale(0.9); } }
 @keyframes dc-drift-c { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-5vw,8vh,0) scale(1.2); } }

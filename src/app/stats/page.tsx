@@ -68,8 +68,8 @@ const container: Variants = {
   show: { transition: { staggerChildren: 0.06, delayChildren: 0.03 } },
 };
 const item: Variants = {
-  hidden: { opacity: 0, y: 18, filter: "blur(4px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
 };
 
 function StatTile({
