@@ -1,5 +1,7 @@
 import UIKit
 import WebKit
+import Photos
+import UniformTypeIdentifiers
 import AVFoundation
 import AuthenticationServices
 import Network
@@ -48,6 +50,8 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
     // boots. A weak proxy avoids WKUserContentController retaining self.
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
+        // App-local plugin for the camera-roll backup (see DrivecordMediaPlugin).
+        bridge?.registerPluginInstance(DrivecordMediaPlugin())
         guard let controller = webView?.configuration.userContentController else { return }
         let proxy = WeakScriptMessageHandler(self)
         // Selected-tab / visibility updates from the web app.
@@ -481,6 +485,133 @@ class MainViewController: CAPBridgeViewController, UITabBarDelegate, WKScriptMes
         guard let data = try? JSONSerialization.data(withJSONObject: s, options: .fragmentsAllowed),
               let literal = String(data: data, encoding: .utf8) else { return "\"\"" }
         return literal
+    }
+}
+
+// MARK: - Camera-roll access for the backup
+//
+// Replaces two calls of @capacitor-community/media that crashed the backup:
+//  • getMediaByIdentifier read every video ENTIRELY into memory
+//    (`Data(contentsOf:)`) before writing it out: a 1–4 GB video got the app
+//    killed by iOS. It also refused slow-motion videos (AVComposition).
+//  • getMedias rendered a thumbnail for every photo, once more per album, just
+//    to get identifiers — slow and memory-hungry on big libraries; and Photos
+//    *folders* came back as the whole library.
+// Exports go through PHAssetResourceManager, which streams the original
+// resource to disk (iCloud download included) without holding it in memory.
+@objc(DrivecordMediaPlugin)
+public class DrivecordMediaPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "DrivecordMediaPlugin"
+    public let jsName = "DrivecordMedia"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "listAssets", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "exportAsset", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearExports", returnType: CAPPluginReturnPromise),
+    ]
+
+    private var exportDir: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("dc-export", isDirectory: true)
+    }
+
+    private func authorized(_ call: CAPPluginCall, then run: @escaping () -> Void) {
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
+            if status == .authorized || status == .limited {
+                run()
+            } else {
+                call.reject("Accès aux photos refusé", "ACCESS_DENIED")
+            }
+        }
+    }
+
+    /// Every photo/video identifier, tagged with the first user album holding it.
+    @objc func listAssets(_ call: CAPPluginCall) {
+        authorized(call) {
+            let options = PHFetchOptions()
+            options.predicate = NSPredicate(
+                format: "mediaType == %d || mediaType == %d",
+                PHAssetMediaType.image.rawValue, PHAssetMediaType.video.rawValue)
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+
+            // Regular user albums only: smart albums and folders aren't fetched.
+            var albumOf: [String: String] = [:]
+            let albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: nil)
+            albums.enumerateObjects { collection, _, _ in
+                let name = collection.localizedTitle ?? "Album"
+                PHAsset.fetchAssets(in: collection, options: options).enumerateObjects { asset, _, _ in
+                    if albumOf[asset.localIdentifier] == nil { albumOf[asset.localIdentifier] = name }
+                }
+            }
+
+            var items: [[String: Any]] = []
+            PHAsset.fetchAssets(with: options).enumerateObjects { asset, _, _ in
+                var item: [String: Any] = [
+                    "identifier": asset.localIdentifier,
+                    "type": asset.mediaType == .video ? "video" : "photo",
+                ]
+                if let album = albumOf[asset.localIdentifier] { item["album"] = album }
+                items.append(item)
+            }
+            call.resolve(["items": items])
+        }
+    }
+
+    /// Stream an asset's original file into Caches/dc-export; returns its path.
+    @objc func exportAsset(_ call: CAPPluginCall) {
+        guard let id = call.getString("identifier") else {
+            call.reject("identifier manquant")
+            return
+        }
+        authorized(call) {
+            guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject else {
+                call.reject("Média introuvable", "NOT_FOUND")
+                return
+            }
+            let resources = PHAssetResource.assetResources(for: asset)
+            // The version shown in Photos (edits applied) first, else the original.
+            let wanted: [PHAssetResourceType] = asset.mediaType == .video
+                ? [.fullSizeVideo, .video]
+                : [.fullSizePhoto, .photo]
+            guard let resource = wanted.lazy.compactMap({ type in resources.first { $0.type == type } }).first
+                    ?? resources.first else {
+                call.reject("Aucun fichier pour ce média", "NO_RESOURCE")
+                return
+            }
+
+            let name = resource.originalFilename
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: ":", with: "_")
+            let dir = self.exportDir
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let file = dir.appendingPathComponent("\(UUID().uuidString)-\(name)")
+
+            let options = PHAssetResourceRequestOptions()
+            options.isNetworkAccessAllowed = true // iCloud-only media
+            PHAssetResourceManager.default().writeData(for: resource, toFile: file, options: options) { error in
+                if let error = error {
+                    try? FileManager.default.removeItem(at: file)
+                    call.reject("Export impossible : \(error.localizedDescription)", "EXPORT_FAILED")
+                    return
+                }
+                let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.int64Value ?? 0
+                let mime = UTType(resource.uniformTypeIdentifier)?.preferredMIMEType ?? ""
+                call.resolve([
+                    "path": file.absoluteString,
+                    "size": size,
+                    "filename": resource.originalFilename,
+                    "mimeType": mime,
+                ])
+            }
+        }
+    }
+
+    /// Delete every exported copy (left by a crash, a stop, a timeout…).
+    @objc func clearExports(_ call: CAPPluginCall) {
+        let fm = FileManager.default
+        let files = (try? fm.contentsOfDirectory(at: exportDir, includingPropertiesForKeys: nil)) ?? []
+        var removed = 0
+        for f in files where (try? fm.removeItem(at: f)) != nil { removed += 1 }
+        call.resolve(["removed": removed])
     }
 }
 

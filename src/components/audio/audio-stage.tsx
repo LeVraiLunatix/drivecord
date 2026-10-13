@@ -13,11 +13,12 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { formatClock, useAudioPlayer } from "@/lib/audio-player";
+import { formatClock, isIOSAudio, useAudioPlayer } from "@/lib/audio-player";
 import { cn } from "@/lib/utils";
 import { SeekBar } from "./seek-bar";
 import { Visualizer } from "./visualizer";
 
+const noopSubscribe = () => () => {};
 const RATES = [0.75, 1, 1.25, 1.5, 2];
 
 /** Lecteur plein format affiché dans l'aperçu d'un fichier audio. */
@@ -31,6 +32,8 @@ export function AudioStage({
   onNext?: () => void;
 }) {
   const s = useAudioPlayer();
+  // iOS ignores element volume (hardware buttons only): no dead slider there.
+  const volumeSlider = React.useSyncExternalStore(noopSubscribe, () => !isIOSAudio(), () => false);
   const VolIcon = s.muted || s.volume === 0 ? VolumeX : s.volume < 0.5 ? Volume1 : Volume2;
   const clean = name.replace(/\.[^.]+$/, "");
 
@@ -40,7 +43,8 @@ export function AudioStage({
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute -top-2 left-1/2 size-64 -translate-x-1/2 rounded-full bg-gradient-to-br from-indigo-500/40 via-fuchsia-500/30 to-transparent blur-2xl transition-opacity duration-700",
+          // Radial gradient, not a blurred disc: a pulsing `blur-2xl` is costly on iPhone.
+          "pointer-events-none absolute -top-10 left-1/2 size-80 -translate-x-1/2 rounded-full bg-[radial-gradient(circle_closest-side,rgb(139_92_246/0.4),rgb(217_70_239/0.18)_55%,transparent)] transition-opacity duration-700",
           s.playing ? "animate-pulse opacity-100" : "opacity-40",
         )}
       />
@@ -67,7 +71,7 @@ export function AudioStage({
       <Visualizer className="relative" />
 
       <div className="relative w-full space-y-1">
-        <SeekBar label="Position" value={s.currentTime} max={s.duration || 1} onChange={s.seek} />
+        <SeekBar label="Position" value={s.currentTime} max={s.duration || 1} onChange={s.seek} commitOnRelease />
         <div className="flex justify-between text-[11px] tabular-nums text-white/45">
           <span>{formatClock(s.currentTime)}</span>
           <span>-{formatClock(Math.max(0, s.duration - s.currentTime))}</span>
@@ -113,7 +117,9 @@ export function AudioStage({
           >
             <VolIcon className="size-4" />
           </button>
-          <SeekBar label="Volume" value={s.muted ? 0 : s.volume} max={1} onChange={s.setVolume} className="flex-1" />
+          {volumeSlider && (
+            <SeekBar label="Volume" value={s.muted ? 0 : s.volume} max={1} onChange={s.setVolume} className="flex-1" />
+          )}
         </div>
         <button
           onClick={() => s.setRate(RATES[(RATES.indexOf(s.rate) + 1) % RATES.length])}

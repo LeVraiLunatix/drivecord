@@ -3,7 +3,25 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Music, Pause, Play, X } from "lucide-react";
-import { formatClock, registerAudioElement, resumeAudioContext, useAudioPlayer } from "@/lib/audio-player";
+import { fade, formatClock, registerAudioElement, resumeAudioContext, useAudioPlayer } from "@/lib/audio-player";
+
+/** Lock screen / Control Center scrubber, in sync with the element. */
+function syncPosition(el: HTMLAudioElement) {
+  if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+  const d = el.duration;
+  if (!Number.isFinite(d) || d <= 0) return;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration: d,
+      position: Math.min(el.currentTime, d),
+      playbackRate: el.playbackRate || 1,
+    });
+  } catch { /* unsupported */ }
+}
+
+function syncPlaybackState(state: MediaSessionPlaybackState) {
+  if (typeof navigator !== "undefined" && "mediaSession" in navigator) navigator.mediaSession.playbackState = state;
+}
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,18 +47,11 @@ export function GlobalAudioPlayer() {
     el.playbackRate = s.rate;
     const target = useAudioPlayer.getState().volume;
     el.volume = 0;
+    // fade() is immediate when hidden: a track chained in a background tab
+    // used to stay at volume 0 (requestAnimationFrame doesn't run there).
     void el
       .play()
-      .then(() => {
-        let t0 = 0;
-        const up = (now: number) => {
-          t0 ||= now;
-          const p = Math.min(1, (now - t0) / 350);
-          el.volume = target * p;
-          if (p < 1) requestAnimationFrame(up);
-        };
-        requestAnimationFrame(up);
-      })
+      .then(() => fade(target, 350))
       .catch(() => {
         el.volume = target;
       });
@@ -53,6 +64,7 @@ export function GlobalAudioPlayer() {
     const ms = navigator.mediaSession;
     if (!s.track) {
       ms.metadata = null;
+      ms.playbackState = "none";
       return;
     }
     try {
@@ -61,8 +73,11 @@ export function GlobalAudioPlayer() {
         artist: "Drivecord",
         artwork: [{ src: "/icon.png", sizes: "512x512", type: "image/png" }],
       });
-      ms.setActionHandler("play", () => useAudioPlayer.getState().toggle());
-      ms.setActionHandler("pause", () => useAudioPlayer.getState().toggle());
+      // Explicit actions: toggling flipped the wrong way whenever the state
+      // was out of sync (interrupted by a call, paused by iOS…).
+      ms.setActionHandler("play", () => useAudioPlayer.getState().play());
+      ms.setActionHandler("pause", () => useAudioPlayer.getState().pause());
+      ms.setActionHandler("stop", () => useAudioPlayer.getState().stop());
       ms.setActionHandler("seekbackward", () => useAudioPlayer.getState().skip(-10));
       ms.setActionHandler("seekforward", () => useAudioPlayer.getState().skip(10));
       ms.setActionHandler("seekto", (d) => {
@@ -88,13 +103,24 @@ export function GlobalAudioPlayer() {
       <audio
         ref={ref}
         preload="auto"
-        onPlay={() => {
+        onPlay={(e) => {
           resumeAudioContext();
           patch({ playing: true });
+          syncPlaybackState("playing");
+          syncPosition(e.currentTarget);
         }}
-        onPause={() => patch({ playing: false })}
+        onPause={(e) => {
+          patch({ playing: false });
+          syncPlaybackState("paused");
+          syncPosition(e.currentTarget);
+        }}
         onTimeUpdate={(e) => patch({ currentTime: e.currentTarget.currentTime })}
-        onDurationChange={(e) => patch({ duration: e.currentTarget.duration || 0 })}
+        onSeeked={(e) => syncPosition(e.currentTarget)}
+        onRateChange={(e) => syncPosition(e.currentTarget)}
+        onDurationChange={(e) => {
+          patch({ duration: e.currentTarget.duration || 0 });
+          syncPosition(e.currentTarget);
+        }}
         onError={() => patch({ playing: false })}
         onEnded={() => patch({ playing: false, endedTick: useAudioPlayer.getState().endedTick + 1 })}
       />
