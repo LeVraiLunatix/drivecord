@@ -4,7 +4,7 @@
  * client sends reaches the database unchecked.
  */
 import { badRequest } from "../api-v2/errors.ts";
-import { assertKnownKeys, assertNotEmpty, parseName } from "../api-v2/validate.ts";
+import { assertKnownKeys, assertNotEmpty, parseName, parseSearch } from "../api-v2/validate.ts";
 
 export const PROJECT_TYPES = ["mod", "modpack", "resourcepack", "shader", "plugin"] as const;
 export type ProjectType = (typeof PROJECT_TYPES)[number];
@@ -62,6 +62,12 @@ function stringList(value: unknown, field: string, re: RegExp, hint: string, { m
   for (const item of value) out.add(matching(item, field, re, hint));
   if (out.size < min) throw badRequest(`\`${field}\` doit contenir au moins ${min} élément.`);
   return [...out];
+}
+
+/** `q` is optional: absent, empty or blank all mean "no filter" (a client that browses sends `q=`). */
+export function parseOptionalSearch(raw: string | null): string | undefined {
+  if (raw === null || raw.trim() === "") return undefined;
+  return parseSearch(raw);
 }
 
 export const parseSlug = (v: unknown, field = "slug") =>

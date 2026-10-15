@@ -6,10 +6,10 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { badRequest } from "@/lib/api-v2/errors";
-import { parseEnumParam, parseLimit, parseSearch } from "@/lib/api-v2/validate";
+import { parseEnumParam, parseLimit } from "@/lib/api-v2/validate";
 import { catalogPreflight, publicRoute } from "@/lib/catalog/http";
 import { toHit } from "@/lib/catalog/serialize";
-import { PROJECT_TYPES } from "@/lib/catalog/validate";
+import { PROJECT_TYPES, parseOptionalSearch } from "@/lib/catalog/validate";
 
 export const runtime = "nodejs";
 export const OPTIONS = catalogPreflight("GET, OPTIONS");
@@ -38,7 +38,7 @@ const ORDER: Record<(typeof SORTS)[number], Prisma.CatalogProjectOrderByWithRela
 export const GET = publicRoute(
   async ({ req }) => {
     const sp = req.nextUrl.searchParams;
-    const q = parseSearch(sp.get("q"));
+    const q = parseOptionalSearch(sp.get("q"));
     const type = sp.get("type") === null ? undefined : parseEnumParam(sp.get("type"), "type", PROJECT_TYPES, "mod");
     const sort = parseEnumParam(sp.get("sort"), "sort", SORTS, "relevance");
     const limit = parseLimit(sp.get("limit"), 20, 50);

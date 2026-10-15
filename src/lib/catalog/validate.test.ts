@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../api-v2/errors";
-import { parseProjectCreate, parseProjectPatch, parseSlug, parseVersionCreate } from "./validate";
+import { parseOptionalSearch, parseProjectCreate, parseProjectPatch, parseSlug, parseVersionCreate } from "./validate";
 
 const SHA1 = "a".repeat(40);
 const SHA512 = "b".repeat(128);
@@ -26,6 +26,16 @@ describe("catalog slug", () => {
   });
   it("refuse majuscules, tiret initial, chemins et longueur", () => {
     for (const bad of ["Luna", "-luna", "lu na", "../etc", "a", "x".repeat(65), "", 12]) fails(() => parseSlug(bad));
+  });
+});
+
+describe("parseOptionalSearch", () => {
+  it("absent, vide ou blanc = pas de filtre", () => {
+    for (const none of [null, "", "   ", "\t\n"]) expect(parseOptionalSearch(none)).toBeUndefined();
+  });
+  it("garde un terme et refuse un terme trop long", () => {
+    expect(parseOptionalSearch(" luna ")).toBe("luna");
+    fails(() => parseOptionalSearch("x".repeat(101)));
   });
 });
 
