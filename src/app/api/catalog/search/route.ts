@@ -25,6 +25,9 @@ function words(raw: string | null, field: string): string[] {
   return list;
 }
 
+/** Prisma's `contains` does not escape LIKE wildcards: a typed `%` or `_` would match everything. */
+const escapeLike = (s: string) => s.replace(/[\\%_]/g, "\\$&");
+
 const ORDER: Record<(typeof SORTS)[number], Prisma.CatalogProjectOrderByWithRelationInput[]> = {
   relevance: [{ downloads: "desc" }, { updatedAt: "desc" }],
   downloads: [{ downloads: "desc" }, { id: "asc" }],
@@ -61,9 +64,9 @@ export const GET = publicRoute(
       ...(q
         ? {
             OR: [
-              { title: { contains: q, mode: "insensitive" } },
-              { summary: { contains: q, mode: "insensitive" } },
-              { slug: { contains: q.toLowerCase() } },
+              { title: { contains: escapeLike(q), mode: "insensitive" } },
+              { summary: { contains: escapeLike(q), mode: "insensitive" } },
+              { slug: { contains: escapeLike(q.toLowerCase()) } },
             ],
           }
         : {}),
