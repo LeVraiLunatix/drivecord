@@ -710,3 +710,85 @@ model Announcement {
 
   @@index([expiresAt])
 }
+
+// ── Catalogue communautaire (Quarry × Cord) ──────────────────────────────────
+// Mods, modpacks, packs de ressources, shaders et plugins publiés par l'admin,
+// lisibles par tout le monde sans compte. Les octets restent dans Drivecord
+// (fichiers `visibility: "public"` + lien public) : le catalogue ne garde que
+// les métadonnées et le jeton du lien. Les noms de champs de l'API publique
+// suivent ceux de Modrinth pour que Quarry réutilise ses types.
+
+/// Un projet du catalogue (ce qu'on cherche et qu'on ouvre).
+model CatalogProject {
+  id          String    @id @default(cuid())
+  /// Identifiant lisible et stable (a-z, 0-9, tirets), unique.
+  slug        String    @unique
+  /// "mod" | "modpack" | "resourcepack" | "shader" | "plugin"
+  projectType String
+  title       String
+  /// Une phrase, affichée dans les résultats de recherche.
+  summary     String
+  /// Description longue en Markdown (nettoyée côté client avant affichage).
+  description String    @default("")
+  categories  String[]  @default([])
+  /// Jeton du lien public Drivecord de l'icône (null = pas d'icône).
+  iconToken   String?
+  /// Propriétaire (admin) — simple identifiant, sans clé étrangère.
+  ownerId     String
+  /// "published" | "removed" (retrait doux : plus rien n'est servi).
+  status      String    @default("published")
+  downloads   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  removedAt   DateTime?
+
+  versions CatalogVersion[]
+
+  @@index([status, projectType])
+  @@index([status, downloads])
+  @@index([ownerId])
+}
+
+/// Une version d'un projet (ce qu'on installe).
+model CatalogVersion {
+  id            String   @id @default(cuid())
+  projectId     String
+  versionNumber String
+  name          String
+  changelog     String   @default("")
+  /// "release" | "beta" | "alpha"
+  channel       String   @default("release")
+  gameVersions  String[]
+  loaders       String[]
+  /// [{ projectId, source: "catalog" | "modrinth", type: "required" | "optional" | "incompatible" }]
+  dependencies  Json     @default("[]")
+  /// "published" | "removed"
+  status        String   @default("published")
+  downloads     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  project CatalogProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  files   CatalogFile[]
+
+  @@unique([projectId, versionNumber])
+  @@index([projectId, status])
+}
+
+/// Un fichier d'une version : le lien public Drivecord + ses empreintes.
+model CatalogFile {
+  id         String  @id @default(cuid())
+  versionId  String
+  /// Jeton du `Share` Drivecord (lien public) qui sert les octets.
+  shareToken String
+  filename   String
+  size       BigInt
+  sha1       String
+  sha512     String
+  /// Le fichier à installer par défaut (un seul par version).
+  isPrimary  Boolean @default(false)
+
+  version CatalogVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([versionId])
+  @@index([shareToken])
+}
