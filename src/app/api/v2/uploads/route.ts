@@ -5,7 +5,8 @@ import { BUCKETS, ok, preflight, v2Route } from "@/lib/api-v2/http";
 import { ApiError } from "@/lib/api-v2/errors";
 import { assertParentUsable, loadScope, resolveParent, zparse } from "@/lib/api-v2/drive";
 import { clientFileId, idLike } from "@/lib/e2ee-server";
-import { CHUNK_CIPHER, CHUNK_PLAIN, MAX_FILE_CHUNKS } from "@/lib/crypto/e2ee/file-cipher";
+import { CHUNK_CIPHER, MAX_FILE_CHUNKS } from "@/lib/crypto/e2ee/file-cipher";
+import { CHUNK_PUBLIC } from "@/lib/api-v2/uploads";
 import { MAX_OPEN_SESSIONS_PER_KEY, SESSION_TTL_MS } from "@/lib/upload-session-core";
 import { maxApiFilesPerDrive } from "@/lib/api-v1/guards";
 import { principalId } from "@/lib/api-v2/principal";
@@ -30,7 +31,7 @@ export const POST = v2Route({ cap: "write", bucket: BUCKETS.write, route: "/api/
   const parentId = resolveParent(scope, b.parentId);
   await assertParentUsable(scope, parentId);
 
-  const chunkSize = b.visibility === "private" ? CHUNK_CIPHER : CHUNK_PLAIN;
+  const chunkSize = b.visibility === "private" ? CHUNK_CIPHER : CHUNK_PUBLIC;
   const chunkCount = Math.ceil(b.size / chunkSize);
   if (chunkCount > MAX_FILE_CHUNKS) throw new ApiError(413, "payload_too_large", "Fichier trop volumineux.");
 
