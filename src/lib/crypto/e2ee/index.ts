@@ -4,3 +4,6 @@ export * from "./kdf";
 export * from "./keys";
 export * from "./file-cipher";
 export * from "./meta";
+export * from "./shamir";
+export * from "./pin";
+export * from "./shares";

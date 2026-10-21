@@ -24,6 +24,8 @@ Master Key (MK)            32 octets aléatoires, générés sur l'appareil
  ├─ enveloppée par la clé de récupération   (256 bits, affichée une fois)
  ├─ enveloppée par la phrase de chiffrement (Argon2id, optionnelle)
  ├─ enveloppée par une passkey              (WebAuthn PRF, optionnelle)
+ ├─ enveloppée par un code PIN à 6 chiffres (Argon2id + preuve vérifiée par le serveur, optionnelle)
+ ├─ enveloppée par des parts de récupération (secret découpé en Shamir k-sur-n, optionnelle)
  └─ enveloppée par une clé d'appareil       (non extractable, dans IndexedDB)
 Drive Key (DK)             une par drive, enveloppée par MK
 File Key (FK)              une par fichier, enveloppée par DK
@@ -44,6 +46,7 @@ Le coffre-fort ajoute un code PIN : le PIN est étiré par Argon2id **sur l'appa
 3. **Les fichiers volontairement publics.** Un lien « public » (hotlink) sert le fichier **en clair**, par choix explicite ; le badge « Public — non chiffré » le rappelle. Un fichier chiffré ne devient jamais public sans ré-envoi volontaire.
 4. **Les fichiers envoyés via l'API v1** : ils sont stockés en clair (un appel serveur à serveur n'a pas de clé). Ils sont marqués « Non chiffré » dans l'interface, avec un bouton « Chiffrer maintenant ».
 5. **La perte de toutes les méthodes de déverrouillage.** Si tu perds tous tes appareils de confiance, ta passkey, ta phrase **et** ta clé de récupération, tes fichiers sont définitivement perdus : personne (nous compris) ne peut les récupérer. C'est le prix d'un chiffrement sans porte dérobée.
+5 bis. **Les limites des méthodes « confort ».** Le **code PIN** n'a que 10^6 valeurs : le serveur ne remet la clé enveloppée que contre une preuve dérivée du PIN et supprime le PIN après 5 erreurs, ce qui bloque quelqu'un qui aurait volé ta session. En revanche, **un serveur malveillant** peut tester les 10^6 PIN hors ligne : contrairement à la phrase, la clé de récupération ou la passkey, le PIN ne protège pas contre le serveur. Les **parts de récupération** protègent contre le serveur (aucune part seule ne révèle rien) mais *k* proches réunis peuvent ouvrir ton stockage. La **biométrie d'appareil** est un verrou local (WebAuthn, vérifié sur l'appareil) devant la clé non extractable d'un appareil de confiance : elle empêche un tiers d'utiliser ton téléphone déverrouillé, pas un attaquant qui contrôle le navigateur. L'**approbation par QR code** vérifie, côté téléphone, la clé et le nonce du QR contre l'engagement du serveur : scanner remplace la comparaison du code à 6 chiffres, mais approuve seulement ce que tu scannes toi-même.
 6. **Un appareil compromis** (logiciel malveillant, extension de navigateur hostile, XSS) pendant qu'il est déverrouillé : il voit ce que tu vois.
 7. **Les anciennes clés de drive.** Avant le passage à l'E2EE, la clé de chaque drive a existé sur nos serveurs. « Renouveler la clé du drive » (Réglages) lui en donne une que le serveur n'a jamais connue ; les sauvegardes de base de données antérieures peuvent encore contenir l'ancienne.
 

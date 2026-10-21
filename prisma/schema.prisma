@@ -310,6 +310,15 @@ model UserKeys {
   phraseKdf         Json?
   /// credentialId (base64url) → Master Key wrapped by the passkey's PRF output.
   mkWrappedPasskey  Json     @default("{}")
+  /// PIN (6 digits). The wrapped key is only released by POST /api/e2ee/pin against a proof whose
+  /// SHA-256 is `pinVerifier`; `pinFails` counts wrong proofs (the PIN is wiped at the limit).
+  mkWrappedPin      String?
+  pinKdf            Json?
+  pinVerifier       String?
+  pinFails          Int      @default(0)
+  /// Master Key wrapped by a secret that is Shamir-split among trusted people, and the split's (k, n).
+  mkWrappedShares   String?
+  sharesMeta        Json?
   /// X25519 public key (base64) and its private key wrapped by the Master Key.
   publicKeyX25519   String
   privateKeyWrapped String

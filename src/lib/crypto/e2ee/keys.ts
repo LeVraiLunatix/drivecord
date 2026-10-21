@@ -5,6 +5,8 @@
  *    ├─ wrapped by KEK_passkey   (WebAuthn PRF → HKDF)
  *    ├─ wrapped by KEK_phrase    (Argon2id of a passphrase, optional)
  *    ├─ wrapped by KEK_recovery  (random 256-bit key, shown once)
+ *    ├─ wrapped by KEK_pin       (Argon2id of a 6-digit PIN; released by the server only against a proof, see pin.ts)
+ *    ├─ wrapped by KEK_shares    (random secret split with Shamir among trusted people, see shares.ts)
  *    └─ wrapped by KEK_device    (non-extractable key kept in IndexedDB on trusted devices)
  *   Drive Key (DK)    per drive, wrapped by MK
  *   File Key (FK)     per file,  wrapped by DK
@@ -31,6 +33,12 @@ export type UserKeysBundle = {
   privateKeyWrapped: string;
   /** Vault key, wrapped by MK, so recovery doesn't lose the vault. */
   vaultKeyWrapped: string | null;
+  /** PIN: only the KDF parameters + a flag — the wrapped key is released by POST /api/e2ee/pin. */
+  hasPin?: boolean;
+  pinKdf?: PhraseKdf | null;
+  /** Master Key wrapped by the Shamir-split secret, and the (k, n) of the split. */
+  mkWrappedShares?: string | null;
+  sharesMeta?: { k: number; n: number } | null;
 };
 
 const mkKey = (mk: Uint8Array) => importAesKey(mk);

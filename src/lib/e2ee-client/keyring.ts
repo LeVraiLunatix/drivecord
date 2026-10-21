@@ -14,17 +14,23 @@ import { authFetch } from "@/lib/api-base";
 import {
   addPasskey,
   addPhrase,
+  addPin,
   createDeviceKek,
+  createRecoveryShares,
   createUserKeys,
+  pinProof,
   rotateRecovery,
   unlockWithPasskey,
   unlockWithPhrase,
+  unlockWithPin,
   unlockWithRecovery,
+  unlockWithShares,
   unwrapForDevice,
   wrapForDevice,
   type UserKeysBundle,
 } from "@/lib/crypto/e2ee";
 import { idbDel, idbGet, idbSet } from "./idb";
+import { assertBiometric, createBiometricCredential } from "./device-biometric";
 import { getPrfOutput } from "./passkey-prf";
 
 export type KeyringStatus = "idle" | "loading" | "needs-setup" | "locked" | "unlocked" | "error";
@@ -36,12 +42,14 @@ export type KeyringSnapshot = {
   passkeys: { credentialId: string; name: string }[];
   /** This device holds a silent-unlock key. */
   trusted: boolean;
+  /** The silent-unlock key of this device is behind a biometric check. */
+  deviceBio: boolean;
   /** First-time setup is showing: stays true after the keys are committed, until the user leaves the last screen. */
   setupInProgress: boolean;
   error: string | null;
 };
 
-const initial: KeyringSnapshot = { status: "idle", userId: null, bundle: null, passkeys: [], trusted: false, setupInProgress: false, error: null };
+const initial: KeyringSnapshot = { status: "idle", userId: null, bundle: null, passkeys: [], trusted: false, deviceBio: false, setupInProgress: false, error: null };
 
 let snapshot: KeyringSnapshot = initial;
 let mk: Uint8Array | null = null;
@@ -84,6 +92,7 @@ async function api(path: string, init?: RequestInit) {
 // ── Loading ──────────────────────────────────────────────────────────────────
 
 const deviceKey = (u: string) => `device:${u}`;
+type DeviceRecord = { kek: CryptoKey; wrapped: string; /** credential id of the local biometric lock, if enabled */ bio?: string };
 
 async function fetchKeys() {
   const d = await api("/api/e2ee/keys");
@@ -99,9 +108,10 @@ export async function initKeyring(userId: string): Promise<void> {
     const { bundle, passkeys } = await fetchKeys();
     if (!bundle) return set({ status: "needs-setup", bundle: null, passkeys, setupInProgress: true });
 
-    const dev = await idbGet<{ kek: CryptoKey; wrapped: string }>(deviceKey(userId)).catch(() => undefined);
-    set({ bundle, passkeys, trusted: Boolean(dev) });
-    if (dev) {
+    const dev = await idbGet<DeviceRecord>(deviceKey(userId)).catch(() => undefined);
+    set({ bundle, passkeys, trusted: Boolean(dev), deviceBio: Boolean(dev?.bio) });
+    // Behind a biometric lock, the silent unlock waits for the user (a WebAuthn prompt needs a gesture).
+    if (dev && !dev.bio) {
       try {
         mk = await unwrapForDevice(dev.kek, userId, dev.wrapped);
         set({ status: "unlocked" });
@@ -110,7 +120,7 @@ export async function initKeyring(userId: string): Promise<void> {
       } catch {
         // Stale / mismatching blob (e.g. after a key reset): forget it, fall back to a manual unlock.
         await idbDel(deviceKey(userId)).catch(() => {});
-        set({ trusted: false });
+        set({ trusted: false, deviceBio: false });
       }
     }
     set({ status: "locked" });
@@ -192,6 +202,37 @@ export async function unlockPasskey(): Promise<boolean> {
   return true;
 }
 
+/** 6-digit PIN: the server checks a proof (and counts the tries) before releasing the wrapped key. */
+export async function unlockPin(pin: string): Promise<void> {
+  const b = needBundle();
+  if (!b.hasPin || !b.pinKdf) throw new Error("Aucun PIN n'est configuré.");
+  let mkWrappedPin: string;
+  try {
+    ({ mkWrappedPin } = await api("/api/e2ee/pin", { method: "POST", body: JSON.stringify({ pinAuth: await pinProof(pin, b.pinKdf) }) }));
+  } catch (e) {
+    // The server wipes the PIN after too many tries: reflect it in the menu.
+    await refreshPasskeys().catch(() => {});
+    throw e;
+  }
+  unlockedWith(await unlockWithPin(requireUser(), pin, b.pinKdf, mkWrappedPin));
+}
+
+/** Recovery shares (Shamir): `inputs` are the share codes the user gathered. */
+export async function unlockShares(inputs: string[]): Promise<void> {
+  const b = needBundle();
+  if (!b.mkWrappedShares) throw new Error("Aucune part de récupération n'est configurée.");
+  unlockedWith(await unlockWithShares(requireUser(), b.mkWrappedShares, inputs));
+}
+
+/** Local biometric check, then the device's silent-unlock key. */
+export async function unlockBiometric(): Promise<void> {
+  const userId = requireUser();
+  const dev = await idbGet<DeviceRecord>(deviceKey(userId));
+  if (!dev?.bio) throw new Error("Biométrie non configurée sur cet appareil.");
+  await assertBiometric(dev.bio);
+  unlockedWith(await unwrapForDevice(dev.kek, userId, dev.wrapped));
+}
+
 /** MK obtained from another device (see transfer.ts). */
 export function unlockWithTransferredKey(key: Uint8Array) {
   unlockedWith(key);
@@ -206,14 +247,33 @@ function needBundle(): UserKeysBundle {
 
 export async function trustThisDevice(): Promise<void> {
   const userId = requireUser();
+  const previous = await idbGet<DeviceRecord>(deviceKey(userId)).catch(() => undefined);
   const kek = await createDeviceKek();
-  await idbSet(deviceKey(userId), { kek, wrapped: await wrapForDevice(kek, userId, getMk()) });
-  set({ trusted: true });
+  // Re-trusting (e.g. after an unlock with another method) keeps the biometric lock.
+  const record: DeviceRecord = { kek, wrapped: await wrapForDevice(kek, userId, getMk()), ...(previous?.bio ? { bio: previous.bio } : {}) };
+  await idbSet(deviceKey(userId), record);
+  set({ trusted: true, deviceBio: Boolean(record.bio) });
 }
 
 export async function forgetThisDevice(): Promise<void> {
   await idbDel(deviceKey(requireUser()));
-  set({ trusted: false });
+  set({ trusted: false, deviceBio: false });
+}
+
+/** Lock this trusted device behind Face ID / fingerprint. */
+export async function enableDeviceBiometric(): Promise<void> {
+  const userId = requireUser();
+  const dev = await idbGet<DeviceRecord>(deviceKey(userId));
+  if (!dev) throw new Error("Fais d'abord confiance à cet appareil.");
+  await idbSet(deviceKey(userId), { ...dev, bio: await createBiometricCredential(userId) });
+  set({ deviceBio: true });
+}
+
+export async function disableDeviceBiometric(): Promise<void> {
+  const userId = requireUser();
+  const dev = await idbGet<DeviceRecord>(deviceKey(userId));
+  if (dev) await idbSet(deviceKey(userId), { kek: dev.kek, wrapped: dev.wrapped });
+  set({ deviceBio: false });
 }
 
 // ── Managing unlock methods (needs to be unlocked) ───────────────────────────
@@ -241,6 +301,26 @@ export async function enrollPasskey(credentialId: string): Promise<boolean> {
 
 export async function removePasskey(credentialId: string) {
   await patch({ removePasskey: credentialId });
+}
+
+export async function setPin(pin: string) {
+  const { pinKdf, pinAuth, mkWrappedPin } = await addPin(requireUser(), getMk(), pin);
+  await patch({ pin: { mkWrappedPin, pinKdf, pinAuth } });
+}
+
+export async function removePin() {
+  await patch({ pin: null });
+}
+
+/** Split the recovery into `n` shares (any `k` unlock). Returns the share codes, to be shown once. */
+export async function createShares(k: number, n: number): Promise<string[]> {
+  const { shares, mkWrappedShares } = await createRecoveryShares(requireUser(), getMk(), k, n);
+  await patch({ shares: { mkWrappedShares, k, n } });
+  return shares;
+}
+
+export async function removeShares() {
+  await patch({ shares: null });
 }
 
 /** New recovery key (the old one stops working). Returns it to be shown once. */

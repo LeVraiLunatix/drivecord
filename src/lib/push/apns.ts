@@ -116,14 +116,8 @@ export function sendApnsAlert(
   });
 }
 
-/**
- * Notifie tous les appareils natifs de l'utilisateur qu'une connexion demande
- * approbation (style Epic Games). Nettoie les jetons morts. Best-effort.
- */
-export async function sendLoginRequestPush(
-  userId: string,
-  info: { shortCode: string; deviceLabel: string; location?: string | null },
-): Promise<void> {
+/** Envoie une alerte à tous les appareils natifs de l'utilisateur et nettoie les jetons morts. Best-effort. */
+async function pushToUser(userId: string, alert: { title: string; body: string }, data: Record<string, string>): Promise<void> {
   if (!apnsConfigured()) return;
 
   const tokens = await prisma.pushToken.findMany({
@@ -132,18 +126,8 @@ export async function sendLoginRequestPush(
   });
   if (tokens.length === 0) return;
 
-  const where = info.location ? ` (${info.location})` : "";
-  const alert = {
-    title: "Demande de connexion",
-    body: `${info.deviceLabel}${where} veut se connecter · code ${info.shortCode}. Ouvre l'app pour approuver ou refuser.`,
-  };
-
   const results = await Promise.allSettled(
-    tokens.map((t) =>
-      sendApnsAlert(t.token, alert, { type: "login-request" }).then(
-        (r) => [t.token, r] as const,
-      ),
-    ),
+    tokens.map((t) => sendApnsAlert(t.token, alert, data).then((r) => [t.token, r] as const)),
   );
 
   const dead = results
@@ -157,4 +141,35 @@ export async function sendLoginRequestPush(
       .deleteMany({ where: { token: { in: dead } } })
       .catch(() => {});
   }
+}
+
+/**
+ * Notifie tous les appareils natifs de l'utilisateur qu'une connexion demande
+ * approbation (style Epic Games). Nettoie les jetons morts. Best-effort.
+ */
+export async function sendLoginRequestPush(
+  userId: string,
+  info: { shortCode: string; deviceLabel: string; location?: string | null },
+): Promise<void> {
+  const where = info.location ? ` (${info.location})` : "";
+  await pushToUser(
+    userId,
+    {
+      title: "Demande de connexion",
+      body: `${info.deviceLabel}${where} veut se connecter · code ${info.shortCode}. Ouvre l'app pour approuver ou refuser.`,
+    },
+    { type: "login-request" },
+  );
+}
+
+/** Un nouvel appareil demande la clé de chiffrement : à approuver depuis un appareil déverrouillé. */
+export async function sendKeyTransferPush(userId: string, info: { deviceLabel: string }): Promise<void> {
+  await pushToUser(
+    userId,
+    {
+      title: "Nouvel appareil à approuver",
+      body: `${info.deviceLabel} demande l'accès à tes fichiers chiffrés. Ouvre Drivecord pour l'approuver ou le refuser.`,
+    },
+    { type: "key-transfer" },
+  );
 }
