@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { KeyRound, Loader2, Lock, Smartphone } from "lucide-react";
+import { ChevronDown, Fingerprint, KeyRound, Loader2, Lock, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ export function UnlockScreen() {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [code, setCode] = React.useState<string | null>(null);
+  const [showOthers, setShowOthers] = React.useState(false);
   const abort = React.useRef<AbortController | null>(null);
 
   const hasPasskey = bundle && Object.keys(bundle.mkWrappedPasskey).length > 0 && passkeysAvailable();
@@ -37,13 +38,19 @@ export function UnlockScreen() {
     try {
       const ok = await fn();
       if (ok === false) {
-        setError("Cette passkey ne permet pas le déverrouillage sur ce navigateur. Utilise ta phrase ou ta clé de récupération.");
+        setError("Cette passkey ne permet pas le déverrouillage sur ce navigateur. Utilise une autre méthode.");
+        setShowOthers(true);
         return;
       }
       if (trust) await trustThisDevice().catch(() => {});
     } catch (e) {
-      const msg = (e as Error).message;
-      setError(/Déchiffrement impossible/.test(msg) ? "Mauvais secret. Vérifie ce que tu as saisi." : msg);
+      const err = e as Error;
+      if (err.name === "NotAllowedError") {
+        // Prompt dismissed or timed out: not an error worth shouting about.
+        setError("Déverrouillage annulé. Appuie sur le bouton pour réessayer.");
+        return;
+      }
+      setError(/Déchiffrement impossible/.test(err.message) ? "Mauvais secret. Vérifie ce que tu as saisi." : err.message);
     } finally {
       setBusy(false);
     }
@@ -82,23 +89,37 @@ export function UnlockScreen() {
           </div>
 
           {mode === "menu" && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {hasPasskey && (
-                <Button className="w-full justify-start gap-2" onClick={() => run(unlockPasskey)} disabled={busy} data-testid="unlock-passkey">
-                  <KeyRound className="size-4" /> Avec ma passkey
+                <Button size="lg" className="h-12 w-full gap-2 text-base" onClick={() => run(unlockPasskey)} disabled={busy} data-testid="unlock-passkey">
+                  {busy ? <Loader2 className="size-5 animate-spin" /> : <Fingerprint className="size-5" />}
+                  Déverrouiller avec ma passkey
                 </Button>
               )}
-              {hasPhrase && (
-                <Button variant="outline" className="w-full justify-start gap-2" onClick={() => { setMode("phrase"); setValue(""); setError(""); }} data-testid="unlock-phrase-btn">
-                  <Lock className="size-4" /> Avec ma phrase de chiffrement
-                </Button>
+              {hasPasskey && !showOthers ? (
+                <button
+                  type="button"
+                  className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowOthers(true)}
+                  data-testid="unlock-others-btn"
+                >
+                  Autres méthodes <ChevronDown className="size-4" />
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  {hasPhrase && (
+                    <Button variant={hasPasskey ? "outline" : "default"} className="w-full justify-start gap-2" onClick={() => { setMode("phrase"); setValue(""); setError(""); }} data-testid="unlock-phrase-btn">
+                      <Lock className="size-4" /> Avec ma phrase de chiffrement
+                    </Button>
+                  )}
+                  <Button variant="outline" className="w-full justify-start gap-2" onClick={() => { setMode("recovery"); setValue(""); setError(""); }} data-testid="unlock-recovery-btn">
+                    <KeyRound className="size-4" /> Avec ma clé de récupération
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-2" onClick={startTransfer} data-testid="unlock-device-btn">
+                    <Smartphone className="size-4" /> Approuver depuis un autre appareil
+                  </Button>
+                </div>
               )}
-              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => { setMode("recovery"); setValue(""); setError(""); }} data-testid="unlock-recovery-btn">
-                <KeyRound className="size-4" /> Avec ma clé de récupération
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2" onClick={startTransfer} data-testid="unlock-device-btn">
-                <Smartphone className="size-4" /> Approuver depuis un autre appareil
-              </Button>
             </div>
           )}
 
@@ -123,7 +144,7 @@ export function UnlockScreen() {
                 autoFocus
               />
               <div className="flex gap-2">
-                <Button type="button" variant="ghost" onClick={() => setMode("menu")}>Retour</Button>
+                <Button type="button" variant="ghost" onClick={() => { setMode("menu"); setError(""); }}>Retour</Button>
                 <Button type="submit" className="flex-1" disabled={busy || !value.trim()} data-testid="unlock-submit">
                   {busy && <Loader2 className="size-4 animate-spin" />} Déverrouiller
                 </Button>
