@@ -661,10 +661,10 @@ export function Landing() {
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button asChild variant="outline" className="gap-2">
-                  <Link href="/docs/technique/sdk">Voir le SDK <ArrowRight className="size-4" /></Link>
+                  <Link href="https://developers.cordsuite.app/sdk">Voir le SDK <ArrowRight className="size-4" /></Link>
                 </Button>
                 <Button asChild variant="ghost" className="gap-2">
-                  <Link href="/docs/technique/api-v2"><Link2 className="size-4" />API v2</Link>
+                  <Link href="https://developers.cordsuite.app/api/drivecord"><Link2 className="size-4" />API v2</Link>
                 </Button>
               </div>
             </motion.div>

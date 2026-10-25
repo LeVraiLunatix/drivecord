@@ -107,7 +107,7 @@ export function PersonalTokensManager() {
       <p className="text-xs text-muted-foreground">
         Pour tes propres scripts et serveurs. Un jeton donne accès aux <strong>données chiffrées</strong> de ton drive : pour les lire, ton code doit aussi détenir la clé du drive
         (Drivecord ne la connaît jamais). Traite-le comme un mot de passe.{" "}
-        <a href="/docs/technique/api-v2" className="underline hover:text-foreground">Documentation</a>.
+        <a href="https://developers.cordsuite.app/api/drivecord" className="underline hover:text-foreground">Documentation</a>.
       </p>
 
       {revealed && (

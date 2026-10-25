@@ -80,7 +80,7 @@ export default function Page() {
           Les <strong>métadonnées</strong> : le serveur voit la taille (chiffrée), le nombre de morceaux,
           les dates et la structure des dossiers (sans les noms).
         </li>
-        <li>Les fichiers volontairement publiés en clair via l&apos;<a href="/docs/technique/api-v2">API v2</a> (<code>visibility: public</code>).</li>
+        <li>Les fichiers volontairement publiés en clair via l&apos;<a href="https://developers.cordsuite.app/api/drivecord">API v2</a> (<code>visibility: public</code>).</li>
         <li>Le code servi par le site : un site compromis pourrait servir un code piégé. Le code est ouvert et les empreintes de version sont publiées.</li>
       </ul>
 

@@ -58,7 +58,7 @@ export default function DevelopersPage() {
         <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight"><Code2 className="size-7 text-primary" /> Développeurs</h1>
         <p className="text-sm text-muted-foreground">
           Crée une application pour que tes utilisateurs stockent des fichiers <strong>dans leur propre drive</strong> Drivecord, sans que tu puisses les lire.{" "}
-          <a className="underline" href="/docs/technique/api-v2">Documentation</a>
+          <a className="underline" href="https://developers.cordsuite.app/api/drivecord">Documentation</a>
         </p>
       </header>
 

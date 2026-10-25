@@ -69,9 +69,6 @@ export const docsNav: DocSection[] = [
     items: [
       { title: "Comment marche le stockage", href: "/docs/technique/fonctionnement", ready: true },
       { title: "Architecture & stack", href: "/docs/technique/architecture" },
-      { title: "API v2", href: "/docs/technique/api-v2", ready: true },
-      { title: "Applications & OAuth", href: "/docs/technique/applications", ready: true },
-      { title: "SDK & iframe", href: "/docs/technique/sdk", ready: true },
       { title: "API v1 (dépréciée)", href: "/docs/technique/api", ready: true },
       { title: "Auto-hébergement", href: "/docs/technique/auto-hebergement" },
       { title: "Variables d'environnement", href: "/docs/technique/configuration" },

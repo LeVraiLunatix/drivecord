@@ -16,7 +16,7 @@ export function GET(req: NextRequest) {
       code_challenge_methods_supported: ["S256"],
       token_endpoint_auth_methods_supported: ["none", "client_secret_basic", "client_secret_post"],
       revocation_endpoint_auth_methods_supported: ["none", "client_secret_basic", "client_secret_post"],
-      service_documentation: `${base}/docs/technique/api-v2`,
+      service_documentation: "https://developers.cordsuite.app/api/drivecord",
     },
     { headers: { "Cache-Control": "public, max-age=3600" } },
   );

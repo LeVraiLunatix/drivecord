@@ -4,6 +4,23 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        // La doc développeurs vit désormais sur developers.cordsuite.app.
+        // Permanent (308) : les anciens liens et les moteurs de recherche suivent.
+        source: "/docs/technique/api-v2",
+        destination: "https://developers.cordsuite.app/api/drivecord",
+        permanent: true,
+      },
+      {
+        source: "/docs/technique/applications",
+        destination: "https://developers.cordsuite.app/auth",
+        permanent: true,
+      },
+      {
+        source: "/docs/technique/sdk",
+        destination: "https://developers.cordsuite.app/sdk",
+        permanent: true,
+      },
+      {
         // Lien d'invitation « vanity » : on communique drivecord.app/discord
         // partout, et il redirige vers l'invitation Discord réelle. Non
         // permanent (307) exprès : si l'invitation change un jour, il suffit
