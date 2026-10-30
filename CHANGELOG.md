@@ -7,6 +7,16 @@
   à chaque changement notable.
 -->
 
+## Déverrouillage du stockage : plus simple, plus rapide
+
+🔓 **Nouvel appareil**
+- Un seul gros bouton pour la passkey ; les autres méthodes sont repliées sous « Autres méthodes ».
+- **QR code** : sur le nouvel appareil, scanne le QR avec ton téléphone déjà déverrouillé et touche « Approuver ». Plus de code à comparer.
+- **Notification** : tes autres appareils sont prévenus dès qu'un nouvel appareil demande l'accès.
+- **Code PIN à 6 chiffres** (Réglages › Chiffrement) : saisie rapide, désactivé après 5 erreurs.
+- **Biométrie** (Face ID / empreinte) pour ouvrir ton stockage sur un appareil de confiance.
+- **Parts de récupération** : confie des parts à des proches (par exemple 2 sur 3) pour retrouver ton accès si tu perds tout.
+
 ## App iPhone : sauvegarde de la pellicule et lecteur de musique
 
 📸 **Sauvegarde de la pellicule**

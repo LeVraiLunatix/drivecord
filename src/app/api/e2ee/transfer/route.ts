@@ -9,6 +9,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { isResponse, readBody, requireUser } from "@/lib/e2ee-server";
+import { sendKeyTransferPush } from "@/lib/push/apns";
+import { afterCordNotify, DRIVECORD_URL } from "@/lib/cord-sync";
 
 export const runtime = "nodejs";
 
@@ -40,6 +42,24 @@ export async function POST(req: NextRequest) {
   const row = await prisma.keyTransferRequest.create({
     data: { userId: u.userId, commitment: body.commitment, label: body.label, expiresAt: new Date(Date.now() + TRANSFER_TTL_MS) },
   });
+
+  // Wake the user's other devices so they don't have to open the app and wait for the next poll.
+  // Best-effort: the in-app prompt (polling) still works without any push configured.
+  try {
+    await sendKeyTransferPush(u.userId, { deviceLabel: body.label });
+  } catch (err) {
+    console.error("[e2ee-transfer] push", err);
+  }
+  afterCordNotify(
+    u.userId,
+    {
+      title: "Nouvel appareil à approuver",
+      body: `${body.label} demande l'accès à tes fichiers chiffrés. Ouvre Drivecord sur un appareil déverrouillé pour l'approuver.`,
+      url: `${DRIVECORD_URL}/drive`,
+    },
+    { kind: { key: "key-transfer", limit: 10, windowSec: 10 * 60 } },
+  );
+
   return NextResponse.json({ id: row.id, expiresAt: row.expiresAt }, { status: 201 });
 }
 

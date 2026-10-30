@@ -8,10 +8,13 @@
  *                        and seals MK to the new device only once the user confirms.
  */
 import { authFetch } from "@/lib/api-base";
+import { publicOrigin } from "@/lib/site-link";
 import {
   approvalCommitment,
   approveDevice,
   b64decode,
+  b64urlDecode,
+  b64urlEncode,
   b64encode,
   completeApproval,
   createApprovalRequest,
@@ -47,13 +50,41 @@ const sleep = (ms: number, signal?: AbortSignal) =>
     signal?.addEventListener("abort", () => { clearTimeout(t); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
   });
 
-const POLL_MS = 2000;
+const POLL_MS = 1500;
+
+// ── QR code: the fast path ───────────────────────────────────────────────────
+//
+// The new device shows a QR code holding its request id AND the values it committed to (public
+// key + nonce). Scanning it with an unlocked phone is itself the authenticated channel: the phone
+// checks them against the server's commitment, so nobody has to compare the 6-digit code. The
+// values sit in the URL fragment, which browsers never send to a server.
+
+export type QrPayload = { id: string; publicKey: Uint8Array; nonce: Uint8Array };
+
+export function buildApprovalUrl(origin: string, p: QrPayload): string {
+  return `${origin}/approve-device#${new URLSearchParams({ id: p.id, k: b64urlEncode(p.publicKey), n: b64urlEncode(p.nonce) })}`;
+}
+
+export function parseApprovalFragment(hash: string): QrPayload | null {
+  const q = new URLSearchParams(hash.replace(/^#/, ""));
+  const id = q.get("id");
+  const k = q.get("k");
+  const n = q.get("n");
+  if (!id || !k || !n) return null;
+  try {
+    const publicKey = b64urlDecode(k);
+    const nonce = b64urlDecode(n);
+    return publicKey.length === 32 && nonce.length === 16 ? { id, publicKey, nonce } : null;
+  } catch {
+    return null;
+  }
+}
 
 // ── New device ───────────────────────────────────────────────────────────────
 
 export async function requestKeyTransfer(
   label: string,
-  opts: { onCode: (code: string) => void; signal?: AbortSignal },
+  opts: { onCode: (code: string) => void; onQr?: (url: string) => void; signal?: AbortSignal },
 ): Promise<void> {
   const userId = getKeyringSnapshot().userId;
   if (!userId) throw new Error("Non connecté.");
@@ -62,6 +93,8 @@ export async function requestKeyTransfer(
     method: "POST",
     body: JSON.stringify({ commitment: await approvalCommitment(req.publicKey, req.nonce), label }),
   });
+
+  opts.onQr?.(buildApprovalUrl(publicOrigin(), { id, publicKey: req.publicKey, nonce: req.nonce }));
 
   let revealed = false;
   for (;;) {
@@ -123,6 +156,35 @@ export class ApproverSession {
       }
       await sleep(POLL_MS, signal);
     }
+  }
+
+  /**
+   * Approval from a scanned QR code: the request's commitment must match the key and nonce in the
+   * QR, which replaces the code comparison. Returns the device label to show beforehand.
+   */
+  static async inspectQr(qr: QrPayload): Promise<{ label: string }> {
+    const st = await api<TransferState>(`/api/e2ee/transfer/${qr.id}`);
+    if (st.status !== "pending") throw new Error("Cette demande n'est plus valable : relance-la sur le nouvel appareil.");
+    if (!(await verifyApprovalCommitment(st.commitment, qr.publicKey, qr.nonce))) throw new Error("Ce QR code ne correspond pas à la demande : refusé.");
+    return { label: st.label };
+  }
+
+  /** After the user confirmed in the UI: pick r2, wait for the reveal, check it is the QR's key, seal MK. */
+  async approveWithQr(qr: QrPayload, signal?: AbortSignal): Promise<void> {
+    await ApproverSession.inspectQr(qr);
+    this.requesterKey = qr.publicKey;
+    await this.challenge();
+    const expected = b64encode(qr.publicKey);
+    for (let i = 0; i < 40; i++) {
+      const st = await api<TransferState>(`/api/e2ee/transfer/${this.id}`);
+      if (st.status !== "pending") throw new Error("Cette demande n'est plus valable.");
+      if (st.requesterPublicKey) {
+        if (st.requesterPublicKey !== expected) throw new Error("La demande est incohérente (possible falsification) : refusée.");
+        return this.approve();
+      }
+      await sleep(1000, signal);
+    }
+    throw new Error("Le nouvel appareil ne répond pas. Réessaie.");
   }
 
   /** Only after the user confirmed the two codes match. */

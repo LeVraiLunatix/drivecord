@@ -1,12 +1,15 @@
 /**
  * GET   /api/e2ee/keys — the user's wrapped key material + their passkey ids (for PRF unlock)
  * POST  /api/e2ee/keys — first-time setup (409 if keys already exist)
- * PATCH /api/e2ee/keys — add / replace / remove an unlock method, rotate the recovery blob,
- *                        store the wrapped vault key
+ * PATCH /api/e2ee/keys — add / replace / remove an unlock method (phrase, passkey, PIN, recovery
+ *                        shares), rotate the recovery blob, store the wrapped vault key
+ *
+ * The wrapped PIN key is never returned here: only POST /api/e2ee/pin releases it, against a proof.
  *
  * Everything here is opaque to the server: each blob is wrapped by a key only the
  * user's devices hold. Session-only (never reachable with an API key or app token).
  */
+import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
@@ -35,6 +38,11 @@ const patchSchema = z
     setPasskey: z.object({ credentialId, mkWrapped: wrappedBlob }),
     removePasskey: credentialId,
     vaultKeyWrapped: wrappedBlob.nullable(),
+    pin: z.object({ mkWrappedPin: wrappedBlob, pinKdf: phraseKdfSchema, pinAuth: z.string().regex(/^[A-Za-z0-9+/]{43}=$/) }).nullable(),
+    shares: z
+      .object({ mkWrappedShares: wrappedBlob, k: z.number().int().min(2).max(10), n: z.number().int().min(2).max(10) })
+      .refine((s) => s.k <= s.n, "k doit être ≤ n.")
+      .nullable(),
   })
   .partial()
   .refine((b) => Object.keys(b).length > 0, "Aucun champ à modifier.");
@@ -53,6 +61,10 @@ const view = (k: NonNullable<Awaited<ReturnType<typeof prisma.userKeys.findUniqu
   publicKeyX25519: k.publicKeyX25519,
   privateKeyWrapped: k.privateKeyWrapped,
   vaultKeyWrapped: k.vaultKeyWrapped,
+  hasPin: Boolean(k.mkWrappedPin),
+  pinKdf: k.mkWrappedPin ? k.pinKdf : null,
+  mkWrappedShares: k.mkWrappedShares,
+  sharesMeta: k.mkWrappedShares ? (k.sharesMeta as { k: number; n: number } | null) : null,
 });
 
 export async function GET() {
@@ -117,6 +129,17 @@ export async function PATCH(req: NextRequest) {
       ...(body.phrase === null ? { mkWrappedPhrase: null, phraseKdf: Prisma.DbNull } : {}),
       ...(body.phrase ? { mkWrappedPhrase: body.phrase.mkWrappedPhrase, phraseKdf: body.phrase.phraseKdf } : {}),
       ...(body.setPasskey || body.removePasskey ? { mkWrappedPasskey: passkeys } : {}),
+      ...(body.pin === null ? { mkWrappedPin: null, pinKdf: Prisma.DbNull, pinVerifier: null, pinFails: 0 } : {}),
+      ...(body.pin
+        ? {
+            mkWrappedPin: body.pin.mkWrappedPin,
+            pinKdf: body.pin.pinKdf,
+            pinVerifier: createHash("sha256").update(body.pin.pinAuth).digest("base64"),
+            pinFails: 0,
+          }
+        : {}),
+      ...(body.shares === null ? { mkWrappedShares: null, sharesMeta: Prisma.DbNull } : {}),
+      ...(body.shares ? { mkWrappedShares: body.shares.mkWrappedShares, sharesMeta: { k: body.shares.k, n: body.shares.n } } : {}),
       ...(body.vaultKeyWrapped !== undefined ? { vaultKeyWrapped: body.vaultKeyWrapped } : {}),
     },
   });
