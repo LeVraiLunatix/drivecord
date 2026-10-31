@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -27,23 +26,8 @@ import { UpdateBanner } from "@/components/update-banner";
 import { StatusBanner } from "@/components/status-banner";
 import "./globals.css";
 
-// Self-hosted (vendored in src/app/fonts/) — no build-time Google Fonts fetch,
-// so the desktop static export works offline too.
-const interSans = localFont({
-  src: "./fonts/inter-latin-variable.woff2",
-  variable: "--font-sans",
-  display: "swap",
-  weight: "100 900",
-  preload: false,
-});
-
-const jetbrainsMono = localFont({
-  src: "./fonts/jetbrains-mono-latin-variable.woff2",
-  variable: "--font-mono",
-  display: "swap",
-  weight: "100 800",
-  preload: false,
-});
+// Polices : celles de KitCord (@fontsource, importées par globals.css). Elles sont
+// embarquées dans le build, donc l'export statique du bureau marche hors ligne.
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://drivecord.app"),
@@ -145,7 +129,7 @@ export const viewport: Viewport = {
     },
     {
       media: "(prefers-color-scheme: dark)",
-      color: "#0a0a0a",
+      color: "#060509",
     },
   ],
 };
@@ -186,7 +170,7 @@ export default function RootLayout({
     <html
       lang="fr"
       suppressHydrationWarning
-      className={`${interSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <script

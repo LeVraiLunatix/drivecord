@@ -1,3 +1,9 @@
+/* KitCord : le design de la suite (copie dans src/kitcord, voir LISEZ-MOI.md).
+   Il vit dans sa propre couche, entre la base de Tailwind et les classes de l'app :
+   il règle la lumière, le verre et les titres, mais les classes et utilitaires
+   de l'app gardent la main. */
+@layer theme, base, kit, components, utilities;
+@import "../kitcord/styles/index.css" layer(kit);
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -9,9 +15,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans), "gg sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: var(--font-mono), "Consolas", "Andale Mono WT", "Andale Mono", "Lucida Console", monospace;
-  --font-heading: var(--font-sans), "gg sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: var(--cord-font-body);
+  --font-mono: var(--cord-font-mono);
+  --font-heading: var(--cord-font-display);
+  --font-display: var(--cord-font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -85,25 +92,26 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Le thème sombre prend la palette KitCord : encre, texte lavande, lumière violette. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: var(--cord-ink);
+  --foreground: var(--cord-text);
+  --card: var(--cord-ink-2);
+  --card-foreground: var(--cord-text);
+  --popover: var(--cord-ink-2);
+  --popover-foreground: var(--cord-text);
+  --primary: var(--cord-light-core);
+  --primary-foreground: var(--cord-ink);
+  --secondary: color-mix(in srgb, var(--cord-light-mid) 10%, var(--cord-ink-2));
+  --secondary-foreground: var(--cord-text);
+  --muted: color-mix(in srgb, var(--cord-light-mid) 8%, var(--cord-ink-2));
+  --muted-foreground: var(--cord-dim);
+  --accent: color-mix(in srgb, var(--cord-light-mid) 14%, var(--cord-ink-2));
+  --accent-foreground: var(--cord-text);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: var(--cord-line);
+  --input: var(--cord-line-strong);
+  --ring: var(--cord-light-mid);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -136,6 +144,36 @@
   html {
     @apply font-sans;
     overflow-x: hidden;
+  }
+}
+
+/* Le kit est sombre par défaut : on rend au thème clair ses couleurs système
+   et sa taille de texte (le kit monte le corps à 17 px, l'app reste à 16 px). */
+body {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+html.light {
+  color-scheme: light;
+}
+/* Le kit peint <html> ; ici c'est <body> (bg-background) qui le fait. Sans fond
+   sur <html>, celui de <body> remonte au canevas, et les décors en z-index
+   négatif (fond de l'app iOS, des écrans d'auth, du drive) restent visibles. */
+html {
+  background: none;
+}
+
+/* Le mot en couleur du kit part du presque blanc : sur fond clair, on prend
+   les teintes soutenues de la lumière (sauf dans un bloc resté sombre). */
+html.light .cord-accent:not(.dark *) {
+  background-image: linear-gradient(100deg, #6e58f0 0%, var(--cord-light-mid) 34%, #b842ec 68%, #6e58f0 100%);
+}
+
+/* Écrans d'authentification (ceux qui posent <AuthBackground />) : au doigt,
+   champs et boutons font au moins 44 px de haut. */
+@media (pointer: coarse) {
+  :has(> .auth-bg) :is([data-slot="input"], [data-slot="button"]:not([data-size^="icon"])) {
+    min-height: 2.75rem;
   }
 }
 

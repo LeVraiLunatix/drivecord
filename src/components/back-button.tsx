@@ -31,7 +31,7 @@ export function BackButton({
       variant="ghost"
       size="sm"
       onClick={onClick}
-      className={cn("gap-1 text-muted-foreground hover:text-foreground", className)}
+      className={cn("gap-1 text-muted-foreground hover:text-foreground pointer-coarse:h-11 pointer-coarse:px-3", className)}
     >
       <ChevronLeft className="size-4" />
       {label}
