@@ -17,6 +17,7 @@ import { isDesktopApp, isNativeApp } from "@/lib/use-platform";
 import { newNativeNonce } from "@/lib/auth/native-nonce";
 import { openNativeSignIn } from "@/lib/native-auth";
 import { AuthBackground } from "@/components/auth/auth-background";
+import { Accent } from "@/kitcord";
 import { AuthErrorNotice, useCordEnabled } from "@/components/auth/cord-account";
 import { CordHero, CordRedirecting, OtherMethods, startCordSignIn } from "@/components/auth/cord-hero";
 import { DiscordIcon, GoogleIcon } from "@/components/auth/provider-icons";
@@ -219,8 +220,8 @@ function LoginContent() {
             >
               <CloudUpload className="size-7 text-white" />
             </motion.div>
-            <Link href="/" className="font-mono text-xl font-semibold tracking-tight">
-              drivecord
+            <Link href="/" className="inline-flex min-h-11 items-center font-display text-2xl font-semibold tracking-[-0.03em]">
+              Drive<Accent>cord</Accent>
             </Link>
             <p className="text-sm text-muted-foreground">Connecte-toi pour accéder à tes drives.</p>
           </motion.div>
@@ -266,7 +267,7 @@ function LoginContent() {
 
         <motion.p variants={v ?? item} className="pt-8 text-center text-sm text-muted-foreground">
           Pas encore de compte ?{" "}
-          <Link href="/register" className="text-foreground underline-offset-4 hover:underline">
+          <Link href="/register" className="inline-flex min-h-11 items-center text-foreground underline-offset-4 hover:underline">
             S&apos;inscrire
           </Link>
         </motion.p>

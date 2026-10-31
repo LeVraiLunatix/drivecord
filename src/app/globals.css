@@ -169,6 +169,14 @@ html.light .cord-accent:not(.dark *) {
   background-image: linear-gradient(100deg, #6e58f0 0%, var(--cord-light-mid) 34%, #b842ec 68%, #6e58f0 100%);
 }
 
+/* Écrans d'authentification (ceux qui posent <AuthBackground />) : au doigt,
+   champs et boutons font au moins 44 px de haut. */
+@media (pointer: coarse) {
+  :has(> .auth-bg) :is([data-slot="input"], [data-slot="button"]:not([data-size^="icon"])) {
+    min-height: 2.75rem;
+  }
+}
+
 /* ── GooeyNav ─────────────────────────────────────────────────────────────── */
 
 :root {

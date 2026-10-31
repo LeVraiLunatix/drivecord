@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
 import { AuthBackground } from "@/components/auth/auth-background";
+import { Accent } from "@/kitcord";
 import { oauthSignIn, lastLoginMethod, rememberLoginMethod } from "@/lib/auth/oauth";
 import { shouldOpenOtherMethods } from "@/lib/auth/cord-shared";
 import { useCordEnabled } from "@/components/auth/cord-account";
@@ -185,8 +186,8 @@ export default function RegisterPage() {
             >
               <CloudUpload className="size-7 text-white" />
             </motion.div>
-            <Link href="/" className="font-mono text-xl font-semibold tracking-tight">
-              drivecord
+            <Link href="/" className="inline-flex min-h-11 items-center font-display text-2xl font-semibold tracking-[-0.03em]">
+              Drive<Accent>cord</Accent>
             </Link>
             <p className="text-sm text-muted-foreground">Crée ton compte pour garder tes drives partout.</p>
           </motion.div>
@@ -216,7 +217,7 @@ export default function RegisterPage() {
 
         <motion.p variants={v ?? item} className="pt-8 text-center text-sm text-muted-foreground">
           Déjà un compte ?{" "}
-          <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
+          <Link href="/login" className="inline-flex min-h-11 items-center text-foreground underline-offset-4 hover:underline">
             Se connecter
           </Link>
         </motion.p>
