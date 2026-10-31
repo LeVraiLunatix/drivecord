@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { CloudUpload, Loader2, KeyRound } from "lucide-react";
+import { Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import { Accent } from "@/kitcord";
 import { AuthErrorNotice, useCordEnabled } from "@/components/auth/cord-account";
 import { CordHero, CordRedirecting, OtherMethods, startCordSignIn } from "@/components/auth/cord-hero";
 import { DiscordIcon, GoogleIcon } from "@/components/auth/provider-icons";
+import { DrivecordLogo } from "@/components/drivecord-logo";
 import { lastLoginMethod, lastOAuthProvider, oauthSignIn, rememberLoginMethod } from "@/lib/auth/oauth";
 import { cordAuthParamsFromQuery, shouldOpenOtherMethods } from "@/lib/auth/cord-shared";
 import { callbackPath } from "@/lib/auth/next-url";
@@ -216,9 +217,9 @@ function LoginContent() {
               initial={reduce ? undefined : { scale: 0.6, opacity: 0 }}
               animate={reduce ? undefined : { scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.1 }}
-              className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30"
+              className="drop-shadow-[0_10px_24px_rgb(141_120_255/0.35)]"
             >
-              <CloudUpload className="size-7 text-white" />
+              <DrivecordLogo />
             </motion.div>
             <Link href="/" className="inline-flex min-h-11 items-center font-display text-2xl font-semibold tracking-[-0.03em]">
               Drive<Accent>cord</Accent>

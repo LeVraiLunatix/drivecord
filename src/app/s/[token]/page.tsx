@@ -4,9 +4,10 @@ import * as React from "react";
 import { use } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Download, FileIcon, Flag, Lock, Loader2, CloudUpload, AlertCircle } from "lucide-react";
+import { Download, FileIcon, Flag, Lock, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DrivecordLogo } from "@/components/drivecord-logo";
 import { formatBytes } from "@/lib/utils/format";
 import { saveBlobWithToast } from "@/lib/native-save";
 import {
@@ -217,9 +218,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
         className="w-full max-w-sm space-y-6 text-center"
       >
         <Link href="/" className="inline-flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30">
-            <CloudUpload className="size-5 text-white" />
-          </span>
+          <DrivecordLogo className="size-9" />
           <span className="font-mono text-lg font-semibold">drivecord</span>
         </Link>
 

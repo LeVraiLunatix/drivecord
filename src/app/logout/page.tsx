@@ -3,12 +3,13 @@
 import * as React from "react";
 import { signOut } from "next-auth/react";
 import { mutate } from "swr";
-import { CircleCheckBig, Loader2, CloudUpload } from "lucide-react";
+import { CircleCheckBig, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { wipeLocalDrives } from "@/lib/storage/drives";
 import { unregisterNativePush } from "@/components/native-push-register";
+import { DrivecordLogo } from "@/components/drivecord-logo";
 
 /**
  * Page de déconnexion. À l'arrivée, elle effectue réellement la déconnexion
@@ -51,9 +52,7 @@ export default function LogoutPage() {
       <AuthBackground />
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-12">
         <div className="flex flex-col items-center gap-3">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30">
-            <CloudUpload className="size-7 text-white" />
-          </div>
+          <DrivecordLogo />
           <span className="font-mono text-xl font-semibold tracking-tight">
             drivecord
           </span>

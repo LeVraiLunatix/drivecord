@@ -38,10 +38,10 @@ import { Accent, Glow, Headline, TopMenu } from "@/kitcord";
 import { CordLogo } from "@/components/auth/cord-account";
 import { startCordSignIn } from "@/components/auth/cord-hero";
 import { DiscordIcon, GoogleIcon } from "@/components/auth/provider-icons";
+import { DrivecordLogo } from "@/components/drivecord-logo";
 import { STATUS_URL } from "@/lib/status-url";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-const CORD_GRADIENT = "from-[#6E58F0] via-[#8F4DEE] to-[#B842EC]";
 
 /** Pastille d'icône : la teinte de la lumière du kit, sur verre. */
 const ICON_TILE =
@@ -371,7 +371,7 @@ function ProductMock() {
         </div>
         <div className="grid grid-cols-[170px_1fr] text-left">
           <aside className="hidden space-y-1 border-r border-border bg-background/40 p-3 text-xs sm:block">
-            <div className="mb-3 flex items-center gap-2 font-semibold"><span className={`flex size-6 items-center justify-center rounded-md bg-gradient-to-br ${CORD_GRADIENT}`}><CloudUpload className="size-3.5 text-white" /></span>drivecord</div>
+            <div className="mb-3 flex items-center gap-2 font-semibold"><DrivecordLogo className="size-6" />Drivecord</div>
             {[
               ["Tous les fichiers", "bg-violet-500"],
               ["Favoris", "bg-amber-400"],
