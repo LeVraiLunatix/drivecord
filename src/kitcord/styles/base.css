@@ -1,0 +1,95 @@
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/instrument-sans";
+@import "@fontsource-variable/geist-mono";
+@import "./tokens.css";
+
+/* Réglages de base : à importer une fois, à la racine de l'app. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--cord-ink);
+}
+
+body {
+  margin: 0;
+  overflow-x: clip;
+  min-height: 100svh;
+  background: var(--cord-ink);
+  color: var(--cord-text);
+  font-family: var(--cord-font-body);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Jamais de défilement de la page vers les côtés. `clip` (et non `hidden`)
+     garde les éléments collants de la barre et du ruban. */
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+a {
+  -webkit-tap-highlight-color: transparent;
+  color: inherit;
+  text-decoration-color: var(--cord-line-strong);
+  text-underline-offset: 0.25em;
+}
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cord-light-mid);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--cord-light-mid) 40%, transparent);
+}
+
+.cord-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Le grand titre : l'élément signature de la suite. */
+.cord-display {
+  margin: 0;
+  font-family: var(--cord-font-display);
+  font-weight: 600;
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.cord-lede {
+  color: var(--cord-dim);
+  font-size: clamp(1rem, 1.9vw, 1.1875rem);
+  text-wrap: balance;
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 1rem;
+  }
+  .cord-display {
+    font-size: clamp(2.5rem, 11.6vw, 3.5rem);
+    line-height: 0.96;
+  }
+}

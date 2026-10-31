@@ -1,0 +1,129 @@
+/* Le verre liquide.
+   Une matière commune à la suite : un fond flou qui laisse passer la lumière du
+   bas, un reflet doux sur le dessus, et un liseré qui accroche la lumière en
+   haut à gauche et se réchauffe en bas à droite. Elle reste discrète : elle
+   sert à faire flotter ce qu'on touche (barre, recherche, boutons, encadrés),
+   jamais à décorer. */
+
+:root {
+  --cord-glass-tint: color-mix(in srgb, var(--cord-ink-2) 52%, transparent);
+  --cord-glass-sheen: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.11) 0%,
+    rgb(255 255 255 / 0.03) 38%,
+    rgb(255 255 255 / 0.015) 62%,
+    rgb(255 255 255 / 0.06) 100%
+  );
+  --cord-glass-blur: 22px;
+  /* distance entre le haut de l'écran et le bas de la barre : sert aux éléments collants */
+  --cord-topbar-offset: calc(env(safe-area-inset-top, 0px) + 76px);
+}
+
+.cord-glass,
+.cord-topbar,
+.cord-search-field,
+.cord-results,
+.cord-note,
+.cord-button:not([data-primary]),
+.cord-menu-panel,
+.cord-menu-button {
+  background: var(--cord-glass-sheen), var(--cord-glass-tint);
+  -webkit-backdrop-filter: blur(var(--cord-glass-blur)) saturate(1.7);
+  backdrop-filter: blur(var(--cord-glass-blur)) saturate(1.7);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    inset 0 -1px 0 rgb(0 0 0 / 0.25),
+    0 18px 44px -22px rgb(0 0 0 / 0.8);
+}
+
+/* le liseré lumineux */
+.cord-glass::before,
+.cord-topbar::before,
+.cord-search-field::before,
+.cord-results::before,
+.cord-note::before,
+.cord-button:not([data-primary])::before,
+.cord-menu-panel::before,
+.cord-menu-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    150deg,
+    rgb(255 255 255 / 0.5),
+    rgb(255 255 255 / 0.07) 34%,
+    rgb(255 255 255 / 0.02) 60%,
+    color-mix(in srgb, var(--cord-light-warm) 42%, transparent)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* ce qui doit rester lisible par-dessus du texte : verre plus dense */
+.cord-results,
+.cord-menu-panel {
+  --cord-glass-tint: color-mix(in srgb, var(--cord-ink-2) 90%, transparent);
+  --cord-glass-blur: 30px;
+}
+/* les encadrés de lecture : verre léger */
+.cord-note,
+.cord-glass[data-soft] {
+  --cord-glass-tint: color-mix(in srgb, var(--cord-light-mid) 6%, color-mix(in srgb, var(--cord-ink-2) 40%, transparent));
+  --cord-glass-blur: 14px;
+}
+
+/* un doigt qui appuie écrase légèrement le verre */
+.cord-button,
+.cord-menu-button {
+  transition:
+    background 200ms,
+    border-color 200ms,
+    scale 220ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.cord-button:active,
+.cord-menu-button:active {
+  scale: 0.96;
+}
+
+/* pas de flou possible : on garde la matière, en plus dense */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --cord-glass-tint: color-mix(in srgb, var(--cord-ink-2) 92%, transparent);
+  }
+  .cord-results,
+  .cord-menu-panel {
+    --cord-glass-tint: var(--cord-ink-2);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --cord-glass-tint: var(--cord-ink-2);
+  }
+  .cord-glass,
+  .cord-topbar,
+  .cord-search-field,
+  .cord-results,
+  .cord-note,
+  .cord-button:not([data-primary]),
+  .cord-menu-panel,
+  .cord-menu-button {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cord-button,
+  .cord-menu-button {
+    transition: background 200ms, border-color 200ms;
+  }
+  .cord-button:active,
+  .cord-menu-button:active {
+    scale: 1;
+  }
+}

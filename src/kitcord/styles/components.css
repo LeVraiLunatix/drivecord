@@ -1,0 +1,401 @@
+/* ───────── Barre du haut ───────── */
+
+.cord-topbar {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1180px, calc(100% - 2 * var(--cord-space-gutter)));
+  min-height: 56px;
+  margin: 10px auto 0;
+  padding: 6px 12px 6px 22px;
+  border-radius: var(--cord-radius-pill);
+}
+
+.cord-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--cord-font-display);
+  font-weight: 650;
+  font-size: 1.125rem;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+.cord-wordmark .cord-section {
+  color: var(--cord-dim);
+  font-weight: 450;
+}
+
+.cord-toplinks {
+  display: flex;
+  gap: clamp(14px, 3vw, 28px);
+  font-size: 0.9375rem;
+  color: var(--cord-dim);
+}
+.cord-toplinks a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 4px;
+  text-decoration: none;
+}
+.cord-toplinks a:hover {
+  color: var(--cord-text);
+}
+
+/* ───────── Menu des petits écrans ───────── */
+
+.cord-menu {
+  display: none;
+}
+.cord-menu-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cord-radius-pill);
+  color: var(--cord-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* deux barres qui se croisent à l'ouverture */
+.cord-menu-bars,
+.cord-menu-bars::before {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  transition:
+    translate 320ms cubic-bezier(0.3, 1.4, 0.5, 1),
+    rotate 320ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.cord-menu-bars {
+  translate: -50% -3.5px;
+}
+.cord-menu-bars::before {
+  content: "";
+  left: 0;
+  top: 0;
+  translate: 0 7px;
+}
+.cord-menu-button[aria-expanded="true"] .cord-menu-bars {
+  translate: -50% 0;
+  rotate: 45deg;
+}
+.cord-menu-button[aria-expanded="true"] .cord-menu-bars::before {
+  translate: 0 0;
+  rotate: -90deg;
+}
+
+.cord-menu-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(300px, calc(100vw - 2 * var(--cord-space-gutter)));
+  padding: 8px;
+  border-radius: var(--cord-radius-panel);
+  transform-origin: 100% 0;
+  animation: cord-menu-in 380ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+.cord-menu-panel a {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  animation: cord-menu-item 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms + 60ms);
+}
+.cord-menu-panel a:active {
+  background: color-mix(in srgb, var(--cord-light-mid) 20%, transparent);
+}
+@keyframes cord-menu-in {
+  from {
+    opacity: 0;
+    scale: 0.9;
+    translate: 0 -8px;
+  }
+}
+@keyframes cord-menu-item {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cord-menu-panel,
+  .cord-menu-panel a {
+    animation: none;
+  }
+  .cord-menu-bars,
+  .cord-menu-bars::before {
+    transition: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .cord-toplinks {
+    display: none;
+  }
+  .cord-menu {
+    display: block;
+  }
+  .cord-topbar {
+    min-height: 58px;
+    padding: 7px 8px 7px 20px;
+  }
+}
+
+/* ───────── Recherche ───────── */
+
+.cord-search {
+  position: relative;
+  z-index: 3;
+  width: min(560px, 100%);
+  text-align: left;
+}
+
+.cord-search-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 20px;
+  position: relative;
+  border-radius: var(--cord-radius-pill);
+  transition: box-shadow 400ms;
+}
+.cord-search:focus-within .cord-search-field {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -1px 0 rgb(0 0 0 / 0.25),
+    0 0 0 6px color-mix(in srgb, var(--cord-light-mid) 14%, transparent),
+    0 18px 60px -12px color-mix(in srgb, var(--cord-light-mid) 50%, transparent);
+}
+.cord-search:focus-within .cord-search-field::before {
+  background: linear-gradient(
+    150deg,
+    var(--cord-light-core),
+    color-mix(in srgb, var(--cord-light-mid) 55%, transparent) 45%,
+    color-mix(in srgb, var(--cord-light-warm) 60%, transparent)
+  );
+}
+.cord-search-field svg {
+  flex: none;
+  color: var(--cord-dim);
+}
+
+.cord-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: none;
+  border: 0;
+  color: var(--cord-text);
+  font: inherit;
+  font-size: 1.0625rem;
+}
+.cord-search input::placeholder {
+  color: var(--cord-faint);
+}
+.cord-search input:focus-visible {
+  outline: none;
+}
+
+.cord-kbd {
+  flex: none;
+  font-family: var(--cord-font-mono);
+  font-size: 0.75rem;
+  color: var(--cord-faint);
+  border: 1px solid var(--cord-line);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+.cord-results {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  padding: 8px;
+  border-radius: var(--cord-radius-panel);
+  z-index: 5;
+}
+.cord-results-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(46svh, 360px);
+  overscroll-behavior: contain;
+  overflow-y: auto;
+}
+.cord-results-foot {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+  padding: 10px 14px 4px;
+  border-top: 1px solid var(--cord-line);
+  font-size: 0.8125rem;
+  color: var(--cord-faint);
+}
+.cord-results-foot .cord-kbd {
+  margin-right: 4px;
+}
+@media (hover: none) {
+  .cord-results-foot {
+    display: none;
+  }
+}
+.cord-results a {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 52px;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 14px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cord-results a[aria-selected="true"] {
+  background: color-mix(in srgb, var(--cord-light-mid) 16%, transparent);
+}
+.cord-result-title {
+  font-weight: 550;
+}
+.cord-result-desc {
+  font-size: 0.875rem;
+  color: var(--cord-dim);
+}
+.cord-result-empty {
+  padding: 14px;
+  color: var(--cord-dim);
+  font-size: 0.9375rem;
+}
+
+/* ───────── Encadré ───────── */
+
+.cord-note {
+  margin: 28px 0;
+  position: relative;
+  padding: 16px 20px;
+  border-radius: var(--cord-radius-card);
+}
+.cord-note > :first-child {
+  margin-top: 0;
+}
+.cord-note > :last-child {
+  margin-bottom: 0;
+}
+
+/* ───────── Boutons ───────── */
+
+.cord-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  padding: 0 22px;
+  border-radius: var(--cord-radius-pill);
+  border: 0;
+  background: transparent;
+  color: var(--cord-text);
+  font: inherit;
+  font-weight: 550;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.cord-button:not([data-primary]):hover {
+  --cord-glass-tint: color-mix(in srgb, var(--cord-light-mid) 20%, color-mix(in srgb, var(--cord-ink-2) 45%, transparent));
+}
+
+/* le bouton principal : la couleur de la lumière */
+.cord-button[data-primary] {
+  background: var(--cord-light-core);
+  color: var(--cord-ink);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 30px -12px color-mix(in srgb, var(--cord-light-mid) 70%, transparent);
+}
+.cord-button[data-primary]:hover {
+  background: #fff;
+  box-shadow: 0 10px 40px -8px color-mix(in srgb, var(--cord-light-mid) 75%, transparent);
+}
+
+/* un reflet de lumière traverse le bouton principal au survol */
+.cord-button[data-primary]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    color-mix(in srgb, var(--cord-light-mid) 45%, transparent) 50%,
+    transparent 70%
+  );
+  translate: -120% 0;
+  transition: translate 750ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.cord-button[data-primary]:hover::after {
+  translate: 120% 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cord-button[data-primary]::after {
+    display: none;
+  }
+}
+
+.cord-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+@media (max-width: 800px) {
+  .cord-search-field .cord-kbd {
+    display: none;
+  }
+}
+
+/* ───────── Téléphone ───────── */
+
+@media (max-width: 640px) {
+  .cord-search-field {
+    height: 58px;
+    padding: 0 20px;
+  }
+  .cord-search input {
+    font-size: 1rem; /* 16 px : iOS ne zoome pas la page au focus */
+  }
+  .cord-results {
+    top: calc(100% + 8px);
+    padding: 6px;
+  }
+  .cord-results-list {
+    max-height: min(36svh, 300px);
+  }
+  .cord-actions {
+    width: 100%;
+  }
+  .cord-actions .cord-button {
+    flex: 1 1 140px;
+    height: 52px;
+  }
+}
