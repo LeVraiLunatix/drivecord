@@ -1,0 +1,154 @@
+/* Le mouvement de la suite.
+   Chaque effet a un rôle : révéler le titre, faire vivre la marque,
+   suivre le curseur, accompagner le défilement.
+   Rien ne bouge pour qui a demandé de réduire les animations. */
+
+/* ───────── Le mot en couleur ───────── */
+
+.cord-accent {
+  background-image: linear-gradient(
+    100deg,
+    var(--cord-light-core) 0%,
+    var(--cord-light-mid) 34%,
+    var(--cord-light-warm) 68%,
+    var(--cord-light-core) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: repeat-x;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: cord-flow 7s linear infinite;
+}
+
+@keyframes cord-flow {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* ───────── Le titre, mot par mot ───────── */
+
+.cord-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* laisse passer les jambages sous la ligne */
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+.cord-word-inner {
+  display: inline-block;
+  transform-origin: 0 100%;
+  animation: cord-word-in 1150ms cubic-bezier(0.18, 0.85, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 95ms + 250ms);
+}
+
+@keyframes cord-word-in {
+  from {
+    transform: translateY(108%) rotate(5deg);
+    opacity: 0;
+    filter: blur(10px);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* ───────── Le halo qui suit le curseur ───────── */
+
+.cord-spot {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 560px;
+  height: 560px;
+  margin: -280px 0 0 -280px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 700ms;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--cord-light-mid) 24%, transparent),
+    transparent
+  );
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.cord-spot[data-on] {
+  opacity: 1;
+}
+
+/* ───────── Les étincelles ───────── */
+
+.cord-sparks {
+  --cord-glow-top: 1;
+  --cord-glow-bottom: 0.15;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@supports (animation-timeline: scroll()) {
+  .cord-sparks {
+    animation: cord-fade linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 70svh;
+  }
+}
+
+/* ───────── Apparition au défilement ───────── */
+
+@keyframes cord-reveal {
+  from {
+    opacity: 0;
+    translate: 0 30px;
+    scale: 0.98;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .cord-reveal {
+      animation: cord-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+  }
+}
+
+/* ───────── Mouvement réduit ───────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .cord-accent {
+    animation: none;
+    background-position: 30% 0;
+  }
+  .cord-word-inner {
+    animation: none;
+  }
+  .cord-spot,
+  .cord-sparks {
+    display: none;
+  }
+}

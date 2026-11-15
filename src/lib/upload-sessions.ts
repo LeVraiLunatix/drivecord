@@ -4,7 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { decryptUrl } from "@/lib/auth/encrypt";
 import { DiscordClient } from "@/lib/discord";
-import { rateLimit } from "@/lib/rate-limit";
+import { purgeExpiredRateLimits, rateLimit } from "@/lib/rate-limit";
 import { MAX_OPEN_SESSIONS_PER_KEY, SESSION_TTL_MS, UploadError } from "./upload-session-core";
 
 export async function createSession(input: {
@@ -41,6 +41,7 @@ export async function cleanupExpiredSessions(): Promise<void> {
   try {
     const gate = await rateLimit("upload-sessions:cleanup", 1, 300);
     if (!gate.ok) return;
+    await purgeExpiredRateLimits();
     const stale = await prisma.uploadSession.findMany({
       where: { status: "open", expiresAt: { lte: new Date() } },
       include: { chunks: true, webhook: { select: { encryptedUrl: true } } },

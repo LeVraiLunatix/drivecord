@@ -1,0 +1,20 @@
+/* Fichier généré par scripts/build-tokens.mjs — ne pas modifier à la main. */
+:root {
+  --cord-ink: #060509;
+  --cord-ink-2: #0d0b14;
+  --cord-text: #f3f1fa;
+  --cord-dim: #9a95b4;
+  --cord-faint: #5f5b78;
+  --cord-line: #ffffff14;
+  --cord-line-strong: #ffffff29;
+  --cord-light-core: #f2edff;
+  --cord-light-mid: #8d78ff;
+  --cord-light-warm: #ffb08a;
+  --cord-font-display: "Bricolage Grotesque Variable", "Instrument Sans Variable", system-ui, sans-serif;
+  --cord-font-body: "Instrument Sans Variable", system-ui, sans-serif;
+  --cord-font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --cord-radius-pill: 999px;
+  --cord-radius-card: 16px;
+  --cord-radius-panel: 22px;
+  --cord-space-gutter: clamp(20px, 4vw, 48px);
+}

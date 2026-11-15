@@ -1,35 +1,22 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { Glow } from "@/kitcord";
 
 /**
- * Subtle animated gradient background for the auth pages (login / register).
- * Soft brand-colored blobs that drift slowly. Cheaper than the WebGL
- * DarkVeil and consistent across both screens. Radial gradients, not blurred
- * discs: an animated `filter: blur(100px+)` made iPhone Safari crash the page.
+ * Fond des écrans d'authentification (connexion, inscription, 2FA…) : la lumière
+ * du bas de KitCord, en version calme (sans étincelles ni halo du curseur) pour
+ * ne pas gêner les formulaires. Le thème clair garde une lueur douce et fixe.
+ * Le conteneur à `-z-10` garde la lumière (fixe) derrière le contenu.
  */
 export function AuthBackground() {
-  const reduce = useReducedMotion();
-
   return (
-    <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-background">
-      <motion.div
-        className="absolute -left-40 -top-40 size-[30rem] rounded-full"
-        style={{ background: "radial-gradient(circle closest-side, rgb(99 102 241 / 0.25), transparent)" }}
-        animate={reduce ? {} : { x: [0, 30, 0], y: [0, 20, 0] }}
-        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute -bottom-40 -right-40 size-[34rem] rounded-full"
-        style={{ background: "radial-gradient(circle closest-side, rgb(217 70 239 / 0.2), transparent)" }}
-        animate={reduce ? {} : { x: [0, -25, 0], y: [0, -20, 0] }}
-        transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute left-1/2 top-1/3 size-[32rem] -translate-x-1/2 -translate-y-1/4 rounded-full"
-        style={{ background: "radial-gradient(circle closest-side, rgb(139 92 246 / 0.15), transparent)" }}
-        animate={reduce ? {} : { scale: [1, 1.15, 1] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+    <div className="auth-bg pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-background">
+      <div className="hidden dark:block">
+        <Glow calm sparks={false} cursor={false} />
+      </div>
+      <div
+        className="absolute inset-x-0 bottom-0 h-[55%] dark:hidden"
+        style={{ background: "radial-gradient(70% 80% at 50% 110%, color-mix(in srgb, var(--cord-light-mid) 22%, transparent), transparent 75%)" }}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CloudUpload } from "lucide-react";
+import { DrivecordLogo } from "@/components/drivecord-logo";
 
 export const metadata = {
   title: "Page introuvable",
@@ -14,9 +14,7 @@ export default function NotFound() {
         className="pointer-events-none absolute left-1/2 top-1/3 -z-10 size-[480px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-indigo-600/25 via-violet-600/20 to-fuchsia-600/25 blur-[120px]"
       />
 
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30">
-        <CloudUpload className="size-7 text-white" />
-      </div>
+      <DrivecordLogo />
 
       <p className="bg-gradient-to-br from-indigo-400 via-violet-400 to-fuchsia-400 bg-clip-text font-mono text-7xl font-bold tracking-tight text-transparent">
         404

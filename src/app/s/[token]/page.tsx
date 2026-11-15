@@ -4,11 +4,14 @@ import * as React from "react";
 import { use } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Download, FileIcon, Flag, Lock, Loader2, CloudUpload, AlertCircle } from "lucide-react";
+import { Download, FileIcon, Flag, Lock, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DrivecordLogo } from "@/components/drivecord-logo";
 import { formatBytes } from "@/lib/utils/format";
 import { saveBlobWithToast } from "@/lib/native-save";
+import { downloadChunks } from "@/lib/discord/download";
+import type { ChunkRef } from "@/lib/discord/types";
 import {
   b64decode,
   b64urlDecode,
@@ -39,7 +42,7 @@ type E2eeManifest = {
   noncePrefix: string;
   encMeta: string;
   size: number;
-  chunks: { index: number; url: string }[];
+  chunks: ChunkRef[];
 };
 
 type Manifest = {
@@ -47,7 +50,7 @@ type Manifest = {
   size: number;
   mimeType: string;
   chunkSize: number;
-  chunks: { index: number; url: string }[];
+  chunks: ChunkRef[];
 };
 
 export default function SharePage({ params }: { params: Promise<{ token: string }> }) {
@@ -141,6 +144,15 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     }
   };
 
+  // Parallel, retried, size-checked — one flaky chunk no longer restarts the whole download.
+  const fetchParts = async (chunks: ChunkRef[]) => {
+    const parts: Blob[] = [];
+    await downloadChunks(chunks, async (p) => void parts.push(p), {
+      onProgress: (p) => setProgress(Math.round((p.chunksDone / Math.max(1, p.chunksTotal)) * 100)),
+    });
+    return parts;
+  };
+
   const download = async () => {
     setBusy(true);
     setError("");
@@ -167,14 +179,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
       // End-to-end encrypted: the server sent ciphertext chunks only. Decrypt here, in the browser.
       if ("encrypted" in payload && payload.encrypted) {
         if (!fk) throw new Error("La clé de déchiffrement est absente du lien.");
-        const ordered = [...payload.chunks].sort((a, b) => a.index - b.index);
-        const parts: Blob[] = [];
-        for (let i = 0; i < ordered.length; i++) {
-          const r = await fetch(`/api/proxy?u=${encodeURIComponent(ordered[i]!.url)}`);
-          if (!r.ok) throw new Error("Téléchargement interrompu");
-          parts.push(await r.blob());
-          setProgress(Math.round(((i + 1) / ordered.length) * 100));
-        }
+        const parts = await fetchParts(payload.chunks);
         const key = await importAesKey(fk);
         const m = await decryptMeta(key, payload.fileId, payload.encMeta);
         const plain = await decryptE2eeBlob(
@@ -188,14 +193,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
 
       // Plaintext files come back as a manifest the browser fetches + assembles.
       const manifest = payload as Manifest;
-      const ordered = [...manifest.chunks].sort((a, b) => a.index - b.index);
-      const parts: Blob[] = [];
-      for (let i = 0; i < ordered.length; i++) {
-        const r = await fetch(`/api/proxy?u=${encodeURIComponent(ordered[i].url)}`);
-        if (!r.ok) throw new Error("Téléchargement interrompu");
-        parts.push(await r.blob());
-        setProgress(Math.round(((i + 1) / ordered.length) * 100));
-      }
+      const parts = await fetchParts(manifest.chunks);
       triggerDownload(
         new Blob(parts, { type: manifest.mimeType || "application/octet-stream" }),
         manifest.filename,
@@ -217,9 +215,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
         className="w-full max-w-sm space-y-6 text-center"
       >
         <Link href="/" className="inline-flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30">
-            <CloudUpload className="size-5 text-white" />
-          </span>
+          <DrivecordLogo className="size-9" />
           <span className="font-mono text-lg font-semibold">drivecord</span>
         </Link>
 

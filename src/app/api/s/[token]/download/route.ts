@@ -13,6 +13,7 @@ import { decryptFileBuffer } from "@/lib/crypto/file-server-crypto";
 import { fetchDiscordCdn, isDiscordCdnUrl, isSnowflake } from "@/lib/discord";
 import type { ChunkRef } from "@/lib/discord";
 import { auth } from "@/auth";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { buildSafeFileHeaders } from "@/lib/safe-file-headers";
 import { afterCordNotify, DRIVECORD_URL } from "@/lib/cord-sync";
 
@@ -27,6 +28,18 @@ export async function POST(
 ) {
   const { token } = await params;
   const { password } = (await req.json().catch(() => ({}))) as { password?: string };
+
+  // Same budget as /key: bcrypt is CPU-heavy and a password share is brute-forceable otherwise.
+  const ip = getClientIp(req);
+  const perIp = await rateLimit(`share-dl:ip:${ip}:${token}`, 30, 600);
+  const perShare = await rateLimit(`share-dl:share:${token}`, 300, 3600);
+  const limited = !perIp.ok ? perIp : !perShare.ok ? perShare : null;
+  if (limited) {
+    return NextResponse.json(
+      { error: "Trop d'essais. Réessaie plus tard." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+    );
+  }
 
   const share = await prisma.share.findUnique({
     where: { token },

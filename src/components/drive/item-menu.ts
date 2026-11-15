@@ -63,6 +63,7 @@ export function buildItemMenu(item: DriveItem): MenuEntry[] {
     entries.push({ kind: "item", label: "Gérer les tags…", action: "tag" });
   }
   if (isFolder) {
+    entries.push({ kind: "item", label: "Télécharger (ZIP)", action: "download" });
     entries.push({ kind: "item", label: "Couleur du dossier…", action: "color" });
   }
   entries.push({ kind: "item", label: "Renommer", action: "rename" });

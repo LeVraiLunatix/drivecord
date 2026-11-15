@@ -5,7 +5,7 @@ import { authFetch } from "@/lib/api-base";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { CloudUpload, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +14,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { BackButton } from "@/components/back-button";
 import { AuthBackground } from "@/components/auth/auth-background";
+import { Accent } from "@/kitcord";
 import { oauthSignIn, lastLoginMethod, rememberLoginMethod } from "@/lib/auth/oauth";
 import { shouldOpenOtherMethods } from "@/lib/auth/cord-shared";
 import { useCordEnabled } from "@/components/auth/cord-account";
 import { CordHero, OtherMethods } from "@/components/auth/cord-hero";
 import { DiscordIcon, GoogleIcon } from "@/components/auth/provider-icons";
+import { DrivecordLogo } from "@/components/drivecord-logo";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 const container: Variants = {
@@ -181,12 +183,12 @@ export default function RegisterPage() {
               initial={reduce ? undefined : { scale: 0.6, opacity: 0 }}
               animate={reduce ? undefined : { scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.1 }}
-              className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30"
+              className="drop-shadow-[0_10px_24px_rgb(141_120_255/0.35)]"
             >
-              <CloudUpload className="size-7 text-white" />
+              <DrivecordLogo />
             </motion.div>
-            <Link href="/" className="font-mono text-xl font-semibold tracking-tight">
-              drivecord
+            <Link href="/" className="inline-flex min-h-11 items-center font-display text-2xl font-semibold tracking-[-0.03em]">
+              Drive<Accent>cord</Accent>
             </Link>
             <p className="text-sm text-muted-foreground">Crée ton compte pour garder tes drives partout.</p>
           </motion.div>
@@ -216,7 +218,7 @@ export default function RegisterPage() {
 
         <motion.p variants={v ?? item} className="pt-8 text-center text-sm text-muted-foreground">
           Déjà un compte ?{" "}
-          <Link href="/login" className="text-foreground underline-offset-4 hover:underline">
+          <Link href="/login" className="inline-flex min-h-11 items-center text-foreground underline-offset-4 hover:underline">
             Se connecter
           </Link>
         </motion.p>

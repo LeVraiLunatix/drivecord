@@ -13,9 +13,8 @@ import { ShareDialog } from "@/components/drive/share-dialog";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
 import { createFolder, refreshDrive } from "@/lib/storage";
 import { convertFileToE2ee } from "@/lib/e2ee-client/convert";
-import { downloadItemsAsZip } from "@/lib/download-zip";
-import { saveBlob } from "@/lib/native-save";
-import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
+import { downloadZipWithToast } from "@/lib/download-zip";
+import { downloadFileWithToast } from "@/lib/download-file";
 import { getVaultKey, clearVaultKey } from "@/lib/crypto/vault-key-store";
 import { ensureDriveKey } from "@/lib/auth/sync";
 import { DriveExplorer, type BulkAction } from "@/components/drive/explorer";
@@ -390,22 +389,7 @@ function DriveContent() {
   const downloadFileItem = React.useCallback(
     async (item: Extract<DriveItem, { kind: "file" }>) => {
       if (!client) { toast.error("Client Discord indisponible"); return; }
-      const t = toast.loading(`Téléchargement de « ${item.filename} »…`);
-      try {
-        const raw = await client.downloadFile({
-          size: item.size, mimeType: item.mimeType,
-          filename: item.filename, chunkSize: item.chunkSize, chunks: item.chunks,
-        });
-        const blob = await maybeDecrypt(raw, item);
-        const dest = await saveBlob(blob, item.filename, item.mimeType);
-        const msg =
-          dest === "gallery" ? `« ${item.filename} » enregistré dans la galerie 📸`
-          : dest === "files" ? `« ${item.filename} » enregistré dans Fichiers › Drivecord 📁`
-          : `« ${item.filename} » téléchargé`;
-        toast.success(msg, { id: t });
-      } catch (err) {
-        toast.error(`Échec : ${(err as Error).message}`, { id: t });
-      }
+      await downloadFileWithToast(client, item); // streamed to disk, progress + cancel
     },
     [client],
   );
@@ -451,8 +435,12 @@ function DriveContent() {
       if (action === "download" && item.kind === "file") {
         await downloadFileItem(item);
       }
+      if (action === "download" && item.kind === "folder") {
+        if (!activeDrive || !client) { toast.error("Drive non prêt"); return; }
+        await downloadZipWithToast([item], activeDrive.id, client, item.name);
+      }
     },
-    [client, downloadFileItem],
+    [client, downloadFileItem, activeDrive],
   );
 
   const handleConfirmDelete = React.useCallback(
@@ -505,17 +493,7 @@ function DriveContent() {
         const zipName = onlyFolder
           ? (items[0] as { name: string }).name
           : `${activeDrive.name}-${new Date().toISOString().slice(0, 10)}`;
-        let done = 0;
-        toast.promise(
-          downloadItemsAsZip(items, activeDrive.id, client, zipName, () => { done += 1; }),
-          {
-            loading: "Préparation du ZIP… (téléchargement des fichiers)",
-            success: (dest) =>
-              dest === "files" ? `ZIP enregistré dans Fichiers › Drivecord 📁 (${done})`
-              : `ZIP téléchargé (${done} fichier${done > 1 ? "s" : ""})`,
-            error: "Échec de la création du ZIP",
-          },
-        );
+        void downloadZipWithToast(items, activeDrive.id, client, zipName);
       }
     },
     [activeDrive, client, downloadFileItem],

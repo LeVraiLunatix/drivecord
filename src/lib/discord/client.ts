@@ -8,7 +8,7 @@ import { parseDiscordError } from "./errors";
 import { getWebhookLimiter } from "./rate-limit";
 import { withRetry } from "./retry";
 import { planChunks, parseCdnExpiry } from "./chunking";
-import { proxyUrl } from "./proxy";
+import { downloadChunks } from "./download";
 import { isSnowflake } from "./cdn-url";
 import { hashWebhook, parseWebhookUrl, fetchWebhookInfo } from "./webhook";
 import {
@@ -403,90 +403,31 @@ export class DiscordClient {
       return (await res.json()) as DiscordMessage;
     });
   }
-
   /**
-   * Download all chunks of a file and return a Blob with the original bytes.
-   *
-   * For large files, prefer `downloadStream` (TODO Phase 5) which streams
-   * directly to disk via the File System Access API instead of materializing
-   * everything in memory.
+   * Download all chunks of a file and hand them, in order, to `write` — memory stays bounded by
+   * the parallelism, whatever the file size. Use this to stream to disk.
    */
-  async downloadFile(
+  async downloadFileTo(
     manifest: FileManifest,
+    write: (part: Blob) => Promise<void>,
     opts: DownloadOptions = {},
-  ): Promise<Blob> {
-    const parallel = Math.max(1, opts.parallel ?? DEFAULT_PARALLEL_DOWNLOADS);
-    const signal = opts.signal;
-
-    const parts: (Blob | undefined)[] = new Array(manifest.chunks.length);
-    let bytesDone = 0;
-    let chunksDone = 0;
-    const emit = () => {
-      opts.onProgress?.({
-        loaded: bytesDone,
-        total: manifest.size,
-        chunksDone,
-        chunksTotal: manifest.chunks.length,
-      });
-    };
-    emit();
-
-    let cursor = 0;
-    const errors: unknown[] = [];
-    const refreshed = new Map<number, ChunkRef>();
-
-    const worker = async () => {
-      while (true) {
-        if (signal?.aborted)
-          throw new DOMException("Aborted", "AbortError");
-        if (errors.length > 0) return;
-        const myIdx = cursor++;
-        if (myIdx >= manifest.chunks.length) return;
-        const original = manifest.chunks[myIdx];
-        try {
-          let chunk = original;
-          // Refresh URL eagerly if expired (with a 30s safety margin).
-          if (chunk.expiresAt > 0 && chunk.expiresAt - Date.now() < 30_000) {
-            chunk = await this.refreshChunkUrl(chunk);
-            refreshed.set(chunk.index, chunk);
-          }
-
-          const blob = await withRetry(async () => {
-            // Route Discord CDN through our same-origin proxy (CORS).
-            const res = await fetch(proxyUrl(chunk.url), { signal });
-            if (res.status === 403 || res.status === 404) {
-              // CDN URL likely expired despite our check — refresh once more.
-              const fresh = await this.refreshChunkUrl(chunk);
-              refreshed.set(fresh.index, fresh);
-              const res2 = await fetch(proxyUrl(fresh.url), { signal });
-              if (!res2.ok) throw await parseDiscordError(res2);
-              return await res2.blob();
-            }
-            if (!res.ok) throw await parseDiscordError(res);
-            return await res.blob();
-          }, signal);
-
-          parts[myIdx] = blob;
-          bytesDone += chunk.size;
-          chunksDone += 1;
-          emit();
-        } catch (err) {
-          errors.push(err);
-          return;
-        }
-      }
-    };
-
-    const workers = Array.from(
-      { length: Math.min(parallel, manifest.chunks.length) },
-      () => worker(),
-    );
-    await Promise.all(workers);
-    if (errors.length > 0) throw errors[0];
-
-    const ordered = parts.filter((p): p is Blob => Boolean(p));
-    return new Blob(ordered, { type: manifest.mimeType || undefined });
+  ): Promise<void> {
+    await downloadChunks(manifest.chunks, (part) => write(part), {
+      parallel: opts.parallel ?? DEFAULT_PARALLEL_DOWNLOADS,
+      signal: opts.signal,
+      onProgress: opts.onProgress,
+      totalSize: manifest.size,
+      refresh: (c) => this.refreshChunkUrl(c),
+    });
   }
+
+  /** Download a file into a single in-memory Blob (fine for small files; big ones: `downloadFileTo`). */
+  async downloadFile(manifest: FileManifest, opts: DownloadOptions = {}): Promise<Blob> {
+    const parts: Blob[] = [];
+    await this.downloadFileTo(manifest, async (p) => void parts.push(p), opts);
+    return new Blob(parts, { type: manifest.mimeType || undefined });
+  }
+
 
   /** Delete a chunk's message from Discord. */
   async deleteChunk(chunk: ChunkRef): Promise<void> {

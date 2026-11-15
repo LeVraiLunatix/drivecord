@@ -23,7 +23,7 @@ export const DEFAULT_CHUNK_SIZE = 9.5 * 1024 * 1024; // 9.5 MiB
 export const DEFAULT_PARALLEL_UPLOADS = 3;
 
 /** Max number of chunks downloaded concurrently. */
-export const DEFAULT_PARALLEL_DOWNLOADS = 4;
+export const DEFAULT_PARALLEL_DOWNLOADS = 6;
 
 /** Retry policy. */
 // Élevé exprès : sur un gros fichier, le webhook Discord finit rate-limité (429)
