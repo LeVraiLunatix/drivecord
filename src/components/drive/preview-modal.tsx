@@ -22,6 +22,7 @@ import { useDiscordClient } from "@/lib/discord/context";
 import { RichTextPreview } from "@/components/drive/rich-text-preview";
 import { maybeDecrypt } from "@/lib/crypto/vault-decrypt";
 import { saveBlobWithToast } from "@/lib/native-save";
+import { downloadFileWithToast } from "@/lib/download-file";
 import { useAudioPlayer } from "@/lib/audio-player";
 import { AudioStage } from "@/components/audio/audio-stage";
 
@@ -38,6 +39,7 @@ type Props = {
 type LoadState = "idle" | "loading" | "done" | "error";
 
 const TEXT_KINDS = new Set(["code", "text"]);
+const PREVIEW_MAX_BYTES = 120 * 1024 * 1024;
 const PREVIEWABLE_KINDS = new Set(["image", "video", "audio", "pdf", "code", "text"]);
 
 /**
@@ -173,6 +175,12 @@ export function PreviewModal({
     kindOf(file.filename, file.mimeType) === "video" &&
     file.size > DESKTOP_HEAVY_VIDEO_BYTES;
 
+  // No in-memory preview: heavy desktop video, no previewable kind, or too big for a WebView
+  // (an iPhone reloads the page when it runs out of memory). Download streams it instead.
+  const skipPreview =
+    heavyDesktopVideo ||
+    (!!file && (!PREVIEWABLE_KINDS.has(kindOf(file.filename, file.mimeType)) || file.size > PREVIEW_MAX_BYTES));
+
   const openInSyncFolder = async () => {
     if (!driveId || !fileId) return;
     setOpeningInFolder(true);
@@ -244,7 +252,7 @@ export function PreviewModal({
 
     // Skip the in-memory download for heavy desktop videos — the dedicated
     // panel handles them.
-    if (heavyDesktopVideo) {
+    if (skipPreview) {
       setLoadState("done");
       return;
     }
@@ -349,10 +357,12 @@ export function PreviewModal({
 
   // Through saveBlob: in the iOS app an <a download> does nothing at all.
   const handleDownload = async () => {
-    if (!blobUrl || !file) return;
+    if (!file) return;
+    // Already previewed → save the bytes we hold; otherwise stream the file to disk.
     const original = originalRef.current;
-    const blob: Blob = original ? original : await (await fetch(blobUrl)).blob();
-    await saveBlobWithToast(blob, file.filename, file.mimeType);
+    if (original) { await saveBlobWithToast(original, file.filename, file.mimeType); return; }
+    if (!client) { toast.error("Client Discord indisponible"); return; }
+    await downloadFileWithToast(client, file);
   };
 
   return (
@@ -375,7 +385,7 @@ export function PreviewModal({
           size="sm"
           className="h-8 shrink-0 gap-1.5 px-2 text-white/70 hover:bg-white/10 hover:text-white sm:px-3"
           onClick={handleDownload}
-          disabled={!blobUrl}
+          disabled={!file || !client}
         >
           <Download className="size-3.5" />
           <span className="hidden sm:inline">Télécharger</span>
@@ -495,15 +505,19 @@ export function PreviewModal({
         )}
 
         {/* No preview */}
-        {loadState === "done" && !canPreview && (
+        {loadState === "done" && skipPreview && !heavyDesktopVideo && (
           <div className="flex flex-col items-center gap-4 text-white/50">
             <FileX className="size-12" />
-            <p className="text-sm">Aperçu non disponible pour ce type de fichier.</p>
+            <p className="text-sm">
+              {canPreview
+                ? `Fichier volumineux (${file ? formatBytes(file.size) : ""}) : aperçu désactivé pour ne pas saturer la mémoire.`
+                : "Aperçu non disponible pour ce type de fichier."}
+            </p>
             <Button
               onClick={handleDownload}
               variant="outline"
               className="border-white/20 text-white hover:bg-white/10"
-              disabled={!blobUrl}
+              disabled={!file || !client}
             >
               <Download className="size-4" />
               Télécharger
