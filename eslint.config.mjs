@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     "status/**",
   ]),
   {
+    // Même périmètre que le plugin react-hooks de Next : sans cela, la règle s'appliquait aussi aux
+    // fichiers .cjs (e2e/), où le plugin n'est pas défini, et `eslint` plantait sur GitHub.
+    files: ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],
     rules: {
       // Apostrophes/guillemets français dans le JSX : bruit cosmétique, géré
       // correctement par React au runtime (la règle est retirée des configs
@@ -28,6 +31,8 @@ const eslintConfig = defineConfig([
       "react-hooks/refs": "warn",
     },
   },
+  // Un fichier CommonJS n'a que require() : la règle « imports ES » n'a pas de sens ici.
+  { files: ["**/*.cjs"], rules: { "@typescript-eslint/no-require-imports": "off" } },
 ]);
 
 export default eslintConfig;
