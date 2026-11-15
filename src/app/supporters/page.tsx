@@ -5,8 +5,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import { Heart, ExternalLink, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { BackButton } from "@/components/back-button";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 import { TierBadge, TIER_META, type PatreonTier } from "@/components/patreon/tier";
 import { cn } from "@/lib/utils";
 
@@ -62,35 +61,23 @@ export default function SupportersPage() {
   const gold = all.filter((s) => s.tier === 1);
 
   return (
-    <motion.div
-      variants={v ?? container}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col gap-8 tabbar-pad px-5 pb-20 sm:px-6"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
+    <PageShell back="/drive" section="Mécènes">
+    <motion.div variants={v ?? container} initial="hidden" animate="show" className="flex flex-col gap-8">
       <motion.div variants={v ?? item}>
-        <BackButton fallback="/drive" className="w-fit" />
-      </motion.div>
-
-      <motion.header variants={v ?? item} className="space-y-2 text-center">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10">
-          <Heart className="size-6 text-primary" />
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight">Nos mécènes</h1>
-        <p className="mx-auto max-w-md text-sm text-muted-foreground">
-          Un immense merci aux personnes qui font vivre Drivecord 💜 Le projet
-          reste gratuit et illimité pour tout le monde grâce à elles.
-        </p>
-        <div className="pt-1">
-          <Button asChild size="sm" className="gap-2">
-            <a href="/patreon" target="_blank" rel="noopener noreferrer">
+        <PageHeader
+          icon={<Heart className="size-4" />}
+          kicker="Merci"
+          title="Nos mécènes"
+          accent="mécènes"
+          lede="Un immense merci aux personnes qui font vivre Drivecord 💜 Le projet reste gratuit et illimité pour tout le monde grâce à elles."
+          actions={
+            <a href="/patreon" target="_blank" rel="noopener noreferrer" data-primary className="cord-button h-11 gap-2 px-5 text-[15px]">
               Devenir mécène
               <ExternalLink className="size-4" />
             </a>
-          </Button>
-        </div>
-      </motion.header>
+          }
+        />
+      </motion.div>
 
       {isLoading && (
         <div className="flex justify-center py-10">
@@ -159,5 +146,6 @@ export default function SupportersPage() {
         );
       })}
     </motion.div>
+    </PageShell>
   );
 }

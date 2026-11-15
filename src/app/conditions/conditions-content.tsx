@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { BackButton } from "@/components/back-button";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 
 const sections: { title: string; body: string[] }[] = [
   {
@@ -57,23 +57,16 @@ export function ConditionsContent() {
   const v = reduce ? {} : undefined;
 
   return (
-    <motion.div
-      variants={v ?? container}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-8 px-6 pb-16"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
+    <PageShell back="/" section="Conditions" width="max-w-2xl">
+    <motion.div variants={v ?? container} initial="hidden" animate="show" className="flex flex-col gap-8">
       <motion.div variants={v ?? item}>
-        <BackButton fallback="/" className="w-fit" />
+        <PageHeader
+          kicker="Mentions légales"
+          title="Conditions & mentions légales"
+          accent="légales"
+          lede="Les trucs chiants que personne ne lit — mais qu'il faut quand même."
+        />
       </motion.div>
-
-      <motion.header variants={v ?? item} className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Conditions &amp; mentions légales</h1>
-        <p className="text-sm text-muted-foreground">
-          Les trucs chiants que personne ne lit — mais qu&apos;il faut quand même.
-        </p>
-      </motion.header>
 
       <div className="space-y-8">
         {sections.map((s) => (
@@ -92,5 +85,6 @@ export function ConditionsContent() {
         Dernière mise à jour : mai 2026 · Drivecord est un projet open source.
       </motion.p>
     </motion.div>
+    </PageShell>
   );
 }

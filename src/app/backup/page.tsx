@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Images, HardDrive, Loader2, Check, Play, Square, Smartphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BackButton } from "@/components/back-button";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 import { cn } from "@/lib/utils";
 import { useIsNativeApp } from "@/lib/use-platform";
 import { keepScreenAwake } from "@/lib/keep-awake";
@@ -362,23 +362,17 @@ export default function BackupPage() {
   };
 
   return (
-    <motion.div
-      variants={v ?? container}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 tabbar-pad px-5 pb-20 sm:px-6"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
-      <motion.div variants={v ?? item}><BackButton fallback="/drive" className="w-fit" /></motion.div>
-
-      <motion.header variants={v ?? item} className="space-y-1">
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-          <Images className="size-7 text-primary" /> Sauvegarde pellicule
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Sauvegarde tes photos et vidéos dans un drive. Tes albums deviennent des sous-dossiers de « Pellicule ». Seuls les nouveaux médias sont envoyés.
-        </p>
-      </motion.header>
+    <PageShell back="/drive" section="Pellicule" width="max-w-2xl">
+    <motion.div variants={v ?? container} initial="hidden" animate="show" className="flex flex-col gap-6">
+      <motion.div variants={v ?? item}>
+        <PageHeader
+          icon={<Images className="size-4" />}
+          kicker="iPhone"
+          title="Sauvegarde pellicule"
+          accent="pellicule"
+          lede="Sauvegarde tes photos et vidéos dans un drive. Tes albums deviennent des sous-dossiers de « Pellicule ». Seuls les nouveaux médias sont envoyés."
+        />
+      </motion.div>
 
       {!native ? (
         <motion.div variants={v ?? item}>
@@ -472,5 +466,6 @@ export default function BackupPage() {
         </>
       )}
     </motion.div>
+    </PageShell>
   );
 }

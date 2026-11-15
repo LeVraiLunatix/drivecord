@@ -54,7 +54,7 @@ export function DocCard({
 
   if (disabled) {
     return (
-      <div className="not-prose-link block h-full rounded-2xl border border-border/50 bg-card/20 p-5 opacity-60">
+      <div className="not-prose-link kit-panel block h-full rounded-2xl border border-border/50 bg-card/20 p-5 opacity-60">
         {inner}
       </div>
     );
@@ -63,7 +63,7 @@ export function DocCard({
   return (
     <Link
       href={href}
-      className="not-prose-link group block h-full rounded-2xl border border-border/50 bg-card/40 p-5 transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/80"
+      className="not-prose-link kit-panel group block h-full rounded-2xl border border-border/50 bg-card/40 p-5 transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/80"
     >
       {inner}
     </Link>

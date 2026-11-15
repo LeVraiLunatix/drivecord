@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Prose } from "./prose";
 import { Reveal } from "./reveal";
+import { Headline } from "@/kitcord";
 
 /**
  * Enveloppe standard d'une page de doc : titre, chapô, puis le corps en prose.
@@ -19,11 +20,9 @@ export function DocPage({
     <article>
       <Reveal>
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {title}
-          </h1>
+          <Headline text={title} className="text-[clamp(2rem,5.5vw,3.25rem)]" />
           {lead && (
-            <p className="mt-3 text-lg leading-relaxed text-muted-foreground">
+            <p className="cord-lede mt-4 !text-left">
               {lead}
             </p>
           )}

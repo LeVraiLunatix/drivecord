@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BackButton } from "@/components/back-button";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 
 type DevApp = {
@@ -52,15 +52,15 @@ export default function DevelopersPage() {
   const copy = (t: string) => { void navigator.clipboard.writeText(t); toast.success("Copié."); };
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 px-5 pb-20 pt-6">
-      <BackButton fallback="/settings" className="w-fit" />
-      <header className="space-y-1">
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight"><Code2 className="size-7 text-primary" /> Développeurs</h1>
-        <p className="text-sm text-muted-foreground">
-          Crée une application pour que tes utilisateurs stockent des fichiers <strong>dans leur propre drive</strong> Drivecord, sans que tu puisses les lire.{" "}
-          <a className="underline" href="https://developers.cordsuite.app/api/drivecord">Documentation</a>
-        </p>
-      </header>
+    <PageShell back="/settings" section="Développeurs" width="max-w-2xl">
+      <PageHeader
+        icon={<Code2 className="size-4" />}
+        kicker="API ouverte"
+        title="Développeurs"
+        accent="Développeurs"
+        lede={<>Crée une application pour que tes utilisateurs stockent des fichiers <strong>dans leur propre drive</strong> Drivecord, sans que tu puisses les lire.{" "}
+          <a className="underline" href="https://developers.cordsuite.app/api/drivecord">Documentation</a></>}
+      />
 
       {secret && (
         <div className="space-y-2 rounded-lg border border-violet-500/40 bg-violet-500/10 p-3" data-testid="client-secret">
@@ -133,6 +133,6 @@ export default function DevelopersPage() {
           ))}
         </ul>
       )}
-    </div>
+    </PageShell>
   );
 }

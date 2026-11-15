@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import {
@@ -105,10 +106,7 @@ export default function SetupPage() {
   };
 
   return (
-    <div
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 px-6 pb-12"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
+    <PageShell section="Configuration" width="max-w-2xl">
       {status === "authenticated" && drives !== undefined && drives.length === 0 ? (
         // Signed in but no drive yet: the only escape is to sign out — going
         // "back" to "/" would just bounce the user straight here again.
@@ -128,20 +126,13 @@ export default function SetupPage() {
         />
       )}
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 font-mono text-sm uppercase tracking-wider text-muted-foreground">
-          <CloudUpload className="size-4" />
-          Configuration
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Connecte un webhook Discord
-        </h1>
-        <p className="text-muted-foreground">
-          Drivecord utilise un webhook Discord comme « compte ». Laisse Drivecord
-          t&apos;en créer un automatiquement, ou héberge le tien sur ton propre
-          serveur.
-        </p>
-      </div>
+      <PageHeader
+        icon={<CloudUpload className="size-4" />}
+        kicker="Configuration"
+        title="Connecte un webhook Discord"
+        accent="webhook"
+        lede="Drivecord utilise un webhook Discord comme « compte ». Laisse Drivecord t'en créer un automatiquement, ou héberge le tien sur ton propre serveur."
+      />
 
       {autoState?.available && (
         <Card>
@@ -365,6 +356,6 @@ export default function SetupPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageShell>
   );
 }

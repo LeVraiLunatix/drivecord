@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BackButton } from "@/components/back-button";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 
 const SOURCE_URL =
   "https://raw.githubusercontent.com/LeVraiLunatix/drivecord-releases/main/source.json";
@@ -175,7 +175,7 @@ export default function InstallPage() {
   const renderSteps = (steps: Step[]) => (
     <div className="space-y-3 pt-4">
       {steps.map((s, i) => (
-        <div key={s.title} className="rounded-2xl border border-border/50 bg-card/40 p-5">
+        <div key={s.title} className="kit-panel rounded-2xl border border-border/50 bg-card/40 p-5">
           <div className="flex items-start gap-4">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <s.icon className="size-5" />
@@ -224,34 +224,22 @@ export default function InstallPage() {
   );
 
   return (
-    <motion.div
-      variants={v ?? container}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 px-5 pb-16 sm:px-6"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
+    <PageShell back="/" section="Installer" width="max-w-2xl">
+    <motion.div variants={v ?? container} initial="hidden" animate="show" className="flex flex-col gap-6">
       <motion.div variants={v ?? item}>
-        <BackButton fallback="/" className="w-fit" />
+        <PageHeader
+          icon={<Smartphone className="size-4" />}
+          kicker="Application iOS"
+          title="Installer Drivecord sur iPhone"
+          accent="iPhone"
+          lede={<>L&apos;app n&apos;est pas sur l&apos;App Store. Deux méthodes gratuites : <strong>AltStore</strong> (mises à jour auto) ou <strong>Sideloadly</strong> (install manuelle avec l&apos;IPA).</>}
+        />
       </motion.div>
-
-      <motion.header variants={v ?? item} className="space-y-2">
-        <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          <Smartphone className="size-4" />
-          Application iOS
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight">Installer Drivecord sur iPhone</h1>
-        <p className="text-sm text-muted-foreground">
-          L&apos;app n&apos;est pas sur l&apos;App Store. Deux méthodes gratuites :{" "}
-          <strong>AltStore</strong> (mises à jour auto) ou <strong>Sideloadly</strong> (install
-          manuelle avec l&apos;IPA).
-        </p>
-      </motion.header>
 
       {/* Direct download */}
       <motion.div
         variants={v ?? item}
-        className="rounded-2xl border border-primary/30 bg-gradient-to-br from-indigo-500/10 via-violet-500/10 to-fuchsia-500/10 p-5"
+        className="kit-panel rounded-2xl border border-primary/30 bg-gradient-to-br from-indigo-500/10 via-violet-500/10 to-fuchsia-500/10 p-5"
       >
         <div className="flex items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
@@ -307,7 +295,7 @@ export default function InstallPage() {
       {/* Tip */}
       <motion.div
         variants={v ?? item}
-        className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4"
+        className="kit-panel flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4"
       >
         <MessageCircle className="mt-0.5 size-4 shrink-0 text-primary" />
         <p className="text-sm text-muted-foreground">
@@ -329,5 +317,6 @@ export default function InstallPage() {
         </Button>
       </motion.div>
     </motion.div>
+    </PageShell>
   );
 }

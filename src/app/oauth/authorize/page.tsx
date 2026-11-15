@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { AlertTriangle, BadgeCheck, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { authFetch } from "@/lib/api-base";
 import { useAllDrives, createFolder, type FolderEntry } from "@/lib/storage";
 import { decryptPayload } from "@/lib/e2ee-client/decrypt-items";
@@ -176,7 +177,8 @@ export default function AuthorizePage() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center p-4">
+    <div className="relative flex min-h-[100dvh] items-center justify-center p-4">
+      <AuthBackground />
       <Card className="w-full max-w-md"><CardContent className="p-6">{children}</CardContent></Card>
     </div>
   );
