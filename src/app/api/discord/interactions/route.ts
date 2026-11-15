@@ -19,7 +19,8 @@ import { NextRequest, NextResponse } from "next/server";
 import nacl from "tweetnacl";
 import { DISCORD_API_BASE } from "@/lib/discord/constants";
 
-const VERIFIED_ROLE_ID = "1550144978498494585"; // ✅・Membres vérifiés
+// ✅・Membres vérifiés (surchargeable par env pour un autre serveur).
+const VERIFIED_ROLE_ID = process.env.DISCORD_VERIFIED_ROLE_ID ?? "1550144978498494585";
 
 // Types Discord minimaux (Interaction/Component) — pas de dépendance externe.
 type DiscordInteraction = {

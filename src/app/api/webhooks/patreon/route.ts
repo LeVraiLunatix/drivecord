@@ -37,12 +37,17 @@ export async function POST(req: NextRequest) {
   const event = req.headers.get("x-patreon-event") ?? "";
   const deleted = event.includes("delete");
 
-  // Non bloquant : on répond toujours 204 pour éviter que Patreon ne réémette
-  // en boucle si notre traitement échoue (ex. mécène non lié chez nous).
-  await applyMembershipUpdate(
-    payload as Parameters<typeof applyMembershipUpdate>[0],
-    deleted,
-  ).catch(() => {});
+  // « Mécène non lié » n'est pas une erreur (renvoie false → 204). Une vraie panne
+  // (base indisponible) répond 500 : Patreon réessaie, le palier n'est pas perdu.
+  try {
+    await applyMembershipUpdate(
+      payload as Parameters<typeof applyMembershipUpdate>[0],
+      deleted,
+    );
+  } catch (err) {
+    console.error("[patreon-webhook]", err);
+    return NextResponse.json({ error: "Erreur interne." }, { status: 500 });
+  }
 
   return new NextResponse(null, { status: 204 });
 }
