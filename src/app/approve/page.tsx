@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OtpInput } from "@/components/auth/otp-input";
 import { CordPushHint } from "@/components/auth/cord-push-hint";
+import { PageShell } from "@/components/kit/page-shell";
 
 /**
  * Onglet « Approuver une connexion ».
@@ -48,10 +49,7 @@ export default function ApprovePage() {
   };
 
   return (
-    <div
-      className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center tabbar-pad px-6 pb-20"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
+    <PageShell section="Approbation" width="max-w-md" className="justify-center">
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
         <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30">
           <ShieldCheck className="size-7 text-white" />
@@ -63,7 +61,7 @@ export default function ApprovePage() {
         </p>
       </div>
 
-      <Card className="border-border/60 bg-card/70 backdrop-blur-xl">
+      <Card >
         <CardContent className="space-y-5 py-6">
           {approved ? (
             <div className="flex flex-col items-center gap-3 text-center">
@@ -117,6 +115,6 @@ export default function ApprovePage() {
       <div className="mt-4">
         <CordPushHint />
       </div>
-    </div>
+    </PageShell>
   );
 }

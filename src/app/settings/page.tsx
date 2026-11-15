@@ -53,7 +53,6 @@ import { TwoFactorManager } from "@/components/auth/two-factor-manager";
 import { TrustedDevicesManager } from "@/components/auth/trusted-devices-manager";
 import { ApiKeysManager } from "@/components/settings/api-keys-manager";
 import { ThemeStudio } from "@/components/settings/theme-studio";
-import { DriveBackdrop } from "@/components/drive/drive-backdrop";
 import { PersonalTokensManager } from "@/components/settings/personal-tokens-manager";
 import { EncryptionSettings } from "@/components/e2ee/encryption-settings";
 import { ConnectedApps } from "@/components/settings/connected-apps";
@@ -68,7 +67,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { BackButton } from "@/components/back-button";
+import { PageShell } from "@/components/kit/page-shell";
 import { fullSignOut } from "@/lib/auth/logout";
 import { openSitePage } from "@/lib/site-link";
 import { linkPatreon } from "@/lib/auth/oauth";
@@ -278,23 +277,14 @@ export default function SettingsPage() {
   const initial = (account?.name ?? account?.email ?? "?").charAt(0).toUpperCase();
 
   return (
-    <div
-      className="relative isolate mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col gap-5 tabbar-pad px-4 pb-20 sm:px-6"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 bg-[radial-gradient(ellipse_at_top,rgba(139,92,246,0.18),transparent_65%)]"
-      />
-      <DriveBackdrop />
-      <BackButton fallback="/drive" className="w-fit" />
+    <PageShell back="/drive" section="Réglages" width="max-w-6xl" className="gap-5">
 
       {/* ── En-tête : carte d'identité + recherche ─────────────────────────── */}
       <motion.header
         initial={reduce ? false : { opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-fuchsia-500/15 p-5 sm:p-6"
+        className="kit-panel relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-indigo-500/15 via-violet-500/10 to-fuchsia-500/15 p-5 sm:p-6"
       >
         <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-48 rounded-full bg-fuchsia-500/20 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -428,7 +418,7 @@ export default function SettingsPage() {
           </AnimatePresence>
         </main>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

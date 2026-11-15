@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BackButton } from "@/components/back-button";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 import { formatBytes } from "@/lib/utils/format";
 import { useActiveDrive } from "@/lib/storage";
 import { apiFetcher as fetcher } from "@/lib/api-base";
@@ -115,26 +115,18 @@ export default function StatsPage() {
   const maxMonth = Math.max(1, ...(data?.uploadsByMonth.map((m) => m.count) ?? [1]));
 
   return (
-    <motion.div
-      variants={v ?? container}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 tabbar-pad px-5 pb-20 sm:px-6"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
-      <motion.div variants={v ?? item}>
-        <BackButton fallback="/drive" className="w-fit" />
-      </motion.div>
+    <PageShell back="/drive" section="Statistiques" width="max-w-2xl">
+    <motion.div variants={v ?? container} initial="hidden" animate="show" className="flex flex-col gap-6">
 
-      <motion.header variants={v ?? item} className="space-y-1">
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-          <BarChart3 className="size-7 text-primary" />
-          Statistiques
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {drive ? `Drive « ${drive.name} »` : "Aucun drive sélectionné"}
-        </p>
-      </motion.header>
+      <motion.div variants={v ?? item}>
+        <PageHeader
+          icon={<BarChart3 className="size-4" />}
+          kicker="Ton drive"
+          title="Statistiques"
+          accent="Statistiques"
+          lede={drive ? `Drive « ${drive.name} »` : "Aucun drive sélectionné"}
+        />
+      </motion.div>
 
       {!drive && (
         <motion.p variants={v ?? item} className="text-sm text-muted-foreground">
@@ -319,5 +311,6 @@ export default function StatsPage() {
         </>
       )}
     </motion.div>
+    </PageShell>
   );
 }

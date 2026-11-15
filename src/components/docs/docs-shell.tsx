@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CloudUpload, Menu, ArrowUpRight } from "lucide-react";
+import { Menu, ArrowUpRight } from "lucide-react";
+import { Accent } from "@/kitcord";
+import { AuthBackground } from "@/components/auth/auth-background";
 import {
   Sheet,
   SheetContent,
@@ -21,11 +23,11 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
-      {/* ── En-tête ── */}
-      {/* Safe-area padding: in the iOS app (edge to edge) the header sat under the status bar; 0 elsewhere. */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/70 backdrop-blur-xl" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-        <div className="mx-auto flex h-14 max-w-[88rem] items-center gap-2 px-4 sm:px-6">
+    <div className="kit-page relative flex min-h-[100dvh] flex-col">
+      <AuthBackground />
+      {/* ── En-tête : la barre de verre du kit (elle gère la zone sûre de l'iPhone) ── */}
+      <header className="cord-topbar !w-[min(88rem,calc(100%-2*var(--cord-space-gutter)))]">
+        <div className="flex w-full items-center gap-2">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -48,13 +50,9 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <Link
-            href="/docs"
-            className="flex items-center gap-2 font-mono text-sm font-semibold tracking-tight"
-          >
-            <CloudUpload className="size-5 text-primary" />
-            drivecord
-            <span className="font-normal text-muted-foreground">/docs</span>
+          <Link href="/docs" className="cord-wordmark min-h-11 items-center">
+            <span>Drive<Accent>cord</Accent></span>
+            <span className="cord-section">docs</span>
           </Link>
 
           <div className="ml-auto flex items-center gap-1.5">
@@ -66,12 +64,10 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
             >
               <Link href="/">Site</Link>
             </Button>
-            <Button asChild size="sm" className="gap-1.5">
-              <Link href="/drive">
-                Ouvrir l&apos;app
-                <ArrowUpRight className="size-3.5" />
-              </Link>
-            </Button>
+            <Link href="/drive" data-primary className="cord-button h-11 gap-1.5 whitespace-nowrap px-3 text-[15px] sm:px-4">
+              Ouvrir l&apos;app
+              <ArrowUpRight className="size-3.5" />
+            </Link>
             <ThemeToggle />
           </div>
         </div>
@@ -80,7 +76,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
       {/* ── Corps ── */}
       <div className="mx-auto flex w-full max-w-[88rem] flex-1 sm:px-6">
         {/* Sidebar desktop */}
-        <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-64 shrink-0 overflow-y-auto py-8 pr-6 lg:block">
+        <aside className="sticky top-[var(--cord-topbar-offset)] hidden h-[calc(100dvh-var(--cord-topbar-offset))] w-64 shrink-0 overflow-y-auto py-8 pr-6 lg:block">
           <DocsSidebar />
         </aside>
 

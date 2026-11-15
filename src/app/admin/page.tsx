@@ -46,7 +46,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { BackButton } from "@/components/back-button";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 import { AnnouncementAdmin } from "@/components/admin/announcement-admin";
 import { ReportsAdmin } from "@/components/admin/reports-admin";
 
@@ -139,26 +139,17 @@ export default function AdminPage() {
   };
 
   return (
-    <motion.div
-      variants={v ?? container}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 tabbar-pad px-5 pb-20 sm:px-6"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
+    <PageShell back="/settings" section="Admin" width="max-w-2xl">
+    <motion.div variants={v ?? container} initial="hidden" animate="show" className="flex flex-col gap-6">
       <motion.div variants={v ?? item}>
-        <BackButton fallback="/settings" className="w-fit" />
+        <PageHeader
+          icon={<ShieldCheck className="size-4" />}
+          kicker="Administration"
+          title="Admin"
+          accent="Admin"
+          lede={data ? `${data.users.length} compte(s) enregistré(s)` : "Gestion des comptes"}
+        />
       </motion.div>
-
-      <motion.header variants={v ?? item} className="space-y-1">
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-          <ShieldCheck className="size-7 text-primary" />
-          Admin
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {data ? `${data.users.length} compte(s) enregistré(s)` : "Gestion des comptes"}
-        </p>
-      </motion.header>
 
       {data && (
         <motion.div variants={v ?? item}>
@@ -286,6 +277,7 @@ export default function AdminPage() {
         </div>
       )}
     </motion.div>
+    </PageShell>
   );
 }
 

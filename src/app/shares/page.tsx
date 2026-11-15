@@ -19,7 +19,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BackButton } from "@/components/back-button";
+import { PageShell, PageHeader } from "@/components/kit/page-shell";
 import { formatBytes } from "@/lib/utils/format";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import { publicOrigin } from "@/lib/site-link";
@@ -141,26 +141,18 @@ export default function SharesPage() {
   };
 
   return (
-    <motion.div
-      variants={v ?? container}
-      initial="hidden"
-      animate="show"
-      className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-6 tabbar-pad px-5 pb-20 sm:px-6"
-      style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))" }}
-    >
-      <motion.div variants={v ?? item}>
-        <BackButton fallback="/drive" className="w-fit" />
-      </motion.div>
+    <PageShell back="/drive" section="Partages" width="max-w-2xl">
+    <motion.div variants={v ?? container} initial="hidden" animate="show" className="flex flex-col gap-6">
 
-      <motion.header variants={v ?? item} className="space-y-1">
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-          <Link2 className="size-7 text-primary" />
-          Liens partagés
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {shares.length} lien(s) · {activeCount} actif(s) · {totalDownloads} téléchargement(s)
-        </p>
-      </motion.header>
+      <motion.div variants={v ?? item}>
+        <PageHeader
+          icon={<Link2 className="size-4" />}
+          kicker="Partage"
+          title="Liens partagés"
+          accent="partagés"
+          lede={`${shares.length} lien(s) · ${activeCount} actif(s) · ${totalDownloads} téléchargement(s)`}
+        />
+      </motion.div>
 
       {isLoading && (
         <div className="flex justify-center py-10">
@@ -233,5 +225,6 @@ export default function SharesPage() {
         ))}
       </div>
     </motion.div>
+    </PageShell>
   );
 }

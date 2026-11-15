@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { DrivecordLogo } from "@/components/drivecord-logo";
 import { formatBytes } from "@/lib/utils/format";
 import { saveBlobWithToast } from "@/lib/native-save";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { downloadChunks } from "@/lib/discord/download";
 import type { ChunkRef } from "@/lib/discord/types";
 import {
@@ -207,7 +208,8 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-6">
+    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center bg-background px-6">
+      <AuthBackground />
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -216,13 +218,13 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
       >
         <Link href="/" className="inline-flex items-center gap-2">
           <DrivecordLogo className="size-9" />
-          <span className="font-mono text-lg font-semibold">drivecord</span>
+          <span className="cord-wordmark text-lg">Drive<span className="cord-accent">cord</span></span>
         </Link>
 
         {loading ? (
           <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
         ) : info?.needsRegenerate ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/60 bg-card/40 p-8">
+          <div className="flex flex-col items-center gap-3 kit-panel rounded-2xl border border-border/60 bg-card/40 p-8">
             <AlertCircle className="size-9 text-amber-500" />
             <p className="font-medium">Lien à régénérer</p>
             <p className="text-sm text-muted-foreground">
@@ -230,7 +232,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
             </p>
           </div>
         ) : !info?.exists || info.expired ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/60 bg-card/40 p-8">
+          <div className="flex flex-col items-center gap-3 kit-panel rounded-2xl border border-border/60 bg-card/40 p-8">
             <AlertCircle className="size-9 text-destructive" />
             <p className="font-medium">{info?.expired ? "Lien expiré" : "Lien introuvable"}</p>
             <p className="text-sm text-muted-foreground">
@@ -238,7 +240,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
             </p>
           </div>
         ) : (
-          <div className="space-y-5 rounded-2xl border border-border/60 bg-card/40 p-6">
+          <div className="space-y-5 kit-panel rounded-2xl border border-border/60 bg-card/40 p-6">
             <div className="flex flex-col items-center gap-3">
               <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <FileIcon className="size-7" />
