@@ -8,7 +8,8 @@ import {
   type FileManifest,
   type UploadProgress,
 } from "@/lib/discord";
-import { recordUploadedFile } from "@/lib/storage";
+import { recordUploadedFile, refreshDrive } from "@/lib/storage";
+import { keepScreenAwake } from "@/lib/keep-awake";
 import type { ParentId } from "@/lib/storage";
 import { encryptBlob } from "@/lib/crypto/vault-crypto";
 import { prepareEncryptedUpload } from "@/lib/e2ee-client/file-crypto";
@@ -61,6 +62,9 @@ type InternalQueueItem = QueueItem & {
   _locked?: boolean;
   /** End-to-end encrypt (format v1) with this drive key: name, type and bytes never reach the server in clear. */
   _e2eeKey?: DriveKeyMaterial;
+  /** Each batch brings its own client and callback: the pump must not reuse the first batch's. */
+  _client: DiscordClient;
+  _onUploaded?: (item: QueueItem, manifest: FileManifest) => void;
 };
 
 type UploadQueueState = {
@@ -110,9 +114,8 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
       next._file = undefined;
     }
     map.set(id, next);
-    set({
-      items: Array.from(map.values()).map(stripInternal),
-    });
+    // Only this item gets a new object: the others keep theirs, so a list of 700 rows re-renders one.
+    set({ items: get().items.map((i) => (i.id === id ? stripInternal(next) : i)) });
   },
 
   enqueue: ({ files, driveId, parentId, client, encryptKey, e2eeKey, locked, onUploaded }) => {
@@ -133,6 +136,8 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
         _encryptKey: encryptKey,
         _e2eeKey: e2eeKey,
         _locked: locked,
+        _client: client,
+        _onUploaded: onUploaded,
       };
       map.set(id, item);
       ids.push(id);
@@ -144,6 +149,12 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
       if (get()._pumping) return;
       set({ _pumping: true });
       const startedAt = Date.now();
+      // A long batch dies if the phone locks (iOS suspends the page) or the tab is closed.
+      const releaseAwake = keepScreenAwake();
+      const warnLeave = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+      window.addEventListener("beforeunload", warnLeave);
+      const touched = new Set<string>();
+      let lastRefresh = Date.now();
       try {
         while (true) {
           const map = get()._internal;
@@ -151,9 +162,18 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
             (i) => i.status === "pending",
           );
           if (!next || !next._file) break;
-          await runOne(next as InternalQueueItem & { _file: File }, client, get()._setItem, onUploaded);
+          await runOne(next as InternalQueueItem & { _file: File }, get()._setItem);
+          touched.add(next.driveId);
+          // One refresh every few seconds, not one per file (each refresh refetches and decrypts the whole drive).
+          if (Date.now() - lastRefresh > 5000) {
+            lastRefresh = Date.now();
+            touched.forEach(refreshDrive);
+          }
         }
       } finally {
+        window.removeEventListener("beforeunload", warnLeave);
+        releaseAwake();
+        touched.forEach(refreshDrive);
         set({ _pumping: false });
         // Batch over: refresh the Compte Cord hub once, if anything landed.
         const landed = Array.from(get()._internal.values()).some(
@@ -199,16 +219,27 @@ export const useUploadQueue = create<UploadQueueState>((set, get) => ({
 function stripInternal(item: InternalQueueItem): QueueItem {
   // Don't leak File refs / abort controllers into React render trees.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { _file, _abort, _encryptKey, _locked, _e2eeKey, ...rest } = item;
+  const { _file, _abort, _encryptKey, _locked, _e2eeKey, _client, _onUploaded, ...rest } = item;
   return rest;
+}
+
+/** Progress fires several times a second per chunk: forward it at most every 250 ms (and on the last chunk). */
+function throttled<T extends { chunksDone: number; chunksTotal: number }>(fn: (p: T) => void): (p: T) => void {
+  let last = 0;
+  return (p) => {
+    const now = Date.now();
+    if (now - last < 250 && p.chunksDone < p.chunksTotal) return;
+    last = now;
+    fn(p);
+  };
 }
 
 async function runOne(
   item: InternalQueueItem & { _file: File },
-  client: DiscordClient,
   setItem: UploadQueueState["_setItem"],
-  onUploaded?: (item: QueueItem, manifest: FileManifest) => void,
 ): Promise<void> {
+  const client = item._client;
+  const onUploaded = item._onUploaded;
   setItem(item.id, { status: "uploading", startedAt: Date.now() });
   // Tracks chunks that made it to Discord so we can clean them up if a later
   // step (metadata persistence) fails — otherwise they're orphaned
@@ -229,7 +260,7 @@ async function runOne(
         totalSize: prep.cipherSize,
         chunkSize: prep.chunkSize,
         signal: item._abort.signal,
-        onProgress: (p) => setItem(item.id, { progress: { ...p, total: prep.cipherSize } }),
+        onProgress: throttled((p) => setItem(item.id, { progress: { ...p, total: prep.cipherSize } })),
       });
       uploadedManifest = manifest;
       fileEntryId = await recordUploadedFile({
@@ -237,6 +268,7 @@ async function runOne(
         parentId: item.parentId,
         manifest,
         e2ee: { fileId: prep.fileId, ...(await prep.finalize(manifest.size)) },
+        silent: true,
       });
     } else {
       // Vault (PIN key, legacy single-IV format) or plaintext.
@@ -249,7 +281,7 @@ async function runOne(
       }
       manifest = await client.uploadFile(uploadFile, {
         signal: item._abort.signal,
-        onProgress: (p) => setItem(item.id, { progress: p }),
+        onProgress: throttled((p) => setItem(item.id, { progress: p })),
       });
       uploadedManifest = manifest;
       fileEntryId = await recordUploadedFile({
@@ -258,6 +290,7 @@ async function runOne(
         manifest,
         locked: item._locked ?? false,
         encIv,
+        silent: true,
       });
     }
     setItem(item.id, {

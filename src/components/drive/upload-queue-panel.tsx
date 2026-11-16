@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
-import { useUploadQueue, type QueueStatus } from "@/lib/upload-queue";
+import { useUploadQueue, type QueueItem, type QueueStatus } from "@/lib/upload-queue";
 
 /**
  * Floating panel showing all queued/in-progress/finished uploads.
@@ -42,6 +42,12 @@ export function UploadQueuePanel() {
     (i) => i.status === "pending" || i.status === "uploading",
   );
   const finishedCount = items.length - inProgress.length;
+  const doneCount = items.filter((i) => i.status === "done").length;
+  // 700 rows would freeze a phone: show the files that still matter (running, waiting, failed), capped.
+  const MAX_ROWS = 40;
+  const relevant = items.filter((i) => i.status !== "done");
+  const visible = relevant.slice(0, MAX_ROWS);
+  const hidden = relevant.length - visible.length;
 
   return (
     <div className="upload-panel fixed bottom-4 right-2 z-40 w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-border/60 bg-card/95 shadow-lg backdrop-blur sm:right-4">
@@ -54,7 +60,7 @@ export function UploadQueuePanel() {
           )}
           <span>
             {inProgress.length > 0
-              ? `Upload en cours (${inProgress.length})`
+              ? `Envoi en cours : ${doneCount}/${items.length}`
               : `Uploads terminés (${finishedCount})`}
           </span>
         </div>
@@ -85,63 +91,81 @@ export function UploadQueuePanel() {
         </div>
       </div>
 
-      {!collapsed && (
+      {!collapsed && visible.length > 0 && (
         <ul className="max-h-72 divide-y divide-border/50 overflow-y-auto">
-          {items.map((it) => (
-            <li key={it.id} className="px-3 py-2.5 text-sm">
-              <div className="flex items-center gap-2">
-                <StatusIcon status={it.status} />
-                <span
-                  className="min-w-0 flex-1 truncate font-mono text-xs"
-                  title={it.fileName}
-                >
-                  {it.fileName}
-                </span>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-6 text-muted-foreground"
-                  onClick={() =>
-                    it.status === "uploading" || it.status === "pending"
-                      ? cancel(it.id)
-                      : remove(it.id)
-                  }
-                  aria-label="Annuler / Retirer"
-                >
-                  <X className="size-3.5" />
-                </Button>
-              </div>
-              {it.status === "uploading" && it.progress && (
-                <div className="mt-1.5 space-y-1">
-                  <Progress
-                    value={
-                      (it.progress.loaded /
-                        Math.max(1, it.progress.total)) *
-                      100
-                    }
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    {formatBytes(it.progress.loaded)} /{" "}
-                    {formatBytes(it.progress.total)} · chunk{" "}
-                    {it.progress.chunksDone}/{it.progress.chunksTotal}
-                  </p>
-                </div>
-              )}
-              {it.status === "error" && it.error && (
-                <p className="mt-1 text-[10px] text-destructive">{it.error}</p>
-              )}
-              {it.status === "pending" && (
-                <p className="mt-1 text-[10px] text-muted-foreground">
-                  En attente — {formatBytes(it.fileSize)}
-                </p>
-              )}
-            </li>
+          {visible.map((it) => (
+            <UploadRow key={it.id} it={it} cancel={cancel} remove={remove} />
           ))}
+          {hidden > 0 && (
+            <li className="px-3 py-2.5 text-center text-xs text-muted-foreground">… et {hidden} autre{hidden > 1 ? "s" : ""}</li>
+          )}
         </ul>
       )}
     </div>
   );
 }
+
+/** One row. Memoised: a progress tick on one file re-renders that row only, not the other 700. */
+const UploadRow = React.memo(function UploadRow({
+  it,
+  cancel,
+  remove,
+}: {
+  it: QueueItem;
+  cancel: (id: string) => void;
+  remove: (id: string) => void;
+}) {
+  return (
+    <li className="px-3 py-2.5 text-sm">
+      <div className="flex items-center gap-2">
+        <StatusIcon status={it.status} />
+        <span
+          className="min-w-0 flex-1 truncate font-mono text-xs"
+          title={it.fileName}
+        >
+          {it.fileName}
+        </span>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-6 text-muted-foreground"
+          onClick={() =>
+            it.status === "uploading" || it.status === "pending"
+              ? cancel(it.id)
+              : remove(it.id)
+          }
+          aria-label="Annuler / Retirer"
+        >
+          <X className="size-3.5" />
+        </Button>
+      </div>
+      {it.status === "uploading" && it.progress && (
+        <div className="mt-1.5 space-y-1">
+          <Progress
+            value={
+              (it.progress.loaded /
+                Math.max(1, it.progress.total)) *
+              100
+            }
+          />
+          <p className="text-[10px] text-muted-foreground">
+            {formatBytes(it.progress.loaded)} /{" "}
+            {formatBytes(it.progress.total)} · chunk{" "}
+            {it.progress.chunksDone}/{it.progress.chunksTotal}
+          </p>
+        </div>
+      )}
+      {it.status === "error" && it.error && (
+        <p className="mt-1 text-[10px] text-destructive">{it.error}</p>
+      )}
+      {it.status === "pending" && (
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          En attente — {formatBytes(it.fileSize)}
+        </p>
+      )}
+    </li>
+  );
+});
 
 function StatusIcon({ status }: { status: QueueStatus }) {
   if (status === "uploading")
