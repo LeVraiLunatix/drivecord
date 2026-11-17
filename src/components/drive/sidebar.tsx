@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
 import {
@@ -322,7 +321,6 @@ function SidebarContent({
                 </div>
                 <Settings className="size-4 shrink-0 text-muted-foreground" />
               </button>
-              <ThemeToggle />
             </div>
           )}
           {session?.user && (
@@ -377,7 +375,6 @@ function SidebarContent({
           ) : (
             <div className="flex-1" />
           )}
-          <ThemeToggle />
         </div>
       )}
     </>

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
 import { RADII, useAppearance } from "@/lib/appearance";
 
 /** Variables posées sur <html> (toutes retirées quand le réglage revient à l'origine). */
@@ -18,7 +17,6 @@ const VARS = [
  */
 export function AppearanceApplier() {
   const a = useAppearance((s) => s.appearance);
-  const { resolvedTheme } = useTheme();
 
   React.useEffect(() => {
     const root = document.documentElement;
@@ -27,18 +25,17 @@ export function AppearanceApplier() {
 
     if (a.hue != null) {
       const h = a.hue;
-      const light = resolvedTheme === "light";
       set("--cord-light-core", `oklch(0.95 0.035 ${h})`);
       set("--cord-light-mid", `oklch(0.68 0.17 ${h})`);
       set("--cord-light-warm", `oklch(0.82 0.11 ${(h + 55) % 360})`);
-      set("--primary", light ? `oklch(0.55 0.16 ${h})` : `oklch(0.74 0.16 ${h})`);
-      set("--primary-foreground", light ? `oklch(0.985 0.01 ${h})` : `oklch(0.17 0.04 ${h})`);
+      set("--primary", `oklch(0.74 0.16 ${h})`);
+      set("--primary-foreground", `oklch(0.17 0.04 ${h})`);
       set("--ring", `oklch(0.66 0.16 ${h})`);
-      set("--accent", light ? `oklch(0.94 0.04 ${h})` : `oklch(0.3 0.07 ${h})`);
-      set("--accent-foreground", light ? `oklch(0.25 0.06 ${h})` : "oklch(0.985 0 0)");
+      set("--accent", `oklch(0.3 0.07 ${h})`);
+      set("--accent-foreground", "oklch(0.985 0 0)");
       set("--sidebar-primary", `oklch(0.62 0.16 ${h})`);
       set("--sidebar-primary-foreground", "oklch(0.985 0 0)");
-      set("--sidebar-accent", light ? `oklch(0.94 0.04 ${h})` : `oklch(0.3 0.07 ${h})`);
+      set("--sidebar-accent", `oklch(0.3 0.07 ${h})`);
       set("--sidebar-ring", `oklch(0.66 0.16 ${h})`);
       set("--chart-1", `oklch(0.72 0.16 ${h})`);
     }
@@ -61,7 +58,7 @@ export function AppearanceApplier() {
       delete root.dataset.thumbs;
       delete root.dataset.glass;
     };
-  }, [a, resolvedTheme]);
+  }, [a]);
 
   return null;
 }
