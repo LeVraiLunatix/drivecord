@@ -9,7 +9,7 @@ import { CardGrid, DocCard } from "@/components/docs/doc-cards";
 export const metadata: Metadata = {
   title: "Raccourcis & palette",
   description:
-    "La palette de commandes (Ctrl/Cmd+K) pour tout piloter au clavier : upload, navigation, drives, thème…",
+    "La palette de commandes (Ctrl/Cmd+K) pour tout piloter au clavier : upload, navigation, drives…",
 };
 
 export default function Page() {
@@ -39,9 +39,6 @@ export default function Page() {
         <li>
           <strong>Drives</strong>{" "}— basculer instantanément d&apos;un drive à
           l&apos;autre.
-        </li>
-        <li>
-          <strong>Préférences</strong>{" "}— basculer le thème clair / sombre.
         </li>
         <li>
           <strong>Compte</strong>{" "}— se déconnecter.

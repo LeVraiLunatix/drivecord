@@ -57,7 +57,7 @@ export function ColorPickerDialog({ item, onOpenChange }: Props) {
                 title={label}
                 onClick={() => apply(key === "amber" ? undefined : key)}
                 className={cn(
-                  "group relative flex size-8 items-center justify-center rounded-full transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "group relative flex size-8 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   swatch,
                 )}
               >

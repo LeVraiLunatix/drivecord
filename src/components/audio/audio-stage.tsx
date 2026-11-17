@@ -88,7 +88,7 @@ export function AudioStage({
         <button
           onClick={s.toggle}
           aria-label={s.playing ? "Pause" : "Lecture"}
-          className="group/play relative flex size-16 items-center justify-center rounded-full bg-white text-black shadow-lg shadow-fuchsia-500/30 transition-transform hover:scale-105 active:scale-90"
+          className="group/play relative flex size-16 items-center justify-center rounded-full bg-white text-black shadow-lg shadow-fuchsia-500/30 transition-transform"
         >
           <span
             aria-hidden
@@ -123,7 +123,7 @@ export function AudioStage({
         </div>
         <button
           onClick={() => s.setRate(RATES[(RATES.indexOf(s.rate) + 1) % RATES.length])}
-          className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium tabular-nums text-white/70 transition-all hover:border-fuchsia-400/60 hover:text-fuchsia-300 active:scale-90"
+          className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium tabular-nums text-white/70 transition-all hover:border-fuchsia-400/60 hover:text-fuchsia-300"
         >
           {s.rate}×
         </button>
@@ -148,7 +148,7 @@ function RoundBtn({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="flex size-10 items-center justify-center rounded-full text-white/60 transition-all hover:bg-white/10 hover:text-fuchsia-300 active:scale-90 disabled:pointer-events-none disabled:opacity-25"
+      className="flex size-10 items-center justify-center rounded-full text-white/60 transition-all hover:bg-white/10 hover:text-fuchsia-300 disabled:pointer-events-none disabled:opacity-25"
     >
       {children}
     </button>

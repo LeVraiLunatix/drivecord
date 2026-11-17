@@ -12,7 +12,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { DocsSidebar } from "./docs-sidebar";
 import { DocsToc } from "./docs-toc";
 import { DocsPager } from "./docs-pager";
@@ -68,7 +67,6 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
               Ouvrir l&apos;app
               <ArrowUpRight className="size-3.5" />
             </Link>
-            <ThemeToggle />
           </div>
         </div>
       </header>

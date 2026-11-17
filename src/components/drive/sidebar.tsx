@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
 import {
@@ -120,7 +119,7 @@ function SidebarContent({
         href="/"
         className="group/logo flex items-center gap-2.5 px-1 py-1 text-base font-semibold tracking-tight"
       >
-        <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/30 transition-transform duration-300 group-hover/logo:rotate-[-8deg] group-hover/logo:scale-110">
+        <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/30">
           <CloudUpload className="size-4" />
         </span>
         drivecord
@@ -229,7 +228,7 @@ function SidebarContent({
       </nav>
 
       {/* Stockage illimité : pas de jauge, juste ce qu'on utilise. */}
-      <div className="group/storage relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-indigo-500/10 via-violet-500/5 to-fuchsia-500/10 p-3 transition-all duration-300 hover:border-violet-400/40 hover:shadow-[0_0_28px_-8px_rgba(168,85,247,0.5)]">
+      <div className="group/storage relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-indigo-500/10 via-violet-500/5 to-fuchsia-500/10 p-3">
         <div className="flex items-center gap-3">
           <svg viewBox="0 0 64 32" className="h-7 w-14 shrink-0 overflow-visible" aria-hidden>
             <defs>
@@ -322,7 +321,6 @@ function SidebarContent({
                 </div>
                 <Settings className="size-4 shrink-0 text-muted-foreground" />
               </button>
-              <ThemeToggle />
             </div>
           )}
           {session?.user && (
@@ -377,7 +375,6 @@ function SidebarContent({
           ) : (
             <div className="flex-1" />
           )}
-          <ThemeToggle />
         </div>
       )}
     </>

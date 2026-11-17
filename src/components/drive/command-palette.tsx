@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import {
   Upload,
   FolderPlus,
@@ -12,7 +11,6 @@ import {
   BarChart3,
   Settings,
   Smartphone,
-  SunMoon,
   Link2,
   Images,
   FolderSync,
@@ -53,7 +51,6 @@ type Props = {
  */
 export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: Props) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const drives = useAllDrives();
 
   const [open, setOpen] = React.useState(false);
@@ -103,7 +100,6 @@ export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: P
             { id: "install", label: "Installer l'app", group: "Aller à", icon: Smartphone, run: () => act(() => router.push("/install")) },
           ]),
       { id: "adddrive", label: "Ajouter un drive", group: "Actions", icon: FolderPlus, keywords: "webhook nouveau", run: () => act(() => router.push("/setup")) },
-      { id: "theme", label: "Basculer le thème (clair/sombre)", group: "Préférences", icon: SunMoon, keywords: "dark light mode", run: () => act(() => setTheme(theme === "dark" ? "light" : "dark")) },
       { id: "logout", label: "Se déconnecter", group: "Compte", icon: LogOut, keywords: "quitter signout", run: () => act(() => fullSignOut()) },
     ];
     for (const d of drives ?? []) {
@@ -117,7 +113,7 @@ export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: P
       });
     }
     return list;
-  }, [drives, theme, onUpload, onNewFolder, onSection, router, setTheme]);
+  }, [drives, onUpload, onNewFolder, onSection, router]);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();

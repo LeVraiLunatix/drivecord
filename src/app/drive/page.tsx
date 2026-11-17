@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
+import { useAppearance } from "@/lib/appearance";
 import { DriveBackdrop } from "@/components/drive/drive-backdrop";
 import { DriveSidebar } from "@/components/drive/sidebar";
 import { DriveNativeMenu } from "@/components/drive/native-menu";
@@ -12,7 +13,6 @@ import { DrivePageHead } from "@/components/drive/drive-page-head";
 import { DriveDock } from "@/components/drive/dock";
 import { DriveHome } from "@/components/drive/drive-home";
 import type { DriveSection } from "@/components/drive/sections";
-import { Glow } from "@/kitcord";
 import { CommandPalette } from "@/components/drive/command-palette";
 import { ShareDialog } from "@/components/drive/share-dialog";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
@@ -107,6 +107,14 @@ function DriveContent() {
     lastSectionParam.current = sec;
     setSection(sec === "vault" ? "vault" : "files");
   }, [searchParams]);
+  // Sans lien précis, la première ouverture suit le choix de l'utilisateur (Réglages › Apparence).
+  const startedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    if (!searchParams.get("section") && useAppearance.getState().appearance.startPage === "home") setSection("home");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // A tab tap on the URL already shown changes nothing in the router (e.g.
   // « Fichiers » while in Favoris via the drive menu): the native bridge
   // announces every tap so the section still follows the tab.
@@ -595,7 +603,6 @@ function DriveContent() {
   return (
     <div className="isolate relative min-h-[100dvh]">
       <DriveBackdrop />
-      <Glow calm sparks={false} cursor={false} />
       {/* Tiroir de navigation (mobile) : sur bureau, tout est dans la barre du haut. */}
       <DriveSidebar
         section={section}

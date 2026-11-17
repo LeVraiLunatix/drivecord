@@ -2,9 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeGuard } from "@/components/theme-guard";
-import { ClickFX } from "@/components/click-fx";
 import { ThemeStudioApplier } from "@/components/theme-studio-applier";
+import { AppearanceApplier } from "@/components/appearance-applier";
 import { GlobalAudioPlayer } from "@/components/audio/global-audio-player";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { E2eeProvider } from "@/components/e2ee/e2ee-provider";
@@ -190,12 +189,15 @@ export default function RootLayout({
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
-            enableSystem
+            // Un seul thème : KitCord, sombre. Plus de clair ni de thème Patreon par-dessus
+            // (deux palettes en même temps donnaient un rendu mélangé). La personnalisation
+            // se fait dans Réglages › Mon drive.
+            forcedTheme="dark"
+            enableSystem={false}
             disableTransitionOnChange
-            themes={["light", "dark", "system", "aurora", "or-nocturne"]}
           >
             <TooltipProvider delayDuration={200}>
-              <ThemeGuard />
+              <AppearanceApplier />
               <ThemeStudioApplier />
               <E2eeProvider>{children}</E2eeProvider>
 
@@ -218,7 +220,6 @@ export default function RootLayout({
 
               <GlobalAudioPlayer />
 
-              <ClickFX />
 
               <Toaster richColors position="bottom-right" />
             </TooltipProvider>

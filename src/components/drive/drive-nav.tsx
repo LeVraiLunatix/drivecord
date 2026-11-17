@@ -30,7 +30,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { fullSignOut } from "@/lib/auth/logout";
 import { isDesktopApp } from "@/lib/use-platform";
@@ -214,7 +213,6 @@ function AccountMenu({
             <p className="truncate text-[15px] font-semibold">{session?.user?.name ?? "Mon compte"}</p>
             {session?.user?.email && <p className="truncate text-[13px] text-muted-foreground">{session.user.email}</p>}
           </div>
-          <ThemeToggle />
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 

@@ -1,64 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
 import { useSession } from "next-auth/react";
 import { useTier } from "@/components/patreon/tier";
 import { effectiveStudio, useStudio } from "@/lib/theme-studio";
+import { useAppearance } from "@/lib/appearance";
 
-/** Variables posées sur <html> par le studio (toutes retirées quand il est inactif). */
-const VARS = [
-  "--primary", "--primary-foreground", "--ring", "--accent", "--accent-foreground",
-  "--sidebar-primary", "--sidebar-primary-foreground", "--sidebar-accent", "--sidebar-ring",
-  "--chart-1", "--radius", "--studio-hue", "--studio-hue2", "--studio-speed",
-];
-
-/**
- * Applique le studio de thème Patreon : accent de couleur sur TOUTE l'interface
- * (boutons, focus, sélections, barres), arrondi des angles et halo de curseur.
- * N'agit que connecté avec un palier ≥ Gold ; sinon tout est retiré.
- */
+/** Bonus Patreon VIP : un halo doux qui suit le curseur. N'agit que connecté avec le bon palier. */
 export function ThemeStudioApplier() {
   const { status } = useSession();
   const { tier } = useTier();
-  const { resolvedTheme } = useTheme();
   const raw = useStudio((s) => s.studio);
+  const hue = useAppearance((s) => s.appearance.hue);
   const eff = React.useMemo(
     () => effectiveStudio(raw, status === "authenticated" ? tier : 0),
     [raw, tier, status],
   );
-
-  React.useEffect(() => {
-    const root = document.documentElement;
-    const clear = () => VARS.forEach((v) => root.style.removeProperty(v));
-    if (!eff.enabled) {
-      clear();
-      return;
-    }
-    const light = resolvedTheme === "light";
-    const { hue, chroma: c } = eff;
-    const set = (k: string, v: string) => root.style.setProperty(k, v);
-    set("--primary", light ? `oklch(0.55 ${c} ${hue})` : `oklch(0.74 ${c} ${hue})`);
-    set("--primary-foreground", light ? "oklch(0.985 0.01 " + hue + ")" : `oklch(0.17 0.04 ${hue})`);
-    set("--ring", `oklch(0.66 ${c} ${hue})`);
-    set("--accent", light ? `oklch(0.94 0.04 ${hue})` : `oklch(0.3 ${c * 0.45} ${hue})`);
-    set("--accent-foreground", light ? `oklch(0.25 0.06 ${hue})` : "oklch(0.985 0 0)");
-    set("--sidebar-primary", `oklch(0.62 ${c} ${hue})`);
-    set("--sidebar-primary-foreground", "oklch(0.985 0 0)");
-    set("--sidebar-accent", light ? `oklch(0.94 0.04 ${hue})` : `oklch(0.3 ${c * 0.45} ${hue})`);
-    set("--sidebar-ring", `oklch(0.66 ${c} ${hue})`);
-    set("--chart-1", `oklch(0.72 ${c} ${hue})`);
-    set("--radius", `${eff.radius}rem`);
-    set("--studio-hue", String(hue));
-    set("--studio-hue2", String(eff.hue2 ?? (hue + 55) % 360));
-    set("--studio-speed", String(eff.speed));
-    return clear;
-  }, [eff, resolvedTheme]);
-
-  return <>{eff.cursorGlow && <CursorGlow hue={eff.hue2 ?? eff.hue} />}</>;
+  return <>{eff.cursorGlow && <CursorGlow hue={eff.hue2 ?? hue ?? 285} />}</>;
 }
 
-/** VIP : halo doux qui suit le curseur (en dessous des clics, sans bloquer). */
 function CursorGlow({ hue }: { hue: number }) {
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {

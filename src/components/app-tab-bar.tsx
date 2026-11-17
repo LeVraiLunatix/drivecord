@@ -82,7 +82,6 @@ function TabBarInner() {
             >
               <motion.span
                 animate={{ scale: active ? 1 : 0.92 }}
-                whileTap={{ scale: 0.8 }}
                 transition={{ type: "spring", stiffness: 500, damping: 28 }}
                 className="relative flex size-7 items-center justify-center"
               >

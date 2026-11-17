@@ -39,7 +39,7 @@ function Chip({ active, children, onClick, role }: { active: boolean; children: 
       role={role}
       aria-checked={active}
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs font-medium transition-all active:scale-95 ${active ? "border-violet-400/60 bg-gradient-to-r from-indigo-500/25 to-fuchsia-500/25 text-foreground shadow-[0_0_16px_-6px_rgba(168,85,247,0.8)]" : "border-border/60 text-muted-foreground hover:border-violet-400/40 hover:text-foreground"}`}
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${active ? "border-violet-400/60 bg-gradient-to-r from-indigo-500/25 to-fuchsia-500/25 text-foreground shadow-[0_0_16px_-6px_rgba(168,85,247,0.8)]" : "border-border/60 text-muted-foreground hover:border-violet-400/40 hover:text-foreground"}`}
     >
       {children}
     </button>

@@ -147,7 +147,7 @@ export function GlobalAudioPlayer() {
                 title="Ouvrir le lecteur"
                 className="group/open flex min-w-0 flex-1 items-center gap-3 text-left"
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/40 to-fuchsia-500/40 transition-transform group-hover/open:scale-105">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/40 to-fuchsia-500/40 transition-transform">
                   {s.playing ? <Equalizer /> : <Music className="size-4 text-white/80" />}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -162,7 +162,7 @@ export function GlobalAudioPlayer() {
               <button
                 onClick={s.toggle}
                 aria-label={s.playing ? "Pause" : "Lecture"}
-                className="flex size-9 items-center justify-center rounded-full bg-white text-black transition-transform hover:scale-110 active:scale-90"
+                className="flex size-9 items-center justify-center rounded-full bg-white text-black transition-transform"
               >
                 {s.playing ? (
                   <Pause className="size-4 fill-current" />
@@ -173,7 +173,7 @@ export function GlobalAudioPlayer() {
               <button
                 onClick={s.stop}
                 aria-label="Fermer le lecteur"
-                className="flex size-8 items-center justify-center rounded-full text-white/50 transition-all hover:bg-white/10 hover:text-rose-300 active:scale-90"
+                className="flex size-8 items-center justify-center rounded-full text-white/50 transition-all hover:bg-white/10 hover:text-rose-300"
               >
                 <X className="size-4" />
               </button>

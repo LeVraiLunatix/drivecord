@@ -5,7 +5,6 @@ import { STATUS_URL } from "@/lib/status-url";
 import * as React from "react";
 import { authFetch, apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
-import { useTheme } from "next-themes";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import {
@@ -23,9 +22,6 @@ import {
   X,
   Loader2,
   ShieldAlert,
-  Monitor,
-  Moon,
-  Sun,
   CalendarDays,
   ShieldCheck,
   LogOut,
@@ -36,9 +32,6 @@ import {
   RefreshCw,
   ExternalLink,
   Unlink,
-  Sparkles,
-  Star,
-  Lock,
   Search,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -53,6 +46,7 @@ import { TwoFactorManager } from "@/components/auth/two-factor-manager";
 import { TrustedDevicesManager } from "@/components/auth/trusted-devices-manager";
 import { ApiKeysManager } from "@/components/settings/api-keys-manager";
 import { ThemeStudio } from "@/components/settings/theme-studio";
+import { AppearanceSettings } from "@/components/settings/appearance-settings";
 import { PersonalTokensManager } from "@/components/settings/personal-tokens-manager";
 import { EncryptionSettings } from "@/components/e2ee/encryption-settings";
 import { ConnectedApps } from "@/components/settings/connected-apps";
@@ -193,15 +187,16 @@ export default function SettingsPage() {
       {
         id: "apparence",
         label: "Apparence & Patreon",
-        hint: "Thèmes, vue par défaut, abonnement",
+        hint: "Fond, couleur, formes, abonnement",
         icon: Palette,
         tint: "from-pink-500 to-rose-500",
         keywords:
-          "apparence thème theme sombre clair aurora or nocturne vue grille liste patreon abonnement palier gold premium vip",
+          "apparence personnaliser fond image couleur accent angles arrondi espacement densité vignettes thème theme fond vue grille liste patreon abonnement palier gold premium vip animé",
         render: () => (
           <>
-            <ThemeStudio />
+            <AppearanceSettings />
             <PreferencesSection />
+            <ThemeStudio />
             <PatreonSection />
           </>
         ),
@@ -351,7 +346,7 @@ export default function SettingsPage() {
                 onClick={() => select(g.id)}
                 aria-current={on ? "page" : undefined}
                 className={cn(
-                  "group/nav relative flex shrink-0 items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all duration-200 active:scale-[0.97] lg:w-full",
+                  "group/nav relative flex shrink-0 items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all duration-200 lg:w-full",
                   on ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                   dim && "opacity-35",
                 )}
@@ -369,7 +364,7 @@ export default function SettingsPage() {
                     g.tint,
                     on
                       ? "shadow-lg"
-                      : "scale-95 opacity-60 grayscale group-hover/nav:scale-105 group-hover/nav:opacity-100 group-hover/nav:grayscale-0",
+                      : "scale-95 opacity-60 grayscale group-hover/nav:opacity-100 group-hover/nav:grayscale-0",
                   )}
                 >
                   <Icon className="size-[18px]" />
@@ -826,35 +821,7 @@ function AdminSection() {
 // ── Preferences ───────────────────────────────────────────────────────────────
 
 function PreferencesSection() {
-  const { theme, setTheme } = useTheme();
   const { viewMode, setViewMode } = useViewPrefs();
-  const { tier } = useTier();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-
-  // Thèmes exclusifs réservés à un palier. Si le palier ne suffit plus (ex.
-  // abonnement terminé), on rebascule proprement sur le thème sombre.
-  const exclusiveThemes: {
-    value: string;
-    label: string;
-    minTier: PatreonTier;
-    Icon: typeof Sun;
-  }[] = [
-    { value: "aurora", label: "Aurora", minTier: 2, Icon: Sparkles },
-    { value: "or-nocturne", label: "Or nocturne", minTier: 3, Icon: Star },
-  ];
-  React.useEffect(() => {
-    if (!mounted) return;
-    const active = exclusiveThemes.find((t) => t.value === theme);
-    if (active && tier < active.minTier) setTheme("dark");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, theme, tier]);
-
-  const themes: { value: string; label: string; Icon: typeof Sun }[] = [
-    { value: "light", label: "Clair", Icon: Sun },
-    { value: "dark", label: "Sombre", Icon: Moon },
-    { value: "system", label: "Système", Icon: Monitor },
-  ];
   const views: { value: ViewMode; label: string; Icon: typeof Grid2x2 }[] = [
     { value: "grid", label: "Grille", Icon: Grid2x2 },
     { value: "list", label: "Liste", Icon: List },
@@ -869,62 +836,6 @@ function PreferencesSection() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Thème</Label>
-          <div className="grid grid-cols-3 gap-2">
-            {themes.map(({ value, label, Icon }) => (
-              <button
-                key={value}
-                onClick={() => setTheme(value)}
-                className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-lg border px-3 py-3 text-xs font-medium transition-colors",
-                  mounted && theme === value
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border/50 text-muted-foreground hover:bg-accent/60",
-                )}
-              >
-                <Icon className="size-4" />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Thèmes exclusifs — contreparties Patreon (cosmétique) */}
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {exclusiveThemes.map(({ value, label, minTier, Icon }) => {
-              const unlocked = tier >= minTier;
-              const active = mounted && theme === value;
-              return (
-                <button
-                  key={value}
-                  onClick={() => {
-                    if (unlocked) setTheme(value);
-                    else
-                      toast(
-                        `Thème « ${label} » réservé au palier ${["", "Gold", "Premium", "VIP"][minTier]}`,
-                        { description: "Deviens mécène pour le débloquer." },
-                      );
-                  }}
-                  className={cn(
-                    "relative flex flex-col items-center gap-1.5 rounded-lg border px-3 py-3 text-xs font-medium transition-colors",
-                    active
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : unlocked
-                        ? "border-border/50 text-muted-foreground hover:bg-accent/60"
-                        : "cursor-not-allowed border-border/40 text-muted-foreground/60",
-                  )}
-                >
-                  {!unlocked && (
-                    <Lock className="absolute right-1.5 top-1.5 size-3" />
-                  )}
-                  <Icon className="size-4" />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         <div className="space-y-2">
           <Label>Vue par défaut</Label>
           <div className="grid grid-cols-2 gap-2">

@@ -269,7 +269,7 @@ function DefaultDock({
           <SheetContent
             side="bottom"
             showCloseButton={false}
-            className="cord-glass mx-3 mb-3 w-auto rounded-[32px] border-0 px-3 pb-4 pt-8"
+            className="drive-sheet cord-glass mx-3 mb-3 w-auto rounded-[32px] border-0 px-3 pb-4 pt-8"
             style={{
               background: "var(--cord-glass-sheen), color-mix(in srgb, var(--cord-ink-2) 94%, transparent)",
               marginBottom: "max(0.75rem, env(safe-area-inset-bottom))",

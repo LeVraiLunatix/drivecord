@@ -172,7 +172,7 @@ function StatusLink({ compact = false }: { compact?: boolean }) {
     >
       <StatusDot level={level} />
       <span className={known ? l.text : "text-foreground"}>{l.label}</span>
-      <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+      <ArrowRight className="size-3.5 text-muted-foreground transition-transform" />
     </a>
   );
 }
@@ -215,7 +215,7 @@ function AuthCard({ id, compact = false }: { id?: string; compact?: boolean }) {
         >
           <CordLogo className="size-5 rounded-[6px]" />
           <span className="whitespace-nowrap">Se connecter avec Cord</span>
-          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
+          <ArrowRight className="size-4 transition-transform motion-reduce:transition-none" />
         </button>
         <button
           type="button"
@@ -280,7 +280,7 @@ function SpotCard({ children, className = "" }: { children: React.ReactNode; cla
     <div
       onPointerMove={onMove}
       data-soft
-      className={`cord-glass group relative overflow-hidden rounded-[var(--cord-radius-card)] p-6 transition-transform duration-300 hover:-translate-y-1 ${className}`}
+      className={`cord-glass group relative overflow-hidden rounded-[var(--cord-radius-card)] p-6 transition-transform duration-300 ${className}`}
     >
       <div
         aria-hidden
@@ -580,7 +580,7 @@ export function Landing() {
                 {features.map(({ icon: Icon, title, description }) => (
                   <motion.div key={title} variants={v ?? item}>
                     <SpotCard className="h-full">
-                      <div className={`mb-4 size-12 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110 ${ICON_TILE}`}>
+                      <div className={`mb-4 size-12 transition-transform duration-300 ${ICON_TILE}`}>
                         <Icon className="size-5" />
                       </div>
                       <h3 className="mb-1.5 font-display text-lg font-semibold tracking-tight">{title}</h3>
@@ -625,7 +625,7 @@ export function Landing() {
               <SectionHeading kicker="Confidentialité" title="Qui voit quoi ?" />
               <motion.div variants={v ?? container} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-60px" }} className="grid gap-4 sm:grid-cols-3">
                 {trust.map((t) => (
-                  <motion.div key={t.who} variants={v ?? item} data-soft className="cord-glass relative rounded-[var(--cord-radius-card)] p-6 transition-transform duration-300 hover:-translate-y-1">
+                  <motion.div key={t.who} variants={v ?? item} data-soft className="cord-glass relative rounded-[var(--cord-radius-card)] p-6 transition-transform duration-300">
                     <t.icon className={`mb-3 size-6 ${t.text}`} />
                     <h3 className={`mb-2 font-display text-lg font-semibold ${t.text}`}>{t.who}</h3>
                     <p className="text-[15px] text-muted-foreground">{t.sees}</p>

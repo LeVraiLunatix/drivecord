@@ -1,89 +1,74 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
 import { useSession } from "next-auth/react";
 import { useTier } from "@/components/patreon/tier";
 import { effectiveStudio, useStudio, type BackdropStyle } from "@/lib/theme-studio";
+import { backgroundCss, useAppearanceValue, useBgImage, type Appearance } from "@/lib/appearance";
 
 /**
- * Fond animé du drive.
- *  - Gratuit : trois nappes de couleur qui dérivent lentement (CSS pur, léger).
- *  - Patreon : le style est choisi dans le studio de thème (Réglages › Apparence) :
- *    poussière (Gold), constellation / grille néon (Premium), rubans / étoiles
- *    filantes (VIP), avec couleur, intensité et vitesse réglables (Premium+).
- * Palette : thème Aurora / Or nocturne, ou la teinte choisie dans le studio.
+ * Fond du drive : le même pour tout le monde au départ (un noir uni, fixe). Chacun peut le changer
+ * dans Réglages › Apparence : couleur unie, dégradé fixe ou image à soi, avec voile et flou.
+ * Les mécènes Patreon peuvent en plus poser un fond animé par-dessus (poussière, constellation,
+ * grille néon, rubans, étoiles filantes).
  */
 
-type Palette = { blobs: [string, string, string]; dots: string[]; line: string };
+type Palette = { dots: string[]; line: string };
 
 const hsl = (h: number, s: number, l: number, a = 1) => `hsl(${Math.round(h) % 360} ${s}% ${l}% / ${a})`;
 
-/** A soft blob that is soft by itself (no blur filter to recompute each frame). */
-const blobFill = (color: string) => `radial-gradient(circle closest-side, ${color}, transparent)`;
-
-function paletteFromHue(h1: number, h2: number, k: number): Palette {
+function paletteFromHue(h1: number, h2: number): Palette {
   return {
-    blobs: [hsl(h1, 85, 60, 0.2 * k), hsl(h2, 85, 60, 0.15 * k), hsl(h1 + 150, 80, 60, 0.1 * k)],
     dots: [hsl(h1, 90, 78), hsl(h2, 90, 75), hsl(h1 + 40, 90, 80)],
     line: hsl(h1, 85, 70),
   };
 }
 
-function paletteFor(theme: string | undefined, studio: { enabled: boolean; hue: number; hue2: number | null; intensity: number }): Palette {
-  if (studio.enabled) return paletteFromHue(studio.hue, studio.hue2 ?? studio.hue + 55, studio.intensity);
-  if (theme === "or-nocturne")
-    return {
-      blobs: ["rgba(234,179,8,0.20)", "rgba(217,119,6,0.16)", "rgba(250,204,21,0.12)"],
-      dots: ["#fde68a", "#fbbf24", "#f59e0b"],
-      line: "rgb(251,191,36)",
-    };
-  if (theme === "aurora")
-    return {
-      blobs: ["rgba(99,102,241,0.24)", "rgba(56,189,248,0.16)", "rgba(168,85,247,0.2)"],
-      dots: ["#a5b4fc", "#7dd3fc", "#c4b5fd"],
-      line: "rgb(129,140,248)",
-    };
-  return {
-    blobs: ["rgba(99,102,241,0.17)", "rgba(217,70,239,0.13)", "rgba(34,211,238,0.10)"],
-    dots: ["#a5b4fc", "#f0abfc", "#67e8f9"],
-    line: "rgb(168,85,247)",
-  };
+/** Le fond choisi (uni, dégradé ou image avec voile et flou), à poser dans un conteneur positionné. */
+export function BackgroundLayer({ a, image }: { a: Appearance; image: string | null }) {
+  const showImage = a.bgKind === "image" && image;
+  return (
+    <div className="absolute inset-0 overflow-hidden" style={{ background: showImage ? "#000" : backgroundCss(a) }}>
+      {showImage && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={image}
+            alt=""
+            draggable={false}
+            className="absolute inset-0 size-full object-cover"
+            // Le flou déborde sur les bords : on agrandit un peu l'image pour les cacher.
+            style={{ filter: a.blur ? `blur(${a.blur}px)` : undefined, transform: a.blur ? "scale(1.08)" : undefined }}
+          />
+          <div className="absolute inset-0" style={{ background: `rgb(0 0 0 / ${a.dim})` }} />
+        </>
+      )}
+    </div>
+  );
 }
 
-export function DriveBackdrop({ forceTier, previewStyle }: { forceTier?: number; previewStyle?: BackdropStyle } = {}) {
-  const { resolvedTheme } = useTheme();
+export function DriveBackdrop({ forceTier, previewStyle }: { forceTier?: number; previewStyle?: BackdropStyle | null } = {}) {
   const { status } = useSession();
   const { tier: realTier } = useTier();
+  const a = useAppearanceValue();
   const raw = useStudio((s) => s.studio);
+  const image = useBgImage((s) => s.url);
+  const loadImage = useBgImage((s) => s.load);
+  React.useEffect(() => loadImage(), [loadImage]);
+
   const tier = forceTier ?? (status === "authenticated" ? realTier : 0);
   const eff = React.useMemo(() => effectiveStudio(raw, tier), [raw, tier]);
-  const style = previewStyle ?? eff.backdropStyle;
-  const pal = React.useMemo(
-    () => paletteFor(resolvedTheme, eff),
-    [resolvedTheme, eff],
-  );
-  const dur = (s: number) => `${s / eff.speed}s`;
+  const style = previewStyle !== undefined ? previewStyle : eff.backdropStyle;
+  const hue = a.hue ?? 285;
+  const pal = React.useMemo(() => paletteFromHue(hue, eff.hue2 ?? hue + 55), [hue, eff.hue2]);
   const k = eff.intensity;
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      {/* Radial gradients, not blurred discs: see .dc-blob in globals.css. */}
-      <div
-        className="dc-blob left-[-17vw] top-[-20vh] size-[62vw] min-h-96 min-w-96"
-        style={{ background: blobFill(pal.blobs[0]), animation: `dc-drift-a ${dur(26)} ease-in-out infinite` }}
-      />
-      <div
-        className="dc-blob bottom-[-22vh] right-[-15vw] size-[58vw] min-h-96 min-w-96"
-        style={{ background: blobFill(pal.blobs[1]), animation: `dc-drift-b ${dur(32)} ease-in-out infinite` }}
-      />
-      <div
-        className="dc-blob left-[24vw] top-[29vh] size-[46vw] min-h-80 min-w-80"
-        style={{ background: blobFill(pal.blobs[2]), animation: `dc-drift-c ${dur(38)} ease-in-out infinite` }}
-      />
-      {style === "ribbons" && <Ribbons hue={eff.enabled ? eff.hue : 45} speed={eff.speed} k={k} />}
+      <BackgroundLayer a={a} image={image} />
+      {style === "ribbons" && <Ribbons hue={hue} speed={eff.speed} k={k} />}
       {style === "grid" && <NeonGrid pal={pal} speed={eff.speed} k={k} />}
-      {style !== "blobs" && style !== "grid" && (
+      {(style === "particles" || style === "constellation" || style === "stars") && (
         <Particles style={style} pal={pal} speed={eff.speed} k={k} />
       )}
     </div>
