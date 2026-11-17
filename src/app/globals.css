@@ -512,11 +512,38 @@ html.native-tabs .tabbar-pad { padding-bottom: var(--tabbar-clear) !important; }
    the upload-queue panel and the toasts (confirmations / errors).
    (The multi-select actions now live in a top-right dropdown, not a floating
    bottom bar.) */
-html.native-tabs .upload-panel { bottom: calc(var(--tabbar-clear) + 0.5rem) !important; }
-html.is-native:not(.native-tabs) .upload-panel { bottom: calc(80px + env(safe-area-inset-bottom) + 0.5rem) !important; }
+html.native-tabs .upload-panel { bottom: calc(var(--tabbar-clear) + 6rem) !important; }
+html.is-native:not(.native-tabs) .upload-panel { bottom: calc(80px + env(safe-area-inset-bottom) + 6rem) !important; }
 
 html.native-tabs [data-sonner-toaster][data-y-position="bottom"] { bottom: calc(var(--tabbar-clear) + 0.5rem) !important; }
 html.is-native:not(.native-tabs) [data-sonner-toaster][data-y-position="bottom"] { bottom: calc(80px + env(safe-area-inset-bottom) + 0.5rem) !important; }
+
+/* ── Drive (KitCord) ───────────────────────────────────────────────────────────
+   Barre du haut en pilule, contenu centré sur la même largeur qu'elle, et un
+   « dock » flottant en bas : envoyer quand rien n'est sélectionné, les actions du
+   fichier sinon. Tout est bâti avec les jetons du kit (voir src/kitcord). */
+.drive-wrap { width: min(1180px, calc(100% - 2 * var(--cord-space-gutter))); margin-inline: auto; }
+.drive-nav { width: min(1180px, calc(100% - 2 * var(--cord-space-gutter))); }
+/* Tauri : les boutons de la fenêtre flottent en haut à droite. */
+html.is-desktop .drive-nav { width: min(1180px, calc(100% - 2 * var(--cord-space-gutter) - 5.25rem)); margin-inline: var(--cord-space-gutter) auto; }
+.drive-navlink {
+  display: inline-flex; align-items: center; min-height: 46px; padding: 0 1.5rem; border-radius: 999px; border: 0; background: none;
+  color: var(--cord-dim); font: inherit; font-size: 0.9375rem; text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: color 160ms, background 160ms;
+}
+.drive-navlink:hover { color: var(--cord-text); }
+.drive-navlink[aria-current="page"] { color: var(--cord-text); background: color-mix(in srgb, var(--cord-light-mid) 16%, transparent); }
+.drive-dock {
+  position: fixed; left: 50%; translate: -50% 0; z-index: 35; max-width: calc(100vw - 1.5rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1.75rem); border-radius: 999px;
+}
+html.native-tabs .drive-dock { bottom: calc(var(--tabbar-clear) + 0.75rem); }
+html.is-native:not(.native-tabs) .drive-dock { bottom: calc(80px + env(safe-area-inset-bottom) + 0.75rem); }
+/* Le contenu défile jusque sous le dock : on réserve sa hauteur. */
+.drive-pad { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 9rem); }
+html.native-tabs .drive-pad { padding-bottom: calc(var(--tabbar-clear) + 9rem); }
+html.is-native:not(.native-tabs) .drive-pad { padding-bottom: calc(80px + env(safe-area-inset-bottom) + 9rem); }
+.upload-panel { bottom: calc(env(safe-area-inset-bottom, 0px) + 7.5rem); }
 
 /* Light-theme variant. */
 html.is-native.light body { background: #eef0f6 !important; }

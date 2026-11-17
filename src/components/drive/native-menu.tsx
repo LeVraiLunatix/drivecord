@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   Check,
   ChevronsUpDown,
+  Clock,
   HardDrive,
   Lock,
   Plus,
@@ -31,11 +32,11 @@ import {
   useAllTags,
 } from "@/lib/storage";
 
-type SidebarSection = "files" | "favorites" | "vault" | "trash" | "tag";
+import type { DriveSection } from "./sections";
 
 type Props = {
-  section: SidebarSection;
-  onSectionChange: (s: SidebarSection) => void;
+  section: DriveSection;
+  onSectionChange: (s: DriveSection) => void;
   onNavigateRoot: () => void;
   activeTag?: string | null;
   onTagSelect?: (tag: string) => void;
@@ -75,6 +76,8 @@ export function DriveNativeMenu({
 
     items.push({ label: "Tous les fichiers", selected: section === "files" });
     actions.push(() => { onSectionChange("files"); onNavigateRoot(); });
+    items.push({ label: "Récents", selected: section === "recent" });
+    actions.push(() => onSectionChange("recent"));
     items.push({ label: "Favoris", selected: section === "favorites" });
     actions.push(() => onSectionChange("favorites"));
     items.push({ label: "Coffre-fort", selected: section === "vault" });
@@ -139,6 +142,10 @@ export function DriveNativeMenu({
         <DropdownMenuItem onClick={() => { onSectionChange("files"); onNavigateRoot(); }}>
           <HardDrive className={cn("size-4", section === "files" && "text-primary")} />
           Tous les fichiers
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onSectionChange("recent")}>
+          <Clock className={cn("size-4", section === "recent" && "text-primary")} />
+          Récents
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onSectionChange("favorites")}>
           <Star className={cn("size-4", section === "favorites" && "text-primary")} />

@@ -51,7 +51,7 @@ try {
   await shot(page, "1-empty");
 
   step("new folder");
-  await page.getByRole("button", { name: "Nouveau", exact: true }).click(); await page.getByRole("menuitem", { name: "Nouveau dossier" }).click();
+  await page.getByRole("button", { name: "Nouveau dossier" }).first().click(); // la barre du bas (dock)
   await page.getByRole("textbox").first().fill("Documents");
   await page.keyboard.press("Enter");
   await page.getByText(/0 élément/).first().waitFor();
@@ -114,19 +114,21 @@ try {
   step("drive-wide search from the root");
   await page.getByText("Mon drive", { exact: true }).first().click();
   await page.waitForTimeout(800);
-  await page.getByPlaceholder(/Rechercher/).fill("notes");
+  await page.getByRole("button", { name: /Rechercher \(Ctrl K\)/ }).click();
+  await page.keyboard.type("notes");
+  await page.keyboard.press("Enter"); // « Rechercher « notes » dans le drive »
   await page.waitForTimeout(1500);
   const found = await page.getByText("notes.txt").count();
   if (!found) note("search from the root does not find a file inside a sub-folder");
   await shot(page, "9-search");
-  await page.getByPlaceholder(/Rechercher/).fill("");
+  await page.getByRole("button", { name: "Effacer la recherche" }).click();
 
   step("rename + favorite");
   await page.getByText("Documents", { exact: false }).locator("visible=true").first().click({ button: "right" }).catch(() => {});
   await page.keyboard.press("Escape");
 
   step("trash view");
-  await page.getByRole("link", { name: "Corbeille" }).or(page.getByText("Corbeille", { exact: true })).first().click();
+  await page.getByRole("button", { name: "Compte, drives et réglages" }).click(); await page.getByRole("menuitem", { name: "Corbeille" }).click();
   await page.waitForTimeout(1200);
   await shot(page, "10-trash");
   if (!(await page.getByText("data.json").count())) note("trashed file is not listed in the trash");
@@ -138,7 +140,7 @@ try {
   }
   console.log("  trash text:", (await page.locator("main").innerText()).replace(/\s+/g, " ").slice(0, 200));
   step("rename / favorite / list view");
-  await page.getByText("Tous les fichiers", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Fichiers", exact: true }).click();
   await page.getByText("Mon drive", { exact: true }).first().click();
   await page.waitForTimeout(1000);
   await page.getByText(/^\d+ éléments? ·/).first().dblclick();
@@ -163,7 +165,7 @@ try {
   await page.waitForTimeout(1200);
   if (!(await page.getByText("notes-v2.txt").count())) note("favorite not listed in Favoris");
   await shot(page, "11-favorites");
-  await page.getByText("Tous les fichiers", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Fichiers", exact: true }).click();
   await page.waitForTimeout(800);
   await page.getByLabel(/liste/i).first().click().catch(() => {});
   await page.waitForTimeout(600);

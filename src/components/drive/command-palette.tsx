@@ -60,7 +60,7 @@ export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: P
   const [query, setQuery] = React.useState("");
   const [active, setActive] = React.useState(0);
 
-  // Global Cmd/Ctrl+K toggle.
+  // Global Cmd/Ctrl+K toggle, et le bouton « Chercher » de la barre du haut (drive-nav.tsx).
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -68,8 +68,13 @@ export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: P
         setOpen((o) => !o);
       }
     };
+    const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("drivecord:open-palette", onOpen);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("drivecord:open-palette", onOpen);
+    };
   }, []);
 
   // Reset query/selection when opening.
@@ -157,32 +162,32 @@ export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: P
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         showCloseButton={false}
-        className="top-[15%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-lg"
+        className="top-[14%] translate-y-0 gap-0 overflow-hidden rounded-[22px] p-0 sm:max-w-xl"
         onKeyDown={onKeyDown}
       >
         <DialogTitle className="sr-only">Palette de commandes</DialogTitle>
 
-        <div className="flex items-center gap-2 border-b border-border/60 px-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
+        <div className="flex items-center gap-3 border-b border-[var(--cord-line)] px-5">
+          <Search className="size-[18px] shrink-0 text-[var(--cord-dim)]" />
           <input
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tape une commande ou cherche…"
-            className="w-full bg-transparent py-3.5 text-sm outline-none placeholder:text-muted-foreground"
+            className="w-full bg-transparent py-5 text-[17px] outline-none placeholder:text-[var(--cord-faint)]"
           />
-          <kbd className="hidden shrink-0 rounded border border-border/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline">
+          <kbd className="cord-kbd hidden sm:inline">
             ESC
           </kbd>
         </div>
 
-        <div className="max-h-[min(60vh,24rem)] overflow-y-auto p-2">
+        <div className="max-h-[min(60vh,26rem)] overflow-y-auto p-3">
           {filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Aucune commande.</p>
           ) : (
             groups.map(({ group, items }) => (
               <div key={group} className="mb-1">
-                <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                <p className="px-3 pb-1.5 pt-3 text-[13px] font-medium text-[var(--cord-dim)]">
                   {group}
                 </p>
                 {items.map((c) => {
@@ -195,8 +200,8 @@ export function CommandPalette({ onUpload, onNewFolder, onSection, onSearch }: P
                       onClick={c.run}
                       onMouseMove={() => setActive(myIdx)}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm transition-colors",
-                        isActive ? "bg-accent text-accent-foreground" : "text-foreground/90",
+                        "flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 py-2 text-left text-[15px] transition-colors",
+                        isActive ? "bg-[color-mix(in_srgb,var(--cord-light-mid)_16%,transparent)] text-foreground" : "text-foreground/90",
                       )}
                     >
                       <c.icon className="size-4 shrink-0 text-muted-foreground" />

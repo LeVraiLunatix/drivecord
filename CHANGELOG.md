@@ -7,6 +7,15 @@
   à chaque changement notable.
 -->
 
+## Nouveau design du drive : plus aéré, plus simple
+
+✨ **Un drive entièrement repensé**, aux couleurs de KitCord : de grandes marges, des vignettes plus grandes, un verre liquide et la lumière du bas.
+- **Plus de barre latérale** : la navigation est dans une barre du haut (Fichiers, Récents, Favoris, Partagés, Coffre-fort), avec la recherche (Ctrl K) et ton compte. Drives, tags, corbeille, statistiques, sauvegarde et réglages sont dans le menu du compte.
+- **Une barre d'actions en bas** : « Envoyer des fichiers » quand rien n'est sélectionné ; dès que tu choisis un fichier, elle affiche le fichier et ses actions (télécharger, partager, déplacer, tags, corbeille).
+- **Nouveau : Récents**, les derniers fichiers modifiés de tout ton drive.
+- Le titre de la page est le nom du dossier ouvert ; le tri, le filtre par type et l'affichage grille / liste sont rangés à droite.
+- Sur téléphone, des zones plus grandes et plus espacées ; l'envoi en cours s'affiche autour de l'icône en haut.
+
 ## App iPhone : sauvegarde de la pellicule et lecteur de musique
 
 📸 **Sauvegarde de la pellicule**

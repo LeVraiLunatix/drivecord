@@ -7,7 +7,11 @@ import { toast } from "sonner";
 import { DriveBackdrop } from "@/components/drive/drive-backdrop";
 import { DriveSidebar } from "@/components/drive/sidebar";
 import { DriveNativeMenu } from "@/components/drive/native-menu";
-import { DriveTopbar } from "@/components/drive/topbar";
+import { DriveNav } from "@/components/drive/drive-nav";
+import { DrivePageHead } from "@/components/drive/drive-page-head";
+import { DriveDock } from "@/components/drive/dock";
+import type { DriveSection } from "@/components/drive/sections";
+import { Glow } from "@/kitcord";
 import { CommandPalette } from "@/components/drive/command-palette";
 import { ShareDialog } from "@/components/drive/share-dialog";
 import { entriesFromFiles, ensureFolderTree, type UploadEntry } from "@/lib/upload-folder";
@@ -31,7 +35,7 @@ import { useAudioPlayer } from "@/lib/audio-player";
 import { UploadDropzone } from "@/components/drive/upload-dropzone";
 import { UploadQueuePanel } from "@/components/drive/upload-queue-panel";
 import { EmptyState } from "@/components/drive/empty-state";
-import { Lock, Star, Tag, Trash2 } from "lucide-react";
+import { Clock, Lock, Star, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VaultGate } from "@/components/drive/vault-gate";
 import { CordLinkPrompt } from "@/components/auth/cord-link-prompt";
@@ -69,7 +73,7 @@ import {
   type ParentId,
 } from "@/lib/storage";
 
-type Section = "files" | "favorites" | "vault" | "trash" | "tag";
+type Section = DriveSection;
 
 export default function DrivePage() {
   // useSearchParams (tab-bar deep-links) requires a Suspense boundary.
@@ -207,6 +211,13 @@ function DriveContent() {
 
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+  // Sélection remontée par l'explorateur : c'est elle qui décide de ce que montre la barre du bas.
+  const [selection, setSelection] = React.useState<{ items: DriveItem[]; clear: () => void }>({ items: [], clear: () => {} });
+  const handleSelectionChange = React.useCallback(
+    (items: DriveItem[], clear: () => void) => setSelection((prev) => (prev.items.length === 0 && items.length === 0 ? prev : { items, clear })),
+    [],
+  );
+
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   // Desktop tray "Ouvrir un drive" navigates here with ?open=<driveId>.
@@ -243,7 +254,7 @@ function DriveContent() {
   const items      = useDriveItems(driveId, currentFolderId);
   const searching = search.trim() !== "";
   // While searching "Tous les fichiers", look in the whole drive, not just the open folder.
-  const driveIndex = useDriveIndex(driveId, searching && section === "files");
+  const driveIndex = useDriveIndex(driveId, (searching && section === "files") || section === "recent");
   const favorites  = useFavorites(driveId);
   const trashed    = useTrashedItems(driveId);
   const taggedItems = useFilesByTag(driveId, activeTag);
@@ -256,9 +267,19 @@ function DriveContent() {
   }, [section]);
   React.useEffect(() => { setVaultUnlocked(false); clearVaultKey(); }, [driveId]);
 
+  // Récents : les derniers fichiers modifiés de tout le drive (hors corbeille et coffre).
+  const recentItems = React.useMemo(() => {
+    if (!driveIndex) return driveIndex;
+    return driveIndex
+      .filter((it) => it.kind === "file" && !it.trashed && !it.locked)
+      .sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt))
+      .slice(0, 120);
+  }, [driveIndex]);
+
   const displayedItems = React.useMemo(() => {
     const base =
       section === "files" ? (searching ? driveIndex : items)
+      : section === "recent" ? recentItems
       : section === "favorites" ? favorites
       : section === "vault" ? vaultItems
       : section === "tag" ? taggedItems
@@ -270,7 +291,7 @@ function DriveContent() {
       const name = it.kind === "folder" ? it.name : it.filename;
       return name.toLowerCase().includes(q);
     });
-  }, [section, items, searching, driveIndex, favorites, vaultItems, trashed, taggedItems, search]);
+  }, [section, items, searching, driveIndex, recentItems, favorites, vaultItems, trashed, taggedItems, search]);
 
   const previewSiblings = React.useMemo(
     () => (displayedItems ?? []).filter((i) => i.kind === "file").map((i) => i.id),
@@ -557,9 +578,17 @@ function DriveContent() {
   if (!mounted || (activeDriveId !== null && !activeDrive)) return null;
   if (!activeDrive) return null;
 
+  const hideControls =
+    (section === "vault" && !vaultUnlocked) ||
+    (section !== "files" && (displayedItems?.length ?? 0) === 0);
+  // Que propose la barre du bas quand rien n'est sélectionné : envoyer, seulement là où c'est possible.
+  const canUpload = (section === "files" && !searching) || (section === "vault" && vaultUnlocked);
+
   return (
-    <div className="isolate flex min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden">
+    <div className="isolate relative min-h-[100dvh]">
       <DriveBackdrop />
+      <Glow calm sparks={false} cursor={false} />
+      {/* Tiroir de navigation (mobile) : sur bureau, tout est dans la barre du haut. */}
       <DriveSidebar
         section={section}
         onSectionChange={setSection}
@@ -570,8 +599,13 @@ function DriveContent() {
         onMobileClose={() => setSidebarOpen(false)}
       />
 
-      <UploadDropzone onEntries={(entries) => handleUploadEntries(entries)} className="flex min-w-0 flex-1 flex-col lg:overflow-hidden">
-        <DriveTopbar
+      <UploadDropzone onEntries={(entries) => handleUploadEntries(entries)} className="relative z-10 flex min-h-[100dvh] min-w-0 flex-col">
+        <DriveNav
+          section={section}
+          onSectionChange={setSection}
+          onNavigateRoot={() => { resetHistory(ROOT_PARENT); setSection("files"); }}
+          activeTag={activeTag}
+          onTagSelect={(tag) => { setActiveTag(tag); setSection("tag"); resetHistory(ROOT_PARENT); }}
           onMenuOpen={() => setSidebarOpen(true)}
           nativeMenu={
             <DriveNativeMenu
@@ -582,33 +616,38 @@ function DriveContent() {
               onTagSelect={(tag) => { setActiveTag(tag); setSection("tag"); resetHistory(ROOT_PARENT); }}
             />
           }
-          driveId={driveId}
-          currentFolderId={currentFolderId}
-          onNavigate={navigateTo}
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          onGoBack={goBack}
-          onGoForward={goForward}
-          onNewFolder={() => setNewFolderOpen(true)}
-          onUploadClick={() => fileInputRef.current?.click()}
-          onFolderUploadClick={() => folderInputRef.current?.click()}
-          search={search}
-          onSearchChange={setSearch}
-          searchVisible={section !== "trash"}
-          onDropItemOnBreadcrumb={handleMoveTo}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          sortField={sortField}
-          sortDir={sortDir}
-          onSortChange={(field, dir) => { setSortField(field); setSortDir(dir); }}
-          filterKind={filterKind}
-          onFilterChange={setFilterKind}
         />
 
-        <main className="tabbar-pad flex flex-1 flex-col px-3 py-3 lg:min-h-0 lg:touch-pan-y lg:overflow-y-auto lg:overscroll-contain lg:[-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <main className="drive-wrap drive-pad flex flex-1 flex-col">
+          <DrivePageHead
+            section={section}
+            activeTag={activeTag}
+            driveId={driveId}
+            currentFolderId={currentFolderId}
+            onNavigate={navigateTo}
+            onDropItemOnBreadcrumb={handleMoveTo}
+            canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            onGoBack={goBack}
+            onGoForward={goForward}
+            count={section === "vault" && !vaultUnlocked ? undefined : displayedItems?.length}
+            search={search}
+            onClearSearch={() => setSearch("")}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            sortField={section === "recent" ? "date" : sortField}
+            sortDir={section === "recent" ? "desc" : sortDir}
+            onSortChange={(field, dir) => { setSortField(field); setSortDir(dir); }}
+            filterKind={filterKind}
+            onFilterChange={setFilterKind}
+            hideControls={hideControls}
+          />
           <CordLinkPrompt />
           {section === "vault" && !vaultUnlocked && (
             <VaultGate onUnlock={() => setVaultUnlocked(true)} />
+          )}
+          {section === "recent" && (displayedItems?.length ?? 0) === 0 && (
+            <EmptyState icon={Clock} title="Rien de récent" description="Les derniers fichiers que tu envoies ou modifies apparaissent ici." />
           )}
           {section === "favorites" && (displayedItems?.length ?? 0) === 0 && (
             <EmptyState icon={Star} title="Aucun favori" description="Mets un fichier en favori avec le menu contextuel pour le retrouver ici." />
@@ -631,13 +670,13 @@ function DriveContent() {
               </Button>
             </div>
           )}
-          {(section === "files" || (section === "vault" && vaultUnlocked && (displayedItems?.length ?? 0) > 0) || ((section === "favorites" || section === "trash" || section === "tag") && (displayedItems?.length ?? 0) > 0)) && (
+          {(section === "files" || (section === "vault" && vaultUnlocked && (displayedItems?.length ?? 0) > 0) || ((section === "favorites" || section === "trash" || section === "tag" || section === "recent") && (displayedItems?.length ?? 0) > 0)) && (
             <DriveExplorer
               key={`${section}-${currentFolderId}-${searching}`}
               items={displayedItems}
               viewMode={viewMode}
-              sortField={sortField}
-              sortDir={sortDir}
+              sortField={section === "recent" ? "date" : sortField}
+              sortDir={section === "recent" ? "desc" : sortDir}
               filterKind={filterKind}
               onSortChange={(field, dir) => { setSortField(field); setSortDir(dir); }}
               onAction={handleAction}
@@ -652,6 +691,7 @@ function DriveContent() {
                 handleUploadEntries(entriesFromFiles(files), targetFolder.id);
               }}
               onBulkAction={handleBulkAction}
+              onSelectionChange={handleSelectionChange}
               onEmptyUpload={section === "files" && !searching ? () => fileInputRef.current?.click() : undefined}
             />
           )}
@@ -730,6 +770,16 @@ function DriveContent() {
         siblings={previewSiblings}
         onClose={() => setPreviewFileId(null)}
         onNavigate={setPreviewFileId}
+      />
+      <DriveDock
+        selection={selection.items}
+        onClearSelection={selection.clear}
+        onBulkAction={handleBulkAction}
+        onItemAction={handleAction}
+        onUpload={canUpload ? () => fileInputRef.current?.click() : undefined}
+        onFolderUpload={section === "files" && !searching ? () => folderInputRef.current?.click() : undefined}
+        onNewFolder={section === "files" && !searching ? () => setNewFolderOpen(true) : undefined}
+        inTrash={section === "trash"}
       />
       <UploadQueuePanel />
 
