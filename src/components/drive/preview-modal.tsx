@@ -9,6 +9,9 @@ import {
   FileX,
   FolderSymlink,
   Music,
+  Share2,
+  Star,
+  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +37,8 @@ type Props = {
   siblings?: string[];
   onClose: () => void;
   onNavigate?: (id: string) => void;
+  /** Partager / favori / corbeille depuis l'aperçu (partager et corbeille ferment l'aperçu d'abord). */
+  onAction?: (action: "share" | "favorite" | "delete", file: NonNullable<ReturnType<typeof useFile>>) => void;
 };
 
 type LoadState = "idle" | "loading" | "done" | "error";
@@ -151,8 +156,7 @@ export function PreviewModal({
   fileId,
   siblings = [],
   onClose,
-  onNavigate,
-}: Props) {
+  onNavigate, onAction }: Props) {
   const file = useFile(driveId, fileId);
   const client = useDiscordClient();
 
@@ -367,47 +371,39 @@ export function PreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex flex-col bg-[var(--cord-ink)]"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* ── Top bar ──────────────────────────────────────────────────────── */}
+      <div className="cord-glow" data-calm aria-hidden="true" />
+      {/* ── Barre du haut : le nom du fichier, sa place dans le dossier ───────────── */}
       <div
-        className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3"
-        style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+        className="relative z-[2] shrink-0 px-3 pb-2 sm:px-[var(--cord-space-gutter)]"
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
       >
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-white">{file?.filename ?? "…"}</p>
-          {file && <p className="text-xs text-white/40">{formatBytes(file.size)}</p>}
+        <div className="cord-glass mx-auto flex w-full max-w-[1180px] items-center gap-3 rounded-full py-2 pl-6 pr-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[17px] font-semibold tracking-tight [font-family:var(--cord-font-display)]">{file?.filename ?? "…"}</p>
+            {file && (
+              <p className="truncate text-[13px] text-[var(--cord-dim)]">
+                {formatBytes(file.size)}
+                {siblings.length > 1 && currentIdx !== -1 ? ` · ${currentIdx + 1} sur ${siblings.length}` : ""}
+              </p>
+            )}
+          </div>
+          <button type="button" className="cord-menu-button inline-flex shrink-0 items-center justify-center" onClick={onClose} aria-label="Fermer">
+            <X className="size-5" />
+          </button>
         </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 shrink-0 gap-1.5 px-2 text-white/70 hover:bg-white/10 hover:text-white sm:px-3"
-          onClick={handleDownload}
-          disabled={!file || !client}
-        >
-          <Download className="size-3.5" />
-          <span className="hidden sm:inline">Télécharger</span>
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-9 shrink-0 text-white/70 hover:bg-white/10 hover:text-white"
-          onClick={onClose}
-        >
-          <X className="size-5" />
-        </Button>
       </div>
 
       {/* ── Main area ────────────────────────────────────────────────────── */}
-      <div className="relative flex min-h-0 flex-1 items-center justify-center p-4 sm:p-6">
+      <div className="relative z-[1] flex min-h-0 flex-1 items-center justify-center p-4 sm:p-6">
         {/* Prev button */}
         {hasPrev && (
           <button
             onClick={goPrev}
-            className="absolute left-2 z-10 flex size-9 items-center justify-center rounded-full bg-white/10 text-white/60 transition-all hover:bg-white/20 hover:text-white sm:left-3 sm:size-10"
+            className="cord-menu-button absolute left-2 z-10 inline-flex items-center justify-center sm:left-4"
+            aria-label="Fichier précédent"
           >
             <ChevronLeft className="size-5 sm:size-6" />
           </button>
@@ -417,7 +413,8 @@ export function PreviewModal({
         {hasNext && (
           <button
             onClick={goNext}
-            className="absolute right-2 z-10 flex size-9 items-center justify-center rounded-full bg-white/10 text-white/60 transition-all hover:bg-white/20 hover:text-white sm:right-3 sm:size-10"
+            className="cord-menu-button absolute right-2 z-10 inline-flex items-center justify-center sm:right-4"
+            aria-label="Fichier suivant"
           >
             <ChevronRight className="size-5 sm:size-6" />
           </button>
@@ -446,7 +443,7 @@ export function PreviewModal({
           <img
             src={blobUrl}
             alt={file?.filename}
-            className="max-h-full max-w-full select-none rounded object-contain shadow-2xl"
+            className="max-h-full max-w-full select-none rounded-[var(--cord-radius-panel)] object-contain shadow-2xl"
             draggable={false}
           />
         )}
@@ -526,13 +523,46 @@ export function PreviewModal({
         )}
       </div>
 
-      {/* Bottom counter */}
-      {siblings.length > 1 && currentIdx !== -1 && (
+      {/* ── Barre du bas : les actions du fichier ────────────────────────────────── */}
+      {file && (
         <div
-          className="shrink-0 pb-3 text-center text-xs text-white/30 select-none"
-          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+          className="relative z-[2] flex shrink-0 justify-center px-3 pt-3"
+          style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
         >
-          {currentIdx + 1} / {siblings.length}
+          <div role="toolbar" aria-label="Actions sur le fichier" className="cord-glass flex items-center gap-2 rounded-full p-2.5 sm:gap-3 sm:p-3">
+            <button
+              type="button"
+              data-primary
+              className="cord-button h-12 gap-2 px-5 text-[15px] sm:h-[54px] sm:px-7"
+              onClick={handleDownload}
+              disabled={!client}
+            >
+              <Download className="size-[18px]" />
+              Télécharger
+            </button>
+            {onAction && (
+              <>
+                {!file.locked && (
+                  <button type="button" className="cord-button h-12 gap-2 px-4 text-[15px] sm:h-[54px] sm:px-6" onClick={() => { onClose(); onAction("share", file); }} aria-label="Partager">
+                    <Share2 className="size-[18px]" />
+                    <span className="hidden sm:inline">Partager</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="cord-button size-12 shrink-0 p-0 sm:size-[54px]"
+                  onClick={() => onAction("favorite", file)}
+                  aria-label={file.favorite ? "Retirer des favoris" : "Mettre en favori"}
+                  aria-pressed={!!file.favorite}
+                >
+                  <Star className={cn("size-[18px]", file.favorite && "fill-amber-400 text-amber-400")} />
+                </button>
+                <button type="button" className="cord-button size-12 shrink-0 p-0 sm:size-[54px]" onClick={() => { onClose(); onAction("delete", file); }} aria-label="Mettre à la corbeille">
+                  <Trash2 className="size-[18px]" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

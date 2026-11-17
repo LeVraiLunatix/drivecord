@@ -15,7 +15,7 @@ type Props = {
 
 export function EmptyState({ title, description, icon: Icon = UploadCloud, action, hint }: Props) {
   return (
-    <div className="relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-dashed border-border/50 px-6 py-20 text-center">
+    <div className="cord-glass relative flex flex-col items-center justify-center gap-5 rounded-[var(--cord-radius-panel)] px-6 py-24 text-center">
       <div className="flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
         <Icon className="size-6" />
       </div>

@@ -15,6 +15,9 @@
 - **Nouveau : Récents**, les derniers fichiers modifiés de tout ton drive.
 - Le titre de la page est le nom du dossier ouvert ; le tri, le filtre par type et l'affichage grille / liste sont rangés à droite.
 - Sur téléphone, des zones plus grandes et plus espacées ; l'envoi en cours s'affiche autour de l'icône en haut.
+- **Nouvel Accueil** : une grande recherche, tes actions rapides et tes derniers fichiers.
+- **Sur téléphone** : une barre d'onglets en bas (Fichiers, Récents, Partagés, Coffre) avec un gros « + » qui ouvre le menu « Nouveau » (photos et vidéos, fichiers, dossier, pellicule).
+- Aperçu des fichiers, fenêtre de partage, panneau des envois (avec un pourcentage fiable) et coffre-fort (clavier à chiffres) redessinés dans le même style.
 
 ## App iPhone : sauvegarde de la pellicule et lecteur de musique
 

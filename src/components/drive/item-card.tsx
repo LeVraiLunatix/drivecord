@@ -43,6 +43,8 @@ type Props = {
   onItemClick?: (e: React.MouseEvent, intent?: ItemClickIntent) => void;
   onDropItem?: (sourceItemId: string, target: DriveItem) => void;
   onDropExternalFiles?: (files: File[], target: DriveItem) => void;
+  /** Sans case de sélection (ex. les Récents de l'accueil, où un clic ouvre simplement). */
+  plain?: boolean;
 };
 
 export const DriveItemCard = React.memo(function DriveItemCard({
@@ -53,6 +55,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
   onItemClick,
   onDropItem,
   onDropExternalFiles,
+  plain,
 }: Props) {
   const isFolder = item.kind === "folder";
   const name = isFolder ? item.name : item.filename;
@@ -184,7 +187,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       )}
     >
       {/* Case de sélection — visible au survol ou quand elle est cochée */}
-      {onItemClick && (
+      {onItemClick && !plain && (
         <div
           onClick={(e) => { e.stopPropagation(); onItemClick(e, "toggle"); }}
           className={cn(

@@ -3,8 +3,9 @@
 import * as React from "react";
 import { apiFetcher as fetcher } from "@/lib/api-base";
 import useSWR from "swr";
-import { Lock, ShieldCheck, Loader2, KeyRound, Fingerprint } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Delete, Lock, ShieldCheck, Loader2, KeyRound, Fingerprint } from "lucide-react";
+import { Accent } from "@/kitcord";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -93,58 +94,83 @@ export function VaultGate({ onUnlock }: { onUnlock: () => void }) {
     finally { setBusy(false); }
   };
 
+  const digits = (v: string) => v.replace(/\D/g, "").slice(0, 12);
+  const tap = (d: string) => setPin((p) => digits(p + d));
+  const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  const roundKey = "cord-menu-button inline-flex size-[68px] items-center justify-center text-2xl font-semibold [font-family:var(--cord-font-display)] disabled:opacity-50 sm:size-[72px]";
+
   return (
-    <div className="flex flex-1 items-center justify-center px-6 py-16">
-      <div className="w-full max-w-xs space-y-5 text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30">
+    <div className="flex flex-1 items-start justify-center px-2 pb-8 pt-2 sm:pt-6">
+      <div className="flex w-full max-w-sm flex-col items-center text-center">
+        <span className="cord-menu-button inline-flex size-16 items-center justify-center text-[var(--cord-light-mid)]" aria-hidden="true">
           <Lock className="size-7" />
-        </div>
+        </span>
 
         {data.hasPin ? (
           <>
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold">Coffre-fort verrouillé</h2>
-              <p className="text-sm text-muted-foreground">Entre ton code pour accéder à tes fichiers protégés.</p>
-            </div>
-            <form onSubmit={verifyPin} className="space-y-3">
-              <Input
-                type="password" inputMode="numeric" autoFocus
-                value={pin} onChange={(e) => setPin(e.target.value)}
-                placeholder="Code" className="text-center tracking-[0.3em]"
+            <h2 className="cord-display mt-6 text-[clamp(2.25rem,7vw,3.25rem)]">
+              Coffre<Accent>-fort</Accent>
+            </h2>
+            <p className="cord-lede mt-4">Saisis ton code pour accéder à tes fichiers protégés.</p>
+            <form onSubmit={verifyPin} className="mt-9 flex w-full flex-col items-center">
+              {/* Le champ reste réel (clavier, gestionnaire de mots de passe) mais invisible : les points le montrent. */}
+              <label className="sr-only" htmlFor="vault-pin">Code</label>
+              <input
+                id="vault-pin" className="sr-only" type="password" inputMode="none" autoFocus autoComplete="current-password"
+                value={pin} onChange={(e) => setPin(digits(e.target.value))}
               />
-              <Button type="submit" className="w-full gap-2" disabled={busy || !pin}>
+              <div className="flex h-5 items-center gap-4" role="img" aria-label={`${pin.length} chiffre${pin.length > 1 ? "s" : ""} saisi${pin.length > 1 ? "s" : ""}`}>
+                {Array.from({ length: Math.max(6, pin.length) }).map((_, i) => (
+                  <i key={i} className={cn("block size-3 rounded-full transition-colors", i < pin.length ? "bg-[var(--cord-light-core)]" : "bg-[var(--cord-line-strong)]")} />
+                ))}
+              </div>
+              <div className="mt-9 grid grid-cols-3 gap-x-7 gap-y-3.5">
+                {KEYS.map((k) => (
+                  <button key={k} type="button" className={roundKey} onClick={() => tap(k)} disabled={busy} aria-label={k}>{k}</button>
+                ))}
+                <span aria-hidden="true" />
+                <button type="button" className={roundKey} onClick={() => tap("0")} disabled={busy} aria-label="0">0</button>
+                <button
+                  type="button" aria-label="Effacer"
+                  className="inline-flex size-[68px] items-center justify-center rounded-full text-[var(--cord-dim)] hover:text-foreground sm:size-[72px]"
+                  onClick={() => setPin((p) => p.slice(0, -1))} disabled={busy || !pin}
+                >
+                  <Delete className="size-6" />
+                </button>
+              </div>
+              <button type="submit" data-primary className="cord-button mt-8 h-[52px] w-full max-w-[16rem] gap-2 text-base" disabled={busy || !pin}>
                 {busy ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
                 Déverrouiller
-              </Button>
+              </button>
               {bioAvailable && (
-                <Button type="button" variant="outline" className="w-full gap-2" onClick={tryBiometric}>
-                  <Fingerprint className="size-4" />
+                <button type="button" className="cord-button mt-3 h-[52px] w-full max-w-[16rem] gap-2 text-base" onClick={tryBiometric}>
+                  <Fingerprint className="size-[18px]" />
                   Face ID / Touch ID
-                </Button>
+                </button>
               )}
             </form>
           </>
         ) : (
           <>
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold">Crée ton coffre-fort</h2>
-              <p className="text-sm text-muted-foreground">Choisis un code (4 à 12 chiffres) pour protéger tes fichiers sensibles.</p>
-            </div>
-            <form onSubmit={createPin} className="space-y-3">
-              <div className="space-y-1.5 text-left">
-                <Label htmlFor="pin">Nouveau code</Label>
-                <Input id="pin" type="password" inputMode="numeric" autoFocus
-                  value={pin} onChange={(e) => setPin(e.target.value)} placeholder="4 à 12 chiffres" />
+            <h2 className="cord-display mt-6 text-[clamp(2.25rem,7vw,3.25rem)]">
+              Crée ton <Accent>coffre</Accent>
+            </h2>
+            <p className="cord-lede mt-4">Choisis un code (4 à 12 chiffres) pour protéger tes fichiers sensibles.</p>
+            <form onSubmit={createPin} className="mt-9 w-full space-y-5">
+              <div className="space-y-2 text-left">
+                <Label htmlFor="pin" className="px-2 text-[var(--cord-dim)]">Nouveau code</Label>
+                <Input id="pin" type="password" inputMode="numeric" autoFocus className="h-14 rounded-full px-6 text-base"
+                  value={pin} onChange={(e) => setPin(digits(e.target.value))} placeholder="4 à 12 chiffres" />
               </div>
-              <div className="space-y-1.5 text-left">
-                <Label htmlFor="confirm-pin">Confirme</Label>
-                <Input id="confirm-pin" type="password" inputMode="numeric"
-                  value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+              <div className="space-y-2 text-left">
+                <Label htmlFor="confirm-pin" className="px-2 text-[var(--cord-dim)]">Confirme</Label>
+                <Input id="confirm-pin" type="password" inputMode="numeric" className="h-14 rounded-full px-6 text-base"
+                  value={confirm} onChange={(e) => setConfirm(digits(e.target.value))} />
               </div>
-              <Button type="submit" className="w-full gap-2" disabled={busy || !pin}>
+              <button type="submit" data-primary className="cord-button h-[52px] w-full gap-2 text-base" disabled={busy || !pin}>
                 {busy ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
                 Créer le coffre
-              </Button>
+              </button>
             </form>
           </>
         )}

@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/format";
 import { useUploadQueue, type QueueItem, type QueueStatus } from "@/lib/upload-queue";
+import { useUploadPercent } from "./use-upload-percent";
 
 /**
  * Floating panel showing all queued/in-progress/finished uploads.
@@ -27,6 +28,7 @@ export function UploadQueuePanel() {
   const remove = useUploadQueue((s) => s.remove);
   const clearFinished = useUploadQueue((s) => s.clearFinished);
   const [collapsed, setCollapsed] = React.useState(false);
+  const overall = useUploadPercent();
 
   // Everything went through: tidy the panel away after a few seconds (failures stay until dismissed).
   const allDone = items.length > 0 && items.every((i) => i.status === "done");
@@ -50,19 +52,26 @@ export function UploadQueuePanel() {
   const hidden = relevant.length - visible.length;
 
   return (
-    <div className="upload-panel fixed bottom-4 right-2 z-40 w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-border/60 bg-card/95 shadow-lg backdrop-blur sm:right-4">
-      <div className="flex items-center justify-between gap-2 border-b border-border/50 px-3 py-2">
-        <div className="flex items-center gap-2 text-sm font-medium">
+    <div
+      className="upload-panel cord-glass fixed right-3 z-40 w-[min(23rem,calc(100vw-1.5rem))] rounded-[22px] sm:right-6"
+      // Verre dense : sur du texte, la teinte légère du kit ne suffit pas.
+      style={{ background: "var(--cord-glass-sheen), color-mix(in srgb, var(--cord-ink-2) 92%, transparent)" }}
+    >
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-3 text-[15px] font-semibold">
           {inProgress.length > 0 ? (
-            <Loader2 className="size-4 animate-spin text-primary" />
+            <Loader2 className="size-[18px] shrink-0 animate-spin text-[var(--cord-light-mid)]" />
           ) : (
-            <CheckCircle2 className="size-4 text-green-500" />
+            <CheckCircle2 className="size-[18px] shrink-0 text-green-500" />
           )}
-          <span>
+          <span className="truncate">
             {inProgress.length > 0
               ? `Envoi en cours : ${doneCount}/${items.length}`
-              : `Uploads terminés (${finishedCount})`}
+              : `Envois terminés (${finishedCount})`}
           </span>
+          {inProgress.length > 0 && overall && (
+            <span className="shrink-0 font-normal tabular-nums text-[var(--cord-dim)]">{overall.percent}{"\u00a0"}%</span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           {finishedCount > 0 && (
@@ -92,12 +101,12 @@ export function UploadQueuePanel() {
       </div>
 
       {!collapsed && visible.length > 0 && (
-        <ul className="max-h-72 divide-y divide-border/50 overflow-y-auto">
+        <ul className="max-h-72 divide-y divide-[var(--cord-line)] overflow-y-auto border-t border-[var(--cord-line)]">
           {visible.map((it) => (
             <UploadRow key={it.id} it={it} cancel={cancel} remove={remove} />
           ))}
           {hidden > 0 && (
-            <li className="px-3 py-2.5 text-center text-xs text-muted-foreground">… et {hidden} autre{hidden > 1 ? "s" : ""}</li>
+            <li className="px-5 py-3 text-center text-xs text-muted-foreground">… et {hidden} autre{hidden > 1 ? "s" : ""}</li>
           )}
         </ul>
       )}
@@ -116,7 +125,7 @@ const UploadRow = React.memo(function UploadRow({
   remove: (id: string) => void;
 }) {
   return (
-    <li className="px-3 py-2.5 text-sm">
+    <li className="px-5 py-3.5 text-sm">
       <div className="flex items-center gap-2">
         <StatusIcon status={it.status} />
         <span
