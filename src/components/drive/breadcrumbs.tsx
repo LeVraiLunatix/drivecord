@@ -28,7 +28,7 @@ export function DriveBreadcrumbs({
   return (
     <nav
       aria-label="Fil d'Ariane"
-      className="flex items-center gap-1 overflow-x-auto whitespace-nowrap text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-[15px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <BreadcrumbButton
         targetId={ROOT_PARENT}
@@ -41,7 +41,7 @@ export function DriveBreadcrumbs({
       </BreadcrumbButton>
       {(path ?? []).map((f, i) => (
         <div key={f.id} className="flex shrink-0 items-center gap-1">
-          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+          <ChevronRight className="size-3.5 shrink-0 text-[var(--cord-faint)]" />
           <BreadcrumbButton
             targetId={f.id}
             onClick={() => onNavigate(f.id)}
@@ -100,10 +100,10 @@ function BreadcrumbButton({
         onDropItem(payload.id, targetId);
       }}
       className={cn(
-        "flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors",
+        "flex items-center gap-2 rounded-full px-3 py-1.5 transition-colors",
         active
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+          ? "text-foreground"
+          : "text-[var(--cord-dim)] hover:bg-[color-mix(in_srgb,var(--cord-light-mid)_14%,transparent)] hover:text-foreground",
         dragOver && "bg-primary/15 text-foreground ring-1 ring-primary/40",
       )}
     >

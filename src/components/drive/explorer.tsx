@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { DriveItemCard } from "./item-card";
 import { DriveItemRow } from "./item-row";
 import { EmptyState } from "./empty-state";
-import { SelectionActionsMenu } from "./selection-actions-menu";
 import { cn } from "@/lib/utils";
 import { kindOf } from "@/lib/utils/file-icons";
 import type { ItemAction } from "./item-menu";
@@ -99,22 +98,22 @@ function ListHeader({
       sortField === field && "text-foreground",
     );
   return (
-    <div className="flex items-center gap-3 border-b border-border/50 px-3 py-1.5 text-xs font-medium text-muted-foreground select-none">
-      {hasCheckbox && <div className="size-5 shrink-0" />}
-      <div className="size-8 shrink-0" />
+    <div className="flex items-center gap-4 px-4 pb-3 text-sm font-medium text-[var(--cord-dim)] select-none sm:gap-7 sm:px-8">
+      {hasCheckbox && <div className="size-[26px] shrink-0" />}
+      <div className="size-[52px] shrink-0 sm:size-[60px]" />
       <button onClick={() => toggle("name")} className={cn(col("name"), "flex-1")}>
         Nom {sortField === "name" && <SortIcon className="size-3" />}
       </button>
-      <button onClick={() => toggle("type")} className={cn(col("type"), "hidden w-24 shrink-0 md:flex")}>
+      <button onClick={() => toggle("type")} className={cn(col("type"), "hidden w-28 shrink-0 md:flex")}>
         Type {sortField === "type" && <SortIcon className="size-3" />}
       </button>
-      <button onClick={() => toggle("size")} className={cn(col("size"), "hidden w-20 shrink-0 justify-end sm:flex")}>
+      <button onClick={() => toggle("size")} className={cn(col("size"), "hidden w-24 shrink-0 justify-end sm:flex")}>
         Taille {sortField === "size" && <SortIcon className="size-3" />}
       </button>
-      <button onClick={() => toggle("date")} className={cn(col("date"), "hidden w-28 shrink-0 justify-end lg:flex")}>
+      <button onClick={() => toggle("date")} className={cn(col("date"), "hidden w-36 shrink-0 justify-end lg:flex")}>
         Modifié {sortField === "date" && <SortIcon className="size-3" />}
       </button>
-      <div className="size-7 shrink-0" />
+      <div className="size-10 shrink-0" />
     </div>
   );
 }
@@ -136,6 +135,8 @@ type Props = {
   onDropItem?: (sourceItemId: string, target: DriveItem) => void;
   onDropExternalFiles?: (files: File[], target: DriveItem) => void;
   onBulkAction?: (action: BulkAction, items: DriveItem[]) => void;
+  /** La sélection courante, remontée pour la barre du bas (dock). Doit être stable (useCallback). */
+  onSelectionChange?: (items: DriveItem[], clear: () => void) => void;
   empty?: { title: string; description: string };
   /** Shows an "Envoyer des fichiers" button in the empty state. */
   onEmptyUpload?: () => void;
@@ -154,6 +155,7 @@ export function DriveExplorer({
   onDropItem,
   onDropExternalFiles,
   onBulkAction,
+  onSelectionChange,
   empty,
   onEmptyUpload,
 }: Props) {
@@ -256,6 +258,12 @@ export function DriveExplorer({
     return sortItems(filterItems(items, filterKind), sortField, sortDir);
   }, [items, filterKind, sortField, sortDir]);
 
+  // La barre du bas (dock) montre la sélection : on la lui remonte, et on la vide en partant.
+  React.useEffect(() => {
+    onSelectionChange?.(processed.filter((i) => selectedIds.has(i.id)), clearSelection);
+  }, [selectedIds, processed, onSelectionChange, clearSelection]);
+  React.useEffect(() => () => onSelectionChange?.([], () => {}), [onSelectionChange]);
+
   // Global keyboard shortcuts
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -317,15 +325,15 @@ export function DriveExplorer({
   // ── Loading skeleton ─────────────────────────────────────────────────────────
   if (items === undefined) {
     return viewMode === "grid" ? (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-52 animate-pulse rounded-2xl border border-border/40 bg-gradient-to-b from-card/50 to-card/20" />
+      <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:gap-x-10">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-60 animate-pulse rounded-[var(--cord-radius-card)] bg-[var(--cord-ink-2)]" />
         ))}
       </div>
     ) : (
-      <div className="overflow-hidden rounded-xl border border-border/40 bg-card/20">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-12 animate-pulse border-b border-border/30 bg-card/30 last:border-b-0" />
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-[84px] animate-pulse rounded-[20px] bg-[var(--cord-ink-2)]" />
         ))}
       </div>
     );
@@ -425,8 +433,6 @@ export function DriveExplorer({
   };
 
   // ── Bulk action helpers ──────────────────────────────────────────────────────
-  const selectedItems = processed.filter((i) => selectedIds.has(i.id));
-
   const itemProps = (item: DriveItem, index: number) => ({
     item,
     selected: selectedIds.has(item.id),
@@ -445,38 +451,34 @@ export function DriveExplorer({
     />
   );
 
-  // ── Selection bar (sticky, top-right) ────────────────────────────────────────
-  // Les actions groupées sont dans un menu déroulant « Actions » ancré en haut à
-  // droite (sticky) plutôt qu'une barre flottante en bas, qui recouvrait les
-  // derniers fichiers / la tab bar native et bloquait le scroll.
+  // ── Sélection ───────────────────────────────────────────────────────────────
+  // Les actions vivent dans la barre du bas (dock) : ici seulement l'entrée « Sélectionner »
+  // (utile au toucher, sans Ctrl/Maj) et « Tout / Terminé » une fois qu'on a commencé.
   const allSelected = processed.length > 0 && selectedIds.size === processed.length;
   const hasSelection = selectedIds.size > 0;
+  const barBtn = "cord-button h-10 px-4 text-sm";
   const selectBar = !onBulkAction ? null : selectMode || hasSelection ? (
-    <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-      <span className="mr-auto text-xs font-medium tabular-nums text-muted-foreground">
-        {selectedIds.size} sél.
+    <div className="mb-6 flex flex-wrap items-center justify-end gap-2.5">
+      <span className="mr-auto text-sm font-medium tabular-nums text-[var(--cord-dim)]">
+        {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
       </span>
-      <Button
-        variant="outline" size="sm" className="h-7 px-2.5 text-xs"
+      <button
+        type="button"
+        className={barBtn}
         onClick={() => setSelectedIds(allSelected ? new Set() : new Set(processed.map((i) => i.id)))}
       >
         {allSelected ? "Aucun" : "Tout"}
-      </Button>
-      <SelectionActionsMenu
-        count={selectedIds.size}
-        onAction={(action) => onBulkAction(action, selectedItems)}
-        className="h-7 px-2.5 text-xs"
-      />
-      <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs" onClick={clearSelection}>
+      </button>
+      <button type="button" className={barBtn} onClick={clearSelection}>
         Terminé
-      </Button>
+      </button>
     </div>
   ) : (
-    <div className="mb-3 flex items-center justify-end gap-2">
-      <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2.5 text-xs" onClick={() => setSelectMode(true)}>
-        <ListChecks className="size-3.5" />
+    <div className="mb-6 hidden items-center justify-end gap-2 pointer-coarse:flex">
+      <button type="button" className={cn(barBtn, "gap-2")} onClick={() => setSelectMode(true)}>
+        <ListChecks className="size-4" />
         Sélectionner
-      </Button>
+      </button>
     </div>
   );
 
@@ -494,19 +496,19 @@ export function DriveExplorer({
           const folders = withIndex.filter((x) => x.item.kind === "folder");
           const files = withIndex.filter((x) => x.item.kind !== "folder");
           return (
-            <div className="space-y-6">
+            <div className="space-y-12 lg:space-y-16">
               {folders.length > 0 && (
                 <section>
-                  {files.length > 0 && <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Dossiers</h2>}
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {files.length > 0 && <h2 className="mb-5 text-[15px] font-medium text-[var(--cord-dim)]">Dossiers</h2>}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
                     {folders.map(({ item, index }) => <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />)}
                   </div>
                 </section>
               )}
               {files.length > 0 && (
                 <section>
-                  {folders.length > 0 && <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Fichiers</h2>}
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  {folders.length > 0 && <h2 className="mb-5 text-[15px] font-medium text-[var(--cord-dim)]">Fichiers</h2>}
+                  <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 sm:gap-x-8 lg:gap-x-10 lg:gap-y-14">
                     {files.map(({ item, index }) => <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />)}
                   </div>
                 </section>
@@ -526,16 +528,18 @@ export function DriveExplorer({
     >
       {rubberBand}
       {selectBar}
-      <div className="overflow-hidden rounded-xl border border-border/40 bg-card/20">
+      <div>
         <ListHeader
           sortField={sortField}
           sortDir={sortDir}
           onSortChange={onSortChange}
           hasCheckbox={!!onBulkAction}
         />
-        {processed.map((item, index) => (
-          <DriveItemRow key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />
-        ))}
+        <div className="space-y-2">
+          {processed.map((item, index) => (
+            <DriveItemRow key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />
+          ))}
+        </div>
       </div>
     </div>
   );

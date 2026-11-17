@@ -6,6 +6,7 @@ import {
   FolderSync,
   Check,
   ChevronsUpDown,
+  Clock,
   CloudUpload,
   HardDrive,
   Images,
@@ -47,12 +48,12 @@ import {
   useDriveUsage,
 } from "@/lib/storage";
 import { tagDot } from "@/lib/tag-colors";
+import type { DriveSection } from "./sections";
 
-type SidebarSection = "files" | "favorites" | "vault" | "trash" | "tag";
 
 type Props = {
-  section: SidebarSection;
-  onSectionChange: (s: SidebarSection) => void;
+  section: DriveSection;
+  onSectionChange: (s: DriveSection) => void;
   onNavigateRoot: () => void;
   activeTag?: string | null;
   onTagSelect?: (tag: string) => void;
@@ -66,12 +67,8 @@ export function DriveSidebar(props: Props) {
 
   return (
     <>
-      {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col gap-4 border-r border-border/50 bg-card/30 p-4">
-        <SidebarContent {...props} onClose={undefined} />
-      </aside>
-
-      {/* ── Mobile drawer ───────────────────────────────────────────────── */}
+      {/* ── Tiroir (mobile) ─────────────────────────────────────────────────
+          Sur bureau la navigation est dans la barre du haut (drive-nav.tsx). */}
       <Sheet open={mobileOpen} onOpenChange={(open) => !open && onMobileClose?.()}>
         <SheetContent
           side="left"
@@ -166,6 +163,12 @@ function SidebarContent({
           icon={HardDrive}
           active={section === "files"}
           onClick={() => { onSectionChange("files"); onNavigateRoot(); close(); }}
+        />
+        <NavButton
+          label="Récents"
+          icon={Clock}
+          active={section === "recent"}
+          onClick={() => { onSectionChange("recent"); close(); }}
         />
         <NavButton
           label="Favoris"

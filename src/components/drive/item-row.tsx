@@ -147,8 +147,8 @@ export const DriveItemRow = React.memo(function DriveItemRow({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "group border-b border-border/30 transition-colors last:border-b-0",
-        selected && "bg-primary/5",
+        "group rounded-[20px] transition-colors",
+        selected && "bg-[color-mix(in_srgb,var(--cord-light-mid)_16%,transparent)]",
         dragOver && "bg-primary/10 ring-1 ring-inset ring-primary/40",
       )}
     >
@@ -167,38 +167,38 @@ export const DriveItemRow = React.memo(function DriveItemRow({
             onKeyDown={(e) => {
               if (e.key === "Enter") onDoubleClick?.(item);
             }}
-            className="flex items-center gap-3 px-3 py-2.5 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring hover:bg-violet-500/10 active:bg-violet-500/15 pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
+            className="flex min-h-[84px] items-center gap-4 rounded-[20px] px-4 py-3 outline-none hover:bg-[color-mix(in_srgb,var(--cord-light-mid)_9%,transparent)] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring active:bg-[color-mix(in_srgb,var(--cord-light-mid)_16%,transparent)] sm:min-h-[92px] sm:gap-7 sm:px-8 pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
             {...longPress.handlers}
           >
-            {/* Selection checkbox */}
+            {/* Case de sélection */}
             {onItemClick && (
               <div
                 onClick={(e) => { e.stopPropagation(); onItemClick(e, "toggle"); }}
                 className={cn(
-                  "flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md border-2 transition-all",
+                  "flex size-[26px] shrink-0 cursor-pointer items-center justify-center rounded-full border-[1.5px] transition-all",
                   selected
-                    ? "border-primary bg-primary text-primary-foreground opacity-100"
-                    : "border-muted-foreground/50 bg-background/80 opacity-0 group-hover:opacity-100",
+                    ? "border-[var(--cord-light-core)] bg-[var(--cord-light-core)] text-[var(--cord-ink)] opacity-100"
+                    : "border-[var(--cord-line-strong)] opacity-60 group-hover:opacity-100",
                 )}
               >
-                {selected && <Check className="size-3" />}
+                {selected && <Check className="size-3.5" strokeWidth={2.6} />}
               </div>
             )}
 
-            {/* File / folder icon */}
+            {/* Icône du fichier / dossier */}
             <div
               className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-md",
+                "flex size-[52px] shrink-0 items-center justify-center rounded-2xl sm:size-[60px]",
                 colorClass,
               )}
             >
-              <Icon className="size-4" />
+              <Icon className="size-5" />
             </div>
 
             {/* Name + tags + favorite star */}
-            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <span
-                className="truncate text-sm font-medium leading-tight"
+                className="truncate text-base font-medium leading-tight"
                 title={name}
               >
                 {name}
@@ -228,12 +228,12 @@ export const DriveItemRow = React.memo(function DriveItemRow({
             </div>
 
             {/* Kind label */}
-            <span className="hidden w-24 shrink-0 text-xs text-muted-foreground md:block">
+            <span className="hidden w-28 shrink-0 text-sm text-[var(--cord-dim)] md:block">
               {kindLabel}
             </span>
 
             {/* Size / child count */}
-            <span className="hidden w-20 shrink-0 text-right text-xs text-muted-foreground sm:block">
+            <span className="hidden w-24 shrink-0 text-right text-sm text-[var(--cord-dim)] sm:block">
               {isFolder
                 ? childCount === undefined
                   ? "—"
@@ -242,7 +242,7 @@ export const DriveItemRow = React.memo(function DriveItemRow({
             </span>
 
             {/* Modified date */}
-            <span className="hidden w-28 shrink-0 text-right text-xs text-muted-foreground lg:block">
+            <span className="hidden w-36 shrink-0 text-right text-sm text-[var(--cord-dim)] lg:block">
               {formatRelativeTime(mtime)}
             </span>
 

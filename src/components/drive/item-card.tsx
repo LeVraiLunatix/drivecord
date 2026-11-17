@@ -176,24 +176,26 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       onDrop={handleDrop}
       data-item-id={item.id}
       className={cn(
-        "group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border/40 bg-card/40 p-3 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-400/50 hover:bg-card/70 hover:shadow-[0_8px_30px_-10px_rgba(168,85,247,0.55)] active:scale-[0.97]",
-        selected && "border-primary/60 bg-primary/5",
-        dragOver &&
-          "border-primary scale-[1.02] bg-primary/10 shadow-md ring-2 ring-primary/30",
+        "group relative flex flex-col transition-transform duration-200 active:scale-[0.98]",
+        // Dossier : une tuile de verre KitCord. Fichier : la vignette seule, le nom en dessous.
+        isFolder && "cord-glass rounded-[var(--cord-radius-card)] hover:-translate-y-0.5",
+        isFolder && selected && "outline outline-2 outline-offset-4 outline-[var(--cord-light-mid)]",
+        dragOver && "scale-[1.02] outline outline-2 outline-offset-4 outline-primary",
       )}
     >
-      {/* Selection checkbox — visible on hover or when selected */}
+      {/* Case de sélection — visible au survol ou quand elle est cochée */}
       {onItemClick && (
         <div
           onClick={(e) => { e.stopPropagation(); onItemClick(e, "toggle"); }}
           className={cn(
-            "absolute left-1.5 top-1.5 z-10 flex size-5 cursor-pointer items-center justify-center rounded-md border-2 transition-all",
+            "absolute z-10 flex size-7 cursor-pointer items-center justify-center rounded-full border-[1.5px] transition-all",
+            isFolder ? "right-16 top-1/2 -translate-y-1/2" : "left-4 top-4",
             selected
-              ? "border-primary bg-primary text-primary-foreground opacity-100"
-              : "border-muted-foreground/50 bg-background/80 opacity-0 group-hover:opacity-100",
+              ? "border-[var(--cord-light-core)] bg-[var(--cord-light-core)] text-[var(--cord-ink)] opacity-100"
+              : "border-white/70 bg-black/35 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100",
           )}
         >
-          {selected && <Check className="size-3" />}
+          {selected && <Check className="size-3.5" strokeWidth={2.6} />}
         </div>
       )}
       <ContextMenu modal={false}>
@@ -211,50 +213,53 @@ export const DriveItemCard = React.memo(function DriveItemCard({
             onKeyDown={(e) => {
               if (e.key === "Enter") onDoubleClick?.(item);
             }}
-            className="flex flex-1 flex-col gap-2 outline-none focus-visible:outline-2 focus-visible:outline-ring pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
+            className="flex flex-1 flex-col gap-4 outline-none focus-visible:outline-2 focus-visible:outline-ring pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
             {...longPress.handlers}
           >
             {isFolder ? (
-              /* ── Folder: compact horizontal card ── */
-              <div className="flex items-center gap-3">
-                <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", colorClass)}>
-                  <Icon className="size-4" />
+              /* ── Dossier : tuile de verre, horizontale ── */
+              <div className="flex h-20 items-center gap-4 px-6">
+                <div className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", colorClass)}>
+                  <Icon className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold leading-tight" title={name}>{name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="truncate text-[15.5px] font-semibold leading-tight" title={name}>{name}</p>
+                  <p className="mt-1 truncate text-[13.5px] text-[var(--cord-dim)]" title={`Modifié ${formatRelativeTime(mtime)}`}>
                     {childCount === undefined ? "Dossier" : `${childCount} élément${childCount > 1 ? "s" : ""}`}
-                    {" · "}
-                    {formatRelativeTime(mtime)}
                   </p>
                 </div>
                 <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} />
               </div>
             ) : (
-              /* ── File: big preview on top, details below ── */
+              /* ── Fichier : grande vignette, le nom en dessous ── */
               <>
-                <div className="relative -mx-3 -mt-3 flex h-28 items-center justify-center overflow-hidden bg-muted/30">
+                <div
+                  className={cn(
+                    "relative flex h-44 items-center justify-center overflow-hidden rounded-[var(--cord-radius-card)] bg-[var(--cord-ink-2)] ring-1 ring-inset ring-[var(--cord-line)] sm:h-48",
+                    selected && "outline outline-2 outline-offset-4 outline-[var(--cord-light-mid)]",
+                  )}
+                >
                   {thumbnailUrl ? (
                     <img src={thumbnailUrl} alt={name} draggable={false} className="h-full w-full object-cover " />
                   ) : (
-                    <div className={cn("flex size-10 items-center justify-center rounded-lg", colorClass)}>
-                      <Icon className="size-5" />
+                    <div className={cn("flex size-14 items-center justify-center rounded-2xl", colorClass)}>
+                      <Icon className="size-7" />
                     </div>
                   )}
-                  {favorite && <Star className="absolute bottom-2 right-2 size-4 fill-amber-400 text-amber-400 drop-shadow" />}
-                  <div className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100">
-                    <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} className="bg-background/70 backdrop-blur hover:bg-background/90" />
+                  {favorite && <Star className="absolute bottom-3 right-3 size-4 fill-amber-400 text-amber-400 drop-shadow" />}
+                  <div className="absolute right-3 top-3 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100">
+                    <ItemMenuButton item={item} menu={menu} name={name} onAction={onAction} className="bg-black/55 backdrop-blur hover:bg-black/70" />
                   </div>
                 </div>
-                <div className="space-y-1 pt-1">
-                  <p className="truncate text-sm font-medium leading-tight" title={name}>{name}</p>
-                  <p className="text-xs text-muted-foreground">
+                <div className="space-y-1 px-1">
+                  <p className="truncate text-base font-medium leading-tight" title={name}>{name}</p>
+                  <p className="text-sm text-[var(--cord-dim)]">
                     {formatBytes(size ?? 0)}
                     {" · "}
                     {formatRelativeTime(mtime)}
                   </p>
                   {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-0.5">
+                    <div className="flex flex-wrap gap-1 pt-1">
                       {tags.slice(0, 2).map((t) => <TagBadge key={t} tag={t} />)}
                       {tags.length > 2 && <span className="self-center text-[10px] text-muted-foreground">+{tags.length - 2}</span>}
                     </div>
