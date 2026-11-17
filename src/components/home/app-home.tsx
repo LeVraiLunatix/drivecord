@@ -114,7 +114,7 @@ export function AppHome() {
           <Button asChild size="lg" className="group h-13 w-full gap-2 text-base">
             <Link href="/register">
               Créer un compte
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight className="size-4 transition-transform" />
             </Link>
           </Button>
         </motion.div>

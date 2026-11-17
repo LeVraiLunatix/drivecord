@@ -109,7 +109,7 @@ export function CordHero({
               type="button"
               onClick={() => start(primary.create)}
               disabled={busy !== null}
-              className="group relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-[#6E58F0] to-[#B842EC] px-3 text-sm font-semibold text-white shadow-lg shadow-[#8F4DEE]/30 outline-none transition hover:shadow-[#8F4DEE]/50 focus-visible:ring-3 focus-visible:ring-[#B842EC]/50 active:translate-y-px disabled:opacity-80"
+              className="group relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-[#6E58F0] to-[#B842EC] px-3 text-sm font-semibold text-white shadow-lg shadow-[#8F4DEE]/30 outline-none transition hover:shadow-[#8F4DEE]/50 focus-visible:ring-3 focus-visible:ring-[#B842EC]/50 disabled:opacity-80"
             >
               <span aria-hidden className="cord-sheen pointer-events-none absolute inset-0" />
               {busy === (primary.create ? "create" : "login") ? (
@@ -119,14 +119,14 @@ export function CordHero({
               )}
               <span className="relative whitespace-nowrap">{primary.label}</span>
               {!primary.create && (
-                <ArrowRight className="relative size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
+                <ArrowRight className="relative size-4 transition-transform motion-reduce:transition-none" />
               )}
             </button>
             <button
               type="button"
               onClick={() => start(secondary.create)}
               disabled={busy !== null}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#8F4DEE]/35 bg-[#8F4DEE]/[0.07] px-4 text-sm font-medium outline-none transition hover:border-[#8F4DEE]/60 hover:bg-[#8F4DEE]/[0.12] focus-visible:ring-3 focus-visible:ring-[#B842EC]/40 active:translate-y-px disabled:opacity-70"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#8F4DEE]/35 bg-[#8F4DEE]/[0.07] px-4 text-sm font-medium outline-none transition hover:border-[#8F4DEE]/60 hover:bg-[#8F4DEE]/[0.12] focus-visible:ring-3 focus-visible:ring-[#B842EC]/40 disabled:opacity-70"
             >
               {busy === (secondary.create ? "create" : "login") ? (
                 <Loader2 className="size-4 animate-spin" />

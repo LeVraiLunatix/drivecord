@@ -100,7 +100,7 @@ export function SeekBar({
       <div
         className={cn(
           "absolute size-3.5 -translate-x-1/2 rounded-full bg-white shadow-[0_0_12px_rgba(168,85,247,0.8)] transition-transform",
-          drag ? "scale-125" : "scale-0 group-hover:scale-100 group-focus-visible:scale-100",
+          drag ? "scale-125" : "scale-0 group-focus-visible:scale-100",
         )}
         style={{ left: `${pct}%` }}
       />

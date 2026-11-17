@@ -20,7 +20,7 @@ export function DocsPager() {
           className="group flex flex-col gap-1 rounded-xl border border-border/50 p-4 transition-colors hover:border-primary/40 hover:bg-card/50"
         >
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" />
+            <ArrowLeft className="size-3.5 transition-transform" />
             Précédent
           </span>
           <span className="font-medium text-foreground">{prev.title}</span>
@@ -35,7 +35,7 @@ export function DocsPager() {
         >
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             Suivant
-            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="size-3.5 transition-transform" />
           </span>
           <span className="font-medium text-foreground">{next.title}</span>
         </Link>

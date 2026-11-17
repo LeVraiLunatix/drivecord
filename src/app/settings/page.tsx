@@ -346,7 +346,7 @@ export default function SettingsPage() {
                 onClick={() => select(g.id)}
                 aria-current={on ? "page" : undefined}
                 className={cn(
-                  "group/nav relative flex shrink-0 items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all duration-200 active:scale-[0.97] lg:w-full",
+                  "group/nav relative flex shrink-0 items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all duration-200 lg:w-full",
                   on ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                   dim && "opacity-35",
                 )}
@@ -364,7 +364,7 @@ export default function SettingsPage() {
                     g.tint,
                     on
                       ? "shadow-lg"
-                      : "scale-95 opacity-60 grayscale group-hover/nav:scale-105 group-hover/nav:opacity-100 group-hover/nav:grayscale-0",
+                      : "scale-95 opacity-60 grayscale group-hover/nav:opacity-100 group-hover/nav:grayscale-0",
                   )}
                 >
                   <Icon className="size-[18px]" />

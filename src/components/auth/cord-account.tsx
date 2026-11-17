@@ -235,7 +235,7 @@ export function CordAccountCard({
                     Ton espace Drivecord et tes notifications, dans le hub Cord
                   </p>
                 </div>
-                <ExternalLink className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
+                <ExternalLink className="size-3.5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none" />
               </a>
             )}
 

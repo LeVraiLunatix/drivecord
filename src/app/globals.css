@@ -792,3 +792,14 @@ body.drive-ui .cord-word-inner { animation: none; }
 body.drive-ui .cord-menu-panel,
 body.drive-ui .cord-menu-panel a { animation: none; }
 body.drive-ui .cord-spot { display: none; }
+
+/* ───────── Aucun effet au clic ─────────
+   Le kit écrase les boutons quand on appuie, avec un petit rebond : on garde seulement le changement de couleur. */
+.cord-button,
+.cord-menu-button {
+  transition: background 150ms, border-color 150ms;
+}
+.cord-button:active,
+.cord-menu-button:active {
+  scale: 1;
+}
