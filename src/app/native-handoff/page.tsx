@@ -69,7 +69,7 @@ export default function NativeHandoffPage() {
       ) : (
         <>
           <Loader2 className="size-7 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Connexion réussie — retour à l&apos;app…</p>
+          <p className="text-sm text-muted-foreground">Connexion réussie, retour à l&apos;app…</p>
           {deepLink && (
             <Button asChild className="mt-2 gap-2">
               <a href={deepLink}>

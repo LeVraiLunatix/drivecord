@@ -96,7 +96,10 @@ function DriveContent() {
   const client = useDiscordClient();
   const enqueue = useUploadQueue((s) => s.enqueue);
 
-  const [section, setSection] = React.useState<Section>("files");
+  // On arrive par défaut sur l'Accueil (la recherche d'abord) ; un lien /drive?section=… garde la main.
+  const [section, setSection] = React.useState<Section>(() =>
+    !searchParams.get("section") && useAppearance.getState().appearance.startPage === "home" ? "home" : "files",
+  );
   // Bottom tab bar deep-links: /drive?section=vault → open the vault section,
   // and back to /drive (no param) → files. Only reacts when `section` itself
   // changes, so other params (?open=…) don't reset Favoris/Corbeille.
@@ -107,14 +110,6 @@ function DriveContent() {
     lastSectionParam.current = sec;
     setSection(sec === "vault" ? "vault" : "files");
   }, [searchParams]);
-  // Sans lien précis, la première ouverture suit le choix de l'utilisateur (Réglages › Apparence).
-  const startedRef = React.useRef(false);
-  React.useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    if (!searchParams.get("section") && useAppearance.getState().appearance.startPage === "home") setSection("home");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   // A tab tap on the URL already shown changes nothing in the router (e.g.
   // « Fichiers » while in Favoris via the drive menu): the native bridge
   // announces every tap so the section still follows the tab.
@@ -823,6 +818,7 @@ function DriveContent() {
         onFolderUpload={section === "files" && !searching ? () => folderInputRef.current?.click() : undefined}
         onNewFolder={(section === "files" || section === "home") && !searching ? () => setNewFolderOpen(true) : undefined}
         inTrash={section === "trash"}
+        hideDefaultBar={section === "home"}
         tabs={{
           section,
           onSection: (s) => { if (s === "files") resetHistory(ROOT_PARENT); setSection(s); },

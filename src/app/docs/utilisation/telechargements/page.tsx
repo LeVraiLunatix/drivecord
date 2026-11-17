@@ -15,7 +15,7 @@ export default function Page() {
   return (
     <DocPage
       title="Téléchargements"
-      lead="Récupère un fichier seul, ou un dossier complet en archive ZIP — et dans l'app, tes médias vont droit dans la galerie."
+      lead="Récupère un fichier seul, ou un dossier complet en archive ZIP, et dans l'app, tes médias vont droit dans la galerie."
     >
       <DocH2>Un fichier ou plusieurs</DocH2>
       <p>

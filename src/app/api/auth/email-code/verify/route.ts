@@ -21,7 +21,7 @@ import {
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  expired: "Code expiré — demandes-en un nouveau.",
+  expired: "Code expiré, demandes-en un nouveau.",
   invalid: "Code incorrect.",
   too_many: "Trop de tentatives. Demande un nouveau code.",
   not_found: "Aucun code en attente. Demande un nouveau code.",

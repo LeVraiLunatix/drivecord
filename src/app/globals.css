@@ -803,3 +803,16 @@ body.drive-ui .cord-spot { display: none; }
 .cord-menu-button:active {
   scale: 1;
 }
+
+/* La lumière du bas reste allumée mais ne bouge plus : ni lever, ni « respiration » en boucle.
+   Elle s'estompe seulement quand on descend dans la page (un fondu lié au défilement). */
+body.drive-ui .cord-glow { animation: none; }
+body.drive-ui .cord-glow::before,
+body.drive-ui .cord-glow::after { animation: none; }
+@supports (animation-timeline: scroll()) {
+  body.drive-ui .cord-glow {
+    animation: cord-fade linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 70svh;
+  }
+}

@@ -112,7 +112,7 @@ export function PersonalTokensManager() {
 
       {revealed && (
         <div className="space-y-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-3">
-          <p className="text-xs font-medium text-violet-300">Jeton « {revealed.name} » créé — copie-le maintenant, il ne sera plus jamais affiché.</p>
+          <p className="text-xs font-medium text-violet-300">Jeton « {revealed.name} » créé, copie-le maintenant, il ne sera plus jamais affiché.</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded bg-background/60 px-2 py-1.5 text-xs">{revealed.token}</code>
             <Button size="icon" variant="ghost" className="size-8 shrink-0" aria-label="Copier le jeton" onClick={() => { navigator.clipboard.writeText(revealed.token); toast.success("Copié."); }}>

@@ -43,6 +43,8 @@ type Props = {
   onNewFolder?: () => void;
   /** Dans la corbeille : restaurer / supprimer définitivement. */
   inTrash?: boolean;
+  /** Sur l'Accueil, les mêmes actions sont déjà au milieu de la page : on garde seulement la barre d'onglets. */
+  hideDefaultBar?: boolean;
   /** Téléphone (web) : barre d'onglets du bas, avec « + » qui ouvre le menu « Nouveau ». */
   tabs?: {
     section: DriveSection;
@@ -71,6 +73,7 @@ export function DriveDock({
   onFolderUpload,
   onNewFolder,
   inTrash,
+  hideDefaultBar,
   tabs,
 }: Props) {
   const count = selection.length;
@@ -159,6 +162,7 @@ export function DriveDock({
       onUpload={inTrash ? undefined : onUpload}
       onFolderUpload={onFolderUpload}
       onNewFolder={onNewFolder}
+      hideDefaultBar={hideDefaultBar}
       tabs={tabs}
     />
   );
@@ -169,8 +173,9 @@ function DefaultDock({
   onUpload,
   onFolderUpload,
   onNewFolder,
+  hideDefaultBar,
   tabs,
-}: Pick<Props, "onUpload" | "onFolderUpload" | "onNewFolder" | "tabs">) {
+}: Pick<Props, "onUpload" | "onFolderUpload" | "onNewFolder" | "hideDefaultBar" | "tabs">) {
   const [newOpen, setNewOpen] = React.useState(false);
   if (!onUpload && !tabs) return null;
 
@@ -243,7 +248,7 @@ function DefaultDock({
         </nav>
       )}
 
-      {onUpload && (
+      {onUpload && !hideDefaultBar && (
         <div role="toolbar" aria-label="Actions" className="drive-dock drive-dock-default cord-glass flex items-center gap-2 p-2.5 sm:gap-3 sm:p-3">
           <button type="button" data-primary className={PILL} onClick={onUpload}>
             <Upload className="size-[18px]" />

@@ -48,7 +48,7 @@ export const DELETE = v1Route<Params>({ route: "/api/v1/folders/[id]", scope: "f
   const files = await prisma.driveFile.findMany({ where: { webhookId, parentId: { in: subtreeIds } } });
   const failures = await deleteFileMessages(auth.webhook, files);
   if (failures.length > 0) {
-    throw new HttpError(502, `Échec de nettoyage Discord pour ${failures.length}/${files.length} fichier(s). Rien n'a été supprimé — réessaie.`, {
+    throw new HttpError(502, `Échec de nettoyage Discord pour ${failures.length}/${files.length} fichier(s). Rien n'a été supprimé, réessaie.`, {
       extra: { failedFiles: failures.slice(0, 50) },
     });
   }

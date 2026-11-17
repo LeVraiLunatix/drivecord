@@ -165,7 +165,7 @@ export function ViewControls({
           type="button"
           className="cord-menu-button inline-flex size-11 items-center justify-center sm:size-[46px]"
           onClick={toggleDir}
-          title={sortDir === "asc" ? "Croissant — cliquer pour inverser" : "Décroissant — cliquer pour inverser"}
+          title={sortDir === "asc" ? "Croissant, cliquer pour inverser" : "Décroissant, cliquer pour inverser"}
           aria-label={sortDir === "asc" ? "Tri croissant, inverser" : "Tri décroissant, inverser"}
         >
           {sortDir === "asc" ? <ArrowUpAZ className="size-[18px]" /> : <ArrowDownAZ className="size-[18px]" />}

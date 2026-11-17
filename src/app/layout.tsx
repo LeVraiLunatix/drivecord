@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://drivecord.app"),
 
   title: {
-    default: "Drivecord — Stockage cloud sécurisé, chiffré et illimité",
+    default: "Drivecord : stockage cloud sécurisé, chiffré et illimité",
     template: "%s · Drivecord",
   },
 
@@ -106,10 +106,16 @@ export const metadata: Metadata = {
     images: ["/icon.png"],
   },
 
+  // Le logo KitCord, en plusieurs tailles nettes pour l'onglet (un 1024 px réduit par le navigateur
+  // est flou à 16 px). Le ?v= force les navigateurs à oublier l'ancienne icône gardée en cache.
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    icon: [
+      { url: "/favicon.ico?v=3", sizes: "48x48" },
+      { url: "/icon-32.png?v=3", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png?v=3", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico?v=3",
+    apple: "/icon.png?v=3",
   },
 
   manifest: "/manifest.webmanifest",

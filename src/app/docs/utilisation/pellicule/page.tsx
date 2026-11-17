@@ -15,7 +15,7 @@ export default function Page() {
   return (
     <DocPage
       title="Pellicule"
-      lead="Sauvegarde la pellicule de ton iPhone dans un drive Drivecord — tes albums deviennent des dossiers, automatiquement."
+      lead="Sauvegarde la pellicule de ton iPhone dans un drive Drivecord, tes albums deviennent des dossiers, automatiquement."
     >
       <Callout variant="info" title="Fonction de l'app iOS">
         La sauvegarde de la pellicule se fait depuis l&apos;<strong>app native

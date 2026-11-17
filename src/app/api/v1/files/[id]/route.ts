@@ -33,7 +33,7 @@ export const DELETE = v1Route<Params>({ route: "/api/v1/files/[id]", scope: "fil
   const failures = await deleteFileMessages(auth.webhook, [row]);
   if (failures.length > 0) {
     // A real cleanup failure must not drop metadata for messages still live on Discord.
-    throw new HttpError(502, "Échec de nettoyage Discord — rien n'a été supprimé, réessaie.");
+    throw new HttpError(502, "Échec de nettoyage Discord, rien n'a été supprimé, réessaie.");
   }
   await prisma.$transaction([
     prisma.share.deleteMany({ where: { fileId: id, webhookId: auth.webhook.id } }),

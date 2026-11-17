@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useSession } from "next-auth/react";
 import { useTier } from "@/components/patreon/tier";
+import { Glow } from "@/kitcord";
 import { effectiveStudio, useStudio, type BackdropStyle } from "@/lib/theme-studio";
 import { backgroundCss, useAppearanceValue, useBgImage, type Appearance } from "@/lib/appearance";
 
@@ -66,6 +67,8 @@ export function DriveBackdrop({ forceTier, previewStyle }: { forceTier?: number;
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <BackgroundLayer a={a} image={image} />
+      {/* La lumière du bas, signature de KitCord : sans étincelles ni halo de curseur. */}
+      {a.light && <Glow sparks={false} cursor={false} />}
       {style === "ribbons" && <Ribbons hue={hue} speed={eff.speed} k={k} />}
       {style === "grid" && <NeonGrid pal={pal} speed={eff.speed} k={k} />}
       {(style === "particles" || style === "constellation" || style === "stars") && (

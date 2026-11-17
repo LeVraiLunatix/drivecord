@@ -15,7 +15,7 @@ export default function Page() {
   return (
     <DocPage
       title="API publique"
-      lead="Une clé API te permet d'uploader, lister, télécharger et supprimer des fichiers d'un drive directement depuis le serveur d'un autre site — sans passer par cette interface."
+      lead="Une clé API te permet d'uploader, lister, télécharger et supprimer des fichiers d'un drive directement depuis le serveur d'un autre site, sans passer par cette interface."
     >
       <Callout variant="warning" title="API dépréciée">
         La v1 est gelée et sera retirée le 30 septembre 2027. Utilise l&apos;<a href="https://developers.cordsuite.app/api/drivecord">API v2</a> (chiffrée de bout en bout).
@@ -75,7 +75,7 @@ export default function Page() {
 
       <DocH2>Uploader un fichier</DocH2>
       <p>
-        <code>POST /api/v1/files</code> — <code>multipart/form-data</code>{" "}
+        <code>POST /api/v1/files</code> : <code>multipart/form-data</code>{" "}
         avec un champ <code>file</code>, et optionnellement{" "}
         <code>parentId</code> (dossier cible) et <code>filename</code>.
       </p>
@@ -137,7 +137,7 @@ curl -X POST https://ton-domaine.tld/api/v1/files \\
       <Callout variant="tip" title="Chaque morceau reste sous la limite de requête">
         Chaque appel à <code>/api/v1/files/chunks</code> ne transporte qu&apos;un
         seul morceau (max ~10 Mio), donc il ne rencontre jamais la limite de
-        requête de l&apos;hébergeur — seul le nombre d&apos;appels change avec
+        requête de l&apos;hébergeur, seul le nombre d&apos;appels change avec
         la taille du fichier.
       </Callout>
 
@@ -160,15 +160,15 @@ curl -X POST https://ton-domaine.tld/api/v1/files \\
       </p>
       <ul>
         <li>
-          <code>recursive=1</code> — tout le drive d&apos;un coup, pas seulement
+          <code>recursive=1</code> : tout le drive d&apos;un coup, pas seulement
           un dossier.
         </li>
         <li>
-          <code>updatedSince=&lt;ms&gt;</code> — uniquement les fichiers modifiés
+          <code>updatedSince=&lt;ms&gt;</code> : uniquement les fichiers modifiés
           après cet horodatage Unix en millisecondes (comparaison stricte).
         </li>
         <li>
-          <code>cursor=&lt;valeur&gt;</code> — pagination : réutilise le{" "}
+          <code>cursor=&lt;valeur&gt;</code> : pagination, réutilise le{" "}
           <code>nextCursor</code> renvoyé par la page précédente jusqu&apos;à ce
           qu&apos;il soit <code>null</code>. <code>limit</code> monte à 500 dans
           ce mode (200 par défaut).
@@ -203,7 +203,7 @@ curl "https://ton-domaine.tld/api/v1/folders?recursive=1" \\
   -H "Authorization: Bearer dvc_xxx"
 # → { "folders": [ { "id": "...", "name": "...", "parentId": "" }, … ] }
 
-# créer  (parentId optionnel — absent = racine)
+# créer  (parentId optionnel, absent = racine)
 curl -X POST https://ton-domaine.tld/api/v1/folders \\
   -H "Authorization: Bearer dvc_xxx" \\
   -H "Content-Type: application/json" \\
@@ -214,7 +214,7 @@ curl -X POST https://ton-domaine.tld/api/v1/folders \\
 curl https://ton-domaine.tld/api/v1/folders/abc123 \\
   -H "Authorization: Bearer dvc_xxx"
 
-# supprimer — récursif : le dossier, ses sous-dossiers et tous les fichiers
+# supprimer, récursif : le dossier, ses sous-dossiers et tous les fichiers
 # qu'ils contiennent (messages Discord compris)
 curl -X DELETE https://ton-domaine.tld/api/v1/folders/abc123 \\
   -H "Authorization: Bearer dvc_xxx"`}</code>
@@ -241,7 +241,7 @@ curl -X DELETE https://ton-domaine.tld/api/v1/folders/abc123 \\
       <DocH2>Lien public permanent (hotlink)</DocH2>
       <p>
         <code>POST /api/v1/files/:id/public</code> crée un lien{" "}
-        <strong>public, sans mot de passe, qui n&apos;expire pas</strong> —
+        <strong>public, sans mot de passe, qui n&apos;expire pas</strong>,
         utilisable directement dans un <code>{`<img src>`}</code>, une balise{" "}
         <code>{`<a>`}</code> ou un <code>fetch()</code>, sans en-tête{" "}
         <code>Authorization</code>. Un seul lien public actif par fichier :

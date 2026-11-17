@@ -36,7 +36,7 @@ export default function DocsHome() {
             Bienvenue dans la doc Drivecord
           </h1>
           <p className="mt-3 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            Ton cloud illimité propulsé par Discord — chiffré de bout en bout,
+            Ton cloud illimité propulsé par Discord, chiffré de bout en bout,
             sans serveur de fichiers et sans abonnement. Voici tout ce qu'il faut
             pour bien démarrer.
           </p>

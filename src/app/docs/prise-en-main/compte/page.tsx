@@ -24,11 +24,11 @@ export default function Page() {
       </p>
       <ul>
         <li>
-          Le <strong>webhook Discord</strong>{" "}— c'est lui qui stocke réellement
+          Le <strong>webhook Discord</strong>{" "}: c'est lui qui stocke réellement
           tes fichiers. Sans webhook, pas de drive.
         </li>
         <li>
-          Le <strong>compte</strong>{" "}(email, Google ou Discord) — une couche{" "}
+          Le <strong>compte</strong>{" "}(email, Google ou Discord), une couche{" "}
           <strong>facultative</strong>{" "}qui sauvegarde la liste de tes webhooks
           et la synchronise entre ton navigateur et l'app iPhone.
         </li>

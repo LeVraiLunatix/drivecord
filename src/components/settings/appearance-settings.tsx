@@ -183,6 +183,13 @@ export function AppearanceSettings() {
               options={(Object.keys(RADII) as (keyof typeof RADII)[]).map((k) => ({ value: k, label: RADII[k].label }))}
             />
           </Row>
+          <Row label="Lumière du bas" hint="La lueur KitCord derrière ton drive">
+            <Seg
+              value={a.light ? "on" : "off"}
+              onChange={(v) => set({ light: v === "on" })}
+              options={[{ value: "on", label: "Allumée" }, { value: "off", label: "Éteinte" }]}
+            />
+          </Row>
           <Row label="Panneaux" hint="Verre dépoli ou fond plein">
             <Seg
               value={a.glass ? "glass" : "solid"}
@@ -212,7 +219,7 @@ export function AppearanceSettings() {
             <Seg
               value={a.startPage}
               onChange={(v) => set({ startPage: v })}
-              options={[{ value: "files", label: "Mes fichiers" }, { value: "home", label: "Accueil" }]}
+              options={[{ value: "home", label: "Accueil" }, { value: "files", label: "Mes fichiers" }]}
             />
           </Row>
         </Section>
@@ -230,6 +237,12 @@ function Preview({ a, image }: { a: Appearance; image: string | null }) {
       aria-label="Aperçu de ton drive"
     >
       <BackgroundLayer a={a} image={image} />
+      {a.light && (
+        <div
+          className="absolute inset-x-0 bottom-0 h-3/4"
+          style={{ background: "radial-gradient(75% 85% at 50% 115%, color-mix(in srgb, var(--cord-light-mid) 75%, transparent), color-mix(in srgb, var(--cord-light-mid) 28%, transparent) 42%, transparent 74%)" }}
+        />
+      )}
       <div className="relative flex h-full flex-col gap-4 p-4 sm:p-5">
         <div className="cord-glass flex h-10 items-center gap-3 rounded-[var(--cord-radius-pill)] px-4 text-xs text-[var(--cord-text)]">
           <span className="font-semibold" style={{ color: "var(--cord-light-mid)" }}>Drivecord</span>

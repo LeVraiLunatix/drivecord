@@ -30,7 +30,7 @@ export default function Page() {
           Disbox
         </a>
         . L&apos;idée est simple : Discord héberge gratuitement les pièces
-        jointes, alors on s&apos;en sert comme d&apos;un disque dur en ligne —
+        jointes, alors on s&apos;en sert comme d&apos;un disque dur en ligne,
         mais en chiffrant tout <strong>avant</strong>{" "}que ça ne quitte ton
         appareil.
       </p>
@@ -38,21 +38,21 @@ export default function Page() {
       <DocH2>Pourquoi Drivecord</DocH2>
       <ul>
         <li>
-          <strong>Stockage illimité</strong>{" "}— les fichiers sont découpés en{" "}
+          <strong>Stockage illimité</strong>{" "}: les fichiers sont découpés en{" "}
           <em>chunks</em>{" "}et envoyés en parallèle, ce qui dépasse la limite de
           taille d&apos;un message Discord.
         </li>
         <li>
-          <strong>Chiffrement E2EE</strong>{" "}— un coffre chiffré en{" "}
+          <strong>Chiffrement E2EE</strong>{" "}: un coffre chiffré en{" "}
           <code>AES-256-GCM</code>{" "}côté client : Discord ne voit que des blocs
           illisibles.
         </li>
         <li>
-          <strong>Partage avancé</strong>{" "}— liens publics avec mot de passe,
+          <strong>Partage avancé</strong>{" "}: liens publics avec mot de passe,
           date d&apos;expiration et compteur de téléchargements.
         </li>
         <li>
-          <strong>App native iOS</strong>{" "}— vraie app installable, avec Face ID
+          <strong>App native iOS</strong>{" "}: vraie app installable, avec Face ID
           et sauvegarde dans la pellicule.
         </li>
       </ul>
@@ -95,7 +95,7 @@ déchiffrement  ◀──  réassemblage  ◀──  proxy anti-expiration  ◀�
       </p>
       <Callout variant="warning" title="Conditions d'utilisation de Discord">
         Stocker des fichiers arbitraires via les webhooks peut entrer en tension
-        avec les CGU de Discord. Drivecord est un projet personnel et éducatif —
+        avec les CGU de Discord. Drivecord est un projet personnel et éducatif,
         utilise-le de façon responsable et à tes risques.
       </Callout>
 
@@ -117,7 +117,7 @@ déchiffrement  ◀──  réassemblage  ◀──  proxy anti-expiration  ◀�
           title="Créer un compte"
           href="/docs/prise-en-main/compte"
         >
-          Email, Google ou Discord — une couche optionnelle pour synchroniser tes
+          Email, Google ou Discord, une couche optionnelle pour synchroniser tes
           webhooks sur tous tes appareils.
         </DocCard>
       </CardGrid>

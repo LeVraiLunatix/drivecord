@@ -454,7 +454,7 @@ export function PreviewModal({
             <FolderSymlink className="size-12 text-white/40" />
             <p className="text-sm">
               Vidéo volumineuse ({formatBytes(file.size)}). Le lecteur intégré ne
-              peut pas la charger — ouvre-la depuis ton dossier synchronisé,
+              peut pas la charger, ouvre-la depuis ton dossier synchronisé,
               l&apos;explorateur la lit en streaming sans tout mettre en mémoire.
             </p>
             <Button

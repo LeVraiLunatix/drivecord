@@ -190,7 +190,7 @@ function RecoveryKey() {
       </div>
       {fresh && (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">Nouvelle clé — <strong>affichée une seule fois</strong> :</p>
+          <p className="text-xs text-muted-foreground">Nouvelle clé, <strong>affichée une seule fois</strong> :</p>
           <RecoveryKeyDisplay groups={fresh} />
           <Button size="sm" onClick={() => setFresh(null)}>Je l&apos;ai enregistrée</Button>
         </div>

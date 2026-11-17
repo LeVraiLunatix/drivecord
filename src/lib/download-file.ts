@@ -63,7 +63,7 @@ export async function downloadFileWithToast(client: DiscordClient, item: FileIte
   inFlight.add(item.id);
   const ac = new AbortController();
   let id: string | number | undefined;
-  const label = (pct?: number) => `Téléchargement de « ${item.filename} »${pct === undefined ? "…" : ` — ${pct} %`} (${formatBytes(item.size)})`;
+  const label = (pct?: number) => `Téléchargement de « ${item.filename} »${pct === undefined ? "…" : `, ${pct} %`} (${formatBytes(item.size)})`;
   const show = (pct?: number) => {
     id = toast.loading(label(pct), { id, action: { label: "Annuler", onClick: () => ac.abort() } });
   };

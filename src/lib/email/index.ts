@@ -18,7 +18,7 @@ function getResend(): Resend {
   const key = process.env.AUTH_RESEND_KEY;
   if (!key) {
     throw new Error(
-      "AUTH_RESEND_KEY est manquant — impossible d'envoyer l'email de vérification.",
+      "AUTH_RESEND_KEY est manquant, impossible d'envoyer l'email de vérification.",
     );
   }
   return (_resend ??= new Resend(key));
@@ -85,7 +85,7 @@ function renderHtml(
             ${
               secureUrl
                 ? `<p style="font-size:13px;line-height:1.6;color:#7a7a8c;margin:14px 0 0;">Ce n'est pas toi qui essaies de te connecter ? <a href="${secureUrl}" style="color:#a78bfa;font-weight:600;text-decoration:none;">Sécurise ton compte &rarr;</a> (change ton mot de passe et déconnecte les appareils).</p>`
-                : `<p style="font-size:13px;line-height:1.6;color:#7a7a8c;margin:14px 0 0;">Si tu n'es pas à l'origine de cette demande, ignore cet email — ton compte reste protégé.</p>`
+                : `<p style="font-size:13px;line-height:1.6;color:#7a7a8c;margin:14px 0 0;">Si tu n'es pas à l'origine de cette demande, ignore cet email, ton compte reste protégé.</p>`
             }
           </td></tr>
         </table>

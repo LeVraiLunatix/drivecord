@@ -143,7 +143,7 @@ export default function SetupPage() {
             </CardTitle>
             <CardDescription>
               Drivecord crée pour toi un salon privé et un webhook sur son serveur
-              Discord officiel — pas besoin de créer ton propre serveur.
+              Discord officiel, pas besoin de créer ton propre serveur.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -151,8 +151,8 @@ export default function SetupPage() {
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
               <p>
                 Tes fichiers sont chiffrés sur ton appareil avant l&apos;envoi. Même
-                sur un salon Discord géré par Drivecord, personne — ni Discord, ni
-                l&apos;équipe Drivecord — ne peut lire leur contenu.
+                sur un salon Discord géré par Drivecord, personne, ni Discord, ni
+                l&apos;équipe Drivecord, ne peut lire leur contenu.
               </p>
             </div>
 
@@ -234,7 +234,7 @@ export default function SetupPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {autoState?.available ? "Méthode manuelle — mon propre serveur" : "URL du webhook"}
+            {autoState?.available ? "Méthode manuelle, mon propre serveur" : "URL du webhook"}
           </CardTitle>
           <CardDescription>
             Tes drives sont stockés <strong>localement</strong>{" "}dans ton

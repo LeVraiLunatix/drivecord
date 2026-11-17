@@ -106,7 +106,7 @@ async function botFetchOrThrow(path: string, init: RequestInit, context: string)
     }
     const body = await res.text().catch(() => "");
     throw new DiscordBotError(
-      `Échec Discord (${context}) : HTTP ${res.status}${body ? ` — ${body.slice(0, 200)}` : ""}`,
+      `Échec Discord (${context}) : HTTP ${res.status}${body ? `, ${body.slice(0, 200)}` : ""}`,
       502,
     );
   }
@@ -216,7 +216,7 @@ async function createUserChannel(
         type: 0, // GUILD_TEXT
         parent_id: categoryId,
         topic:
-          "Stockage chiffré Drivecord — géré automatiquement, ne pas modifier ni supprimer manuellement.",
+          "Stockage chiffré Drivecord, géré automatiquement, ne pas modifier ni supprimer manuellement.",
         // @everyone (id = guildId) : caché. Le bot : explicitement autorisé —
         // sans cet overwrite le bot ne pourrait pas voir son propre salon
         // pour y créer le webhook, puisque le deny @everyone s'appliquerait

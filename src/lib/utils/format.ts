@@ -4,7 +4,7 @@
 
 /** Human-readable byte size. 1.5 KiB, 12.3 MiB, etc. */
 export function formatBytes(n: number, fractionDigits = 1): string {
-  if (!Number.isFinite(n) || n < 0) return "—";
+  if (!Number.isFinite(n) || n < 0) return "-";
   if (n < 1024) return `${n} B`;
   const units = ["KiB", "MiB", "GiB", "TiB"];
   let v = n / 1024;

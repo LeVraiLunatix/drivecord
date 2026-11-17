@@ -36,11 +36,11 @@ export default function Page() {
       <DocH2>Les options</DocH2>
       <ul>
         <li>
-          <strong>Mot de passe</strong>{" "}— optionnel. Laissé vide, le lien est
+          <strong>Mot de passe</strong>{" "}: optionnel. Laissé vide, le lien est
           public ; renseigné, il faut le saisir pour accéder au fichier.
         </li>
         <li>
-          <strong>Expiration</strong>{" "}— <strong>Jamais</strong>,{" "}
+          <strong>Expiration</strong>{" "}: <strong>Jamais</strong>,{" "}
           <strong>1 jour</strong>, <strong>7 jours</strong>{" "}ou{" "}
           <strong>30 jours</strong>. Passé ce délai, le lien ne fonctionne plus.
         </li>

@@ -81,7 +81,7 @@ function Uploader() {
             </div>
           )}
           {err && <p className="text-xs text-red-400">{err}</p>}
-          <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><Lock className="size-3" />Chiffré sur ton appareil avant l&apos;envoi — {e.appName} ne voit jamais la clé.</p>
+          <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><Lock className="size-3" />Chiffré sur ton appareil avant l&apos;envoi, {e.appName} ne voit jamais la clé.</p>
         </>
       );
   }
