@@ -10,6 +10,7 @@ import { DriveNativeMenu } from "@/components/drive/native-menu";
 import { DriveNav } from "@/components/drive/drive-nav";
 import { DrivePageHead } from "@/components/drive/drive-page-head";
 import { DriveDock } from "@/components/drive/dock";
+import { DriveHome } from "@/components/drive/drive-home";
 import type { DriveSection } from "@/components/drive/sections";
 import { Glow } from "@/kitcord";
 import { CommandPalette } from "@/components/drive/command-palette";
@@ -41,6 +42,7 @@ import { VaultGate } from "@/components/drive/vault-gate";
 import { CordLinkPrompt } from "@/components/auth/cord-link-prompt";
 
 import { useDiscordClient } from "@/lib/discord/context";
+import { isDesktopApp } from "@/lib/use-platform";
 import { useUploadQueue } from "@/lib/upload-queue";
 import { useWebhookSync } from "@/components/auth/webhook-sync-provider";
 import { useViewPrefs } from "@/lib/view-prefs";
@@ -208,6 +210,7 @@ function DriveContent() {
   const [bulkTagItems, setBulkTagItems] = React.useState<DriveItem[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const folderInputRef = React.useRef<HTMLInputElement>(null);
+  const mediaInputRef = React.useRef<HTMLInputElement>(null);
 
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
@@ -220,6 +223,11 @@ function DriveContent() {
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+  // Les fenêtres (portails) du drive prennent le verre KitCord : la règle CSS dépend de cette classe.
+  React.useEffect(() => {
+    document.body.classList.add("drive-ui");
+    return () => document.body.classList.remove("drive-ui");
+  }, []);
   // Desktop tray "Ouvrir un drive" navigates here with ?open=<driveId>.
   React.useEffect(() => {
     if (!mounted || allDrives === undefined) return;
@@ -254,7 +262,7 @@ function DriveContent() {
   const items      = useDriveItems(driveId, currentFolderId);
   const searching = search.trim() !== "";
   // While searching "Tous les fichiers", look in the whole drive, not just the open folder.
-  const driveIndex = useDriveIndex(driveId, (searching && section === "files") || section === "recent");
+  const driveIndex = useDriveIndex(driveId, (searching && section === "files") || section === "recent" || section === "home");
   const favorites  = useFavorites(driveId);
   const trashed    = useTrashedItems(driveId);
   const taggedItems = useFilesByTag(driveId, activeTag);
@@ -279,7 +287,7 @@ function DriveContent() {
   const displayedItems = React.useMemo(() => {
     const base =
       section === "files" ? (searching ? driveIndex : items)
-      : section === "recent" ? recentItems
+      : section === "recent" || section === "home" ? recentItems
       : section === "favorites" ? favorites
       : section === "vault" ? vaultItems
       : section === "tag" ? taggedItems
@@ -582,7 +590,7 @@ function DriveContent() {
     (section === "vault" && !vaultUnlocked) ||
     (section !== "files" && (displayedItems?.length ?? 0) === 0);
   // Que propose la barre du bas quand rien n'est sélectionné : envoyer, seulement là où c'est possible.
-  const canUpload = (section === "files" && !searching) || (section === "vault" && vaultUnlocked);
+  const canUpload = ((section === "files" || section === "home") && !searching) || (section === "vault" && vaultUnlocked);
 
   return (
     <div className="isolate relative min-h-[100dvh]">
@@ -606,6 +614,7 @@ function DriveContent() {
           onNavigateRoot={() => { resetHistory(ROOT_PARENT); setSection("files"); }}
           activeTag={activeTag}
           onTagSelect={(tag) => { setActiveTag(tag); setSection("tag"); resetHistory(ROOT_PARENT); }}
+          onHome={() => { resetHistory(ROOT_PARENT); setSection("home"); }}
           onMenuOpen={() => setSidebarOpen(true)}
           nativeMenu={
             <DriveNativeMenu
@@ -619,7 +628,19 @@ function DriveContent() {
         />
 
         <main className="drive-wrap drive-pad flex flex-1 flex-col">
-          <DrivePageHead
+          {section === "home" && (
+            <DriveHome
+              recents={recentItems}
+              onUpload={() => fileInputRef.current?.click()}
+              onNewFolder={() => setNewFolderOpen(true)}
+              onBackup={() => router.push(isDesktopApp() ? "/desktop-sync" : "/backup")}
+              backupLabel={isDesktopApp() ? "Synchroniser un dossier" : "Sauvegarder ma pellicule"}
+              onAction={handleAction}
+              onPreviewFile={(id) => setPreviewFileId(id)}
+              onSeeAll={() => setSection("recent")}
+            />
+          )}
+          {section !== "home" && !(section === "vault" && !vaultUnlocked) && <DrivePageHead
             section={section}
             activeTag={activeTag}
             driveId={driveId}
@@ -641,7 +662,7 @@ function DriveContent() {
             filterKind={filterKind}
             onFilterChange={setFilterKind}
             hideControls={hideControls}
-          />
+          />}
           <CordLinkPrompt />
           {section === "vault" && !vaultUnlocked && (
             <VaultGate onUnlock={() => setVaultUnlocked(true)} />
@@ -710,6 +731,20 @@ function DriveContent() {
         }}
       />
 
+      {/* Photos et vidéos : le sélecteur de la galerie (menu « Nouveau » du téléphone) */}
+      <input
+        ref={mediaInputRef}
+        type="file"
+        multiple
+        accept="image/*,video/*"
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) handleUploadEntries(entriesFromFiles(files));
+          e.target.value = "";
+        }}
+      />
+
       {/* Folder picker (webkitdirectory) — recreates the folder tree on upload */}
       <input
         ref={folderInputRef}
@@ -770,6 +805,7 @@ function DriveContent() {
         siblings={previewSiblings}
         onClose={() => setPreviewFileId(null)}
         onNavigate={setPreviewFileId}
+        onAction={(action, f) => { void handleAction(action, { ...f, kind: "file" } as DriveItem); }}
       />
       <DriveDock
         selection={selection.items}
@@ -778,8 +814,15 @@ function DriveContent() {
         onItemAction={handleAction}
         onUpload={canUpload ? () => fileInputRef.current?.click() : undefined}
         onFolderUpload={section === "files" && !searching ? () => folderInputRef.current?.click() : undefined}
-        onNewFolder={section === "files" && !searching ? () => setNewFolderOpen(true) : undefined}
+        onNewFolder={(section === "files" || section === "home") && !searching ? () => setNewFolderOpen(true) : undefined}
         inTrash={section === "trash"}
+        tabs={{
+          section,
+          onSection: (s) => { if (s === "files") resetHistory(ROOT_PARENT); setSection(s); },
+          onShares: () => router.push("/shares"),
+          onUploadMedia: () => mediaInputRef.current?.click(),
+          onBackup: () => router.push(isDesktopApp() ? "/desktop-sync" : "/backup"),
+        }}
       />
       <UploadQueuePanel />
 

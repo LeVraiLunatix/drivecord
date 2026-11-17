@@ -36,7 +36,7 @@ import { fullSignOut } from "@/lib/auth/logout";
 import { isDesktopApp } from "@/lib/use-platform";
 import { tagDot } from "@/lib/tag-colors";
 import { setActiveDriveId, useActiveDrive, useAllDrives, useAllTags } from "@/lib/storage";
-import { useUploadQueue } from "@/lib/upload-queue";
+import { useUploadPercent } from "./use-upload-percent";
 import type { DriveSection } from "./sections";
 
 type Props = {
@@ -45,6 +45,8 @@ type Props = {
   onNavigateRoot: () => void;
   activeTag?: string | null;
   onTagSelect?: (tag: string) => void;
+  /** Le nom « Drivecord » ouvre l'accueil du drive. */
+  onHome?: () => void;
   /** Mobile web : ouvre le tiroir de navigation. */
   onMenuOpen?: () => void;
   /** App native : menu compact (drives + sections) placé à la place du bouton menu. */
@@ -57,25 +59,6 @@ const LINKS: { id: DriveSection; label: string }[] = [
   { id: "favorites", label: "Favoris" },
 ];
 
-/** Progression globale des envois en cours, en pourcentage (0–100), ou null s'il n'y en a pas. */
-function useUploadPercent(): { count: number; percent: number } | null {
-  const items = useUploadQueue((s) => s.items);
-  return React.useMemo(() => {
-    const live = items.filter((i) => i.status === "pending" || i.status === "uploading");
-    if (live.length === 0) return null;
-    let total = 0;
-    let loaded = 0;
-    for (const i of items) {
-      if (i.status === "error" || i.status === "cancelled") continue;
-      const size = Math.max(1, i.fileSize);
-      total += size;
-      if (i.status === "done") loaded += size;
-      else if (i.progress) loaded += Math.min(size, (i.progress.loaded / Math.max(1, i.progress.total)) * size);
-    }
-    return { count: live.length, percent: total > 0 ? Math.round((loaded / total) * 100) : 0 };
-  }, [items]);
-}
-
 /**
  * La barre du haut du drive : une pilule de verre KitCord. Les sections à gauche, la recherche,
  * l'état des envois et le compte à droite. Sur téléphone elle se réduit au nom, à la recherche
@@ -87,6 +70,7 @@ export function DriveNav({
   onNavigateRoot,
   activeTag,
   onTagSelect,
+  onHome,
   onMenuOpen,
   nativeMenu,
 }: Props) {
@@ -105,9 +89,15 @@ export function DriveNav({
       // Tauri : toute la barre déplace la fenêtre, sauf les boutons.
       data-tauri-drag-region="deep"
     >
-      <Link href="/" className="cord-wordmark shrink-0">
-        <Accent>Drivecord</Accent>
-      </Link>
+      {onHome ? (
+        <button type="button" className="cord-wordmark shrink-0 border-0 bg-transparent p-0" onClick={onHome} aria-label="Accueil du drive" aria-current={section === "home" ? "page" : undefined}>
+          <Accent>Drivecord</Accent>
+        </button>
+      ) : (
+        <Link href="/" className="cord-wordmark shrink-0">
+          <Accent>Drivecord</Accent>
+        </Link>
+      )}
 
       <nav aria-label="Sections" className="cord-toplinks hidden min-w-0 flex-1 justify-center gap-1.5 lg:flex">
         {LINKS.map((l) => (

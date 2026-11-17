@@ -3,7 +3,7 @@
 import * as React from "react";
 import { authFetch } from "@/lib/api-base";
 import { publicOrigin } from "@/lib/site-link";
-import { Copy, Check, Link2, Loader2, Trash2, ExternalLink } from "lucide-react";
+import { Copy, Check, Link2, Loader2, Lock, Trash2, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,11 +11,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
+import { cn } from "@/lib/utils";
+import { formatBytes } from "@/lib/utils/format";
 import type { DriveItem, FileEntry } from "@/lib/storage";
 import { b64urlEncode, wrapFileKeyForShare } from "@/lib/crypto/e2ee";
 import { getDriveKeyMaterialById } from "@/lib/e2ee-client/drive-keys";
@@ -149,88 +150,99 @@ export function ShareDialog({
     } catch { /* clipboard blocked */ }
   };
 
+  const fileName = item?.kind === "file" ? item.filename : "";
+  const note = e2ee && (
+    <div className="cord-note flex gap-3 text-sm text-[var(--cord-dim)]">
+      <Lock className="mt-0.5 size-4 shrink-0 text-[var(--cord-light-mid)]" />
+      <span>
+        {share?.hasPassword || (!share && password)
+          ? "Avec un mot de passe, le lien ne contient plus la clé : c'est le mot de passe qui la déverrouille."
+          : <>La clé de déchiffrement reste dans le lien, après le <span className="font-mono">#</span> : les navigateurs ne l&apos;envoient jamais à un serveur.</>}
+      </span>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Link2 className="size-4" /> Partager par lien
+      <DialogContent className="sm:max-w-[34rem]">
+        <DialogHeader className="gap-2 pr-10">
+          <DialogTitle className="cord-display text-[clamp(1.75rem,5vw,2.25rem)] leading-[1.05]">
+            Partager
+            <span className="block break-words" title={fileName}>{fileName}</span>
           </DialogTitle>
-          <DialogDescription className="truncate">
-            {item?.kind === "file" ? item.filename : ""}
+          <DialogDescription className="text-[var(--cord-dim)]">
+            {item?.kind === "file" ? formatBytes(item.size) : ""}
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex justify-center py-6"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center py-8"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>
         ) : share ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 overflow-hidden rounded-lg border border-border/60 bg-background/60 p-2">
-              <code className="block min-w-0 flex-1 truncate font-mono text-xs">{shareUrl}</code>
-              <Button
-                size="icon"
-                variant="secondary"
-                className="size-8 shrink-0"
-                onClick={copy}
-                title={copied ? "Copié" : "Copier le lien"}
-              >
-                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-              </Button>
+          <div className="min-w-0 space-y-6">
+            <div className="cord-glass flex h-16 w-full min-w-0 items-center gap-2 overflow-hidden rounded-full pl-6 pr-2">
+              <code className="min-w-0 flex-1 truncate font-mono text-[13px] text-[var(--cord-dim)]">{shareUrl}</code>
+              <button type="button" data-primary className="cord-button h-12 shrink-0 gap-2 px-5" onClick={copy}>
+                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copied ? "Copié" : "Copier"}
+              </button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {share.hasPassword ? "🔒 Protégé par mot de passe · " : ""}
-              {(() => {
-                if (!share.expiresAt) return "N'expire jamais";
-                const days = Math.ceil((share.expiresAt - Date.now()) / 86_400_000);
-                return days <= 0 ? "Expiré" : `Expire dans ${days} jour${days > 1 ? "s" : ""}`;
-              })()}
-            </p>
-            <div className="flex gap-2">
-              <Button asChild variant="outline" size="sm" className="gap-1.5">
-                <a href={shareUrl} target="_blank" rel="noopener noreferrer">
-                  Ouvrir <ExternalLink className="size-3.5" />
-                </a>
-              </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={revoke} disabled={busy}>
-                <Trash2 className="size-3.5" /> Révoquer
-              </Button>
+            <div className="space-y-1 px-1">
+              <p className="font-medium">
+                {(() => {
+                  if (!share.expiresAt) return "N'expire jamais";
+                  // eslint-disable-next-line react-hooks/purity
+                  const days = Math.ceil((share.expiresAt - Date.now()) / 86_400_000);
+                  return days <= 0 ? "Expiré" : `Expire dans ${days} jour${days > 1 ? "s" : ""}`;
+                })()}
+              </p>
+              <p className="text-sm text-[var(--cord-dim)]">{share.hasPassword ? "Protégé par un mot de passe" : "Sans mot de passe"}</p>
+            </div>
+            {note}
+            <div className="flex items-center justify-between gap-3">
+              <button type="button" className="cord-button h-12 gap-2 px-4 text-[var(--cord-light-warm)]" onClick={revoke} disabled={busy}>
+                <Trash2 className="size-4" /> Désactiver le lien
+              </button>
+              <a href={shareUrl} target="_blank" rel="noopener noreferrer" className="cord-button h-12 gap-2 px-5">
+                Ouvrir <ExternalLink className="size-4" />
+              </a>
             </div>
           </div>
         ) : legacyEncrypted ? (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-5">
+            <p className="text-sm text-[var(--cord-dim)]">
               Ce fichier utilise l&apos;ancien format de chiffrement : pour le partager sans exposer la clé de tout ton drive, il doit d&apos;abord être rechiffré.
             </p>
-            <Button className="w-full gap-2" onClick={convertThenClose} disabled={converting}>
+            <button type="button" data-primary className="cord-button h-12 w-full gap-2" onClick={convertThenClose} disabled={converting}>
               {converting && <Loader2 className="size-4 animate-spin" />} Rechiffrer ce fichier
-            </Button>
+            </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="share-pw">Mot de passe (optionnel)</Label>
-              <Input id="share-pw" type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide = public" autoComplete="off" />
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="share-pw" className="px-2 text-[var(--cord-dim)]">Mot de passe (optionnel)</Label>
+              <Input id="share-pw" type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide = public" autoComplete="off" className="h-14 rounded-full px-6 text-base" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Expiration</Label>
-              <div className="grid grid-cols-4 gap-1.5">
+            <div className="space-y-2">
+              <Label className="px-2 text-[var(--cord-dim)]">Expiration</Label>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                 {EXPIRY_OPTIONS.map((o) => (
                   <button
                     key={o.days}
+                    type="button"
+                    aria-pressed={expiryDays === o.days}
                     onClick={() => setExpiryDays(o.days)}
-                    className={`rounded-md border px-2 py-1.5 text-xs transition-colors ${
-                      expiryDays === o.days ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:bg-accent/60"
-                    }`}
+                    className={cn("cord-button h-12 px-3 text-sm", expiryDays === o.days && "ring-2 ring-[var(--cord-light-mid)]")}
                   >
                     {o.label}
                   </button>
                 ))}
               </div>
             </div>
-            <Button className="w-full gap-2" onClick={createOrUpdate} disabled={busy}>
+            {note}
+            <button type="button" data-primary className="cord-button h-[52px] w-full gap-2 text-base" onClick={createOrUpdate} disabled={busy}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
               Créer le lien
-            </Button>
+            </button>
           </div>
         )}
       </DialogContent>

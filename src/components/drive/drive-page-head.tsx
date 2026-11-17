@@ -68,6 +68,8 @@ export function DrivePageHead({
   let title: string;
   if (section === "files") {
     title = currentFolderId === ROOT_PARENT ? (drive?.name ?? "Mes fichiers") : (path?.[path.length - 1]?.name ?? "…");
+  } else if (section === "home") {
+    title = "Accueil";
   } else if (section === "tag") {
     title = `#${activeTag ?? ""}`;
   } else {
