@@ -454,11 +454,14 @@ export function DriveExplorer({
   // ── Sélection ───────────────────────────────────────────────────────────────
   // Les actions vivent dans la barre du bas (dock) : ici seulement l'entrée « Sélectionner »
   // (utile au toucher, sans Ctrl/Maj) et « Tout / Terminé » une fois qu'on a commencé.
+  // Avec une souris, « Tout / Terminé » flotte dans la marge sous le titre : elle n'a pas de place
+  // réservée, donc elle ne doit pas pousser les fichiers vers le bas quand on clique sur un élément.
+  // Au toucher, elle remplace le bouton « Sélectionner » de même hauteur : rien ne bouge non plus.
   const allSelected = processed.length > 0 && selectedIds.size === processed.length;
   const hasSelection = selectedIds.size > 0;
   const barBtn = "cord-button h-10 px-4 text-sm";
   const selectBar = !onBulkAction ? null : selectMode || hasSelection ? (
-    <div className="mb-6 flex flex-wrap items-center justify-end gap-2.5">
+    <div className="mb-6 flex flex-wrap items-center justify-end gap-2.5 pointer-fine:absolute pointer-fine:inset-x-0 pointer-fine:-top-11 pointer-fine:z-10 pointer-fine:mb-0 pointer-fine:flex-nowrap">
       <span className="mr-auto text-sm font-medium tabular-nums text-[var(--cord-dim)]">
         {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
       </span>
@@ -487,7 +490,7 @@ export function DriveExplorer({
     return (
       <div
       ref={explorerRef}
-      className="min-h-full"
+      className="relative min-h-full"
     >
         {rubberBand}
         {selectBar}
@@ -524,7 +527,7 @@ export function DriveExplorer({
   return (
     <div
       ref={explorerRef}
-      className="min-h-full"
+      className="relative min-h-full"
     >
       {rubberBand}
       {selectBar}
