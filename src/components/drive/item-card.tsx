@@ -179,9 +179,9 @@ export const DriveItemCard = React.memo(function DriveItemCard({
       onDrop={handleDrop}
       data-item-id={item.id}
       className={cn(
-        "group relative flex flex-col transition-transform duration-200 active:scale-[0.98]",
+        "group relative flex flex-col",
         // Dossier : une tuile de verre KitCord. Fichier : la vignette seule, le nom en dessous.
-        isFolder && "cord-glass rounded-[var(--cord-radius-card)] hover:-translate-y-0.5",
+        isFolder && "cord-glass rounded-[var(--cord-radius-card)]",
         isFolder && selected && "outline outline-2 outline-offset-4 outline-[var(--cord-light-mid)]",
         dragOver && "scale-[1.02] outline outline-2 outline-offset-4 outline-primary",
       )}
@@ -191,7 +191,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
         <div
           onClick={(e) => { e.stopPropagation(); onItemClick(e, "toggle"); }}
           className={cn(
-            "absolute z-10 flex size-7 cursor-pointer items-center justify-center rounded-full border-[1.5px] transition-all",
+            "absolute z-10 flex size-7 cursor-pointer items-center justify-center rounded-full border-[1.5px]",
             isFolder ? "right-16 top-1/2 -translate-y-1/2" : "left-4 top-4",
             selected
               ? "border-[var(--cord-light-core)] bg-[var(--cord-light-core)] text-[var(--cord-ink)] opacity-100"
@@ -221,7 +221,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
           >
             {isFolder ? (
               /* ── Dossier : tuile de verre, horizontale ── */
-              <div className="flex h-20 items-center gap-4 px-6">
+              <div className="flex h-[var(--drive-folder-h)] items-center gap-4 px-6">
                 <div className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", colorClass)}>
                   <Icon className="size-5" />
                 </div>
@@ -238,7 +238,7 @@ export const DriveItemCard = React.memo(function DriveItemCard({
               <>
                 <div
                   className={cn(
-                    "relative flex h-44 items-center justify-center overflow-hidden rounded-[var(--cord-radius-card)] bg-[var(--cord-ink-2)] ring-1 ring-inset ring-[var(--cord-line)] sm:h-48",
+                    "relative flex h-[var(--drive-thumb-h)] items-center justify-center overflow-hidden rounded-[var(--cord-radius-card)] bg-[var(--cord-ink-2)] ring-1 ring-inset ring-[var(--cord-line)]",
                     selected && "outline outline-2 outline-offset-4 outline-[var(--cord-light-mid)]",
                   )}
                 >

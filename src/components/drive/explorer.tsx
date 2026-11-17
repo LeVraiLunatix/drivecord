@@ -325,15 +325,15 @@ export function DriveExplorer({
   // ── Loading skeleton ─────────────────────────────────────────────────────────
   if (items === undefined) {
     return viewMode === "grid" ? (
-      <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:gap-x-10">
+      <div className="drive-files-grid">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-60 animate-pulse rounded-[var(--cord-radius-card)] bg-[var(--cord-ink-2)]" />
+          <div key={i} className="h-60 rounded-[var(--cord-radius-card)] bg-[var(--cord-ink-2)]" />
         ))}
       </div>
     ) : (
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-[84px] animate-pulse rounded-[20px] bg-[var(--cord-ink-2)]" />
+          <div key={i} className="h-[84px] rounded-[20px] bg-[var(--cord-ink-2)]" />
         ))}
       </div>
     );
@@ -500,7 +500,7 @@ export function DriveExplorer({
               {folders.length > 0 && (
                 <section>
                   {files.length > 0 && <h2 className="mb-5 text-[15px] font-medium text-[var(--cord-dim)]">Dossiers</h2>}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+                  <div className="drive-folders-grid">
                     {folders.map(({ item, index }) => <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />)}
                   </div>
                 </section>
@@ -508,7 +508,7 @@ export function DriveExplorer({
               {files.length > 0 && (
                 <section>
                   {folders.length > 0 && <h2 className="mb-5 text-[15px] font-medium text-[var(--cord-dim)]">Fichiers</h2>}
-                  <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 sm:gap-x-8 lg:gap-x-10 lg:gap-y-14">
+                  <div className="drive-files-grid">
                     {files.map(({ item, index }) => <DriveItemCard key={`${item.kind}-${item.id}`} {...itemProps(item, index)} />)}
                   </div>
                 </section>

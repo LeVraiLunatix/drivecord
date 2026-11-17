@@ -167,7 +167,7 @@ export const DriveItemRow = React.memo(function DriveItemRow({
             onKeyDown={(e) => {
               if (e.key === "Enter") onDoubleClick?.(item);
             }}
-            className="flex min-h-[84px] items-center gap-4 rounded-[20px] px-4 py-3 outline-none hover:bg-[color-mix(in_srgb,var(--cord-light-mid)_9%,transparent)] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring active:bg-[color-mix(in_srgb,var(--cord-light-mid)_16%,transparent)] sm:min-h-[92px] sm:gap-7 sm:px-8 pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
+            className="flex min-h-[var(--drive-row-h)] items-center gap-4 rounded-[20px] px-4 py-3 outline-none hover:bg-[color-mix(in_srgb,var(--cord-light-mid)_9%,transparent)] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring active:bg-[color-mix(in_srgb,var(--cord-light-mid)_16%,transparent)] sm:gap-7 sm:px-8 pointer-coarse:select-none pointer-coarse:[-webkit-touch-callout:none]"
             {...longPress.handlers}
           >
             {/* Case de sélection */}
@@ -175,7 +175,7 @@ export const DriveItemRow = React.memo(function DriveItemRow({
               <div
                 onClick={(e) => { e.stopPropagation(); onItemClick(e, "toggle"); }}
                 className={cn(
-                  "flex size-[26px] shrink-0 cursor-pointer items-center justify-center rounded-full border-[1.5px] transition-all",
+                  "flex size-[26px] shrink-0 cursor-pointer items-center justify-center rounded-full border-[1.5px]",
                   selected
                     ? "border-[var(--cord-light-core)] bg-[var(--cord-light-core)] text-[var(--cord-ink)] opacity-100"
                     : "border-[var(--cord-line-strong)] opacity-60 group-hover:opacity-100",

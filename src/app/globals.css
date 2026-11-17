@@ -771,46 +771,8 @@ html.is-desktop .drive-topbar-row { padding-right: 5.25rem; }
   100% { stroke-dashoffset: -100; opacity: 0.5; }
 }
 
-/* Teinte propre à chaque bouton (selon sa position parmi ses frères), appliquée
-   UNIQUEMENT au survol : au repos l'interface reste sobre. */
-:root { --fx: #a78bfa; }
-:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 1) { --fx: #818cf8; }
-:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 2) { --fx: #c084fc; }
-:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 3) { --fx: #f472b6; }
-:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 4) { --fx: #38bdf8; }
-:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):nth-child(5n + 5) { --fx: #fbbf24; }
-
-:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):not(:disabled):not([class*="destructive"]) > svg {
-  transition: color 0.2s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
-}
-:is(button, a, [role="button"], [role="menuitem"], [role="tab"]):not(:disabled):not([class*="destructive"]):hover > svg {
-  color: var(--fx);
-  transform: scale(1.14) rotate(-5deg);
-  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--fx) 55%, transparent));
-}
-[data-slot="button"]:is([data-variant="outline"], [data-variant="ghost"], [data-variant="secondary"]):not(:disabled):hover {
-  background: color-mix(in oklab, var(--fx) 13%, transparent);
-  border-color: color-mix(in oklab, var(--fx) 42%, transparent);
-}
-[data-slot="button"][data-variant="default"]:not(:disabled):hover {
-  box-shadow: 0 0 22px -4px color-mix(in oklab, var(--fx) 70%, transparent);
-}
-
-/* Anneau + éclats déclenchés au clic (voir components/click-fx.tsx). */
-.dc-fx-layer { position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; overflow: hidden; }
-.dc-fx-ring, .dc-fx-dot { position: absolute; border-radius: 9999px; will-change: transform, opacity; }
-.dc-fx-ring { border: 2px solid var(--c); }
-.dc-fx-dot { background: var(--c); box-shadow: 0 0 8px var(--c); }
-
-/* Fond animé du drive (version gratuite) : trois nappes qui dérivent lentement. */
-/* Soft by their radial-gradient background (drive-backdrop.tsx), not by a
-   `filter: blur(80px)`: animated, that blur crashed iPhone Safari. */
-.dc-blob { position: absolute; border-radius: 9999px; will-change: transform; }
-@keyframes dc-drift-a { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(8vw,6vh,0) scale(1.15); } }
-@keyframes dc-drift-b { 0%,100% { transform: translate3d(0,0,0) scale(1.1); } 50% { transform: translate3d(-9vw,-5vh,0) scale(0.9); } }
-@keyframes dc-drift-c { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-5vw,8vh,0) scale(1.2); } }
 @media (prefers-reduced-motion: reduce) {
-  .dc-blob, .dc-infinity { animation: none !important; }
+  .dc-infinity { animation: none !important; }
 }
 
 /* ───────── KitCord sur les pages de l'app ─────────
@@ -836,3 +798,76 @@ html.light .kit-page .cord-topbar {
 html.light .kit-page .cord-topbar::before {
   display: none;
 }
+
+/* ───────── Personnalisation du drive (Réglages › Apparence) ─────────
+   Posée sur <html> par AppearanceApplier : data-density, data-thumbs, data-glass. */
+:root {
+  --drive-gap-x: 2rem;
+  --drive-gap-y: 3rem;
+  --drive-folder-gap: 1.25rem;
+  --drive-folder-h: 5rem;
+  --drive-row-h: 84px;
+  --drive-thumb-h: 11rem;
+  --drive-thumb-min: 300px;
+  --drive-thumb-cols-mobile: 2;
+}
+html[data-density="compact"] {
+  --drive-gap-x: 1.25rem;
+  --drive-gap-y: 1.75rem;
+  --drive-folder-gap: 0.75rem;
+  --drive-folder-h: 4rem;
+  --drive-row-h: 60px;
+}
+html[data-density="airy"] {
+  --drive-gap-x: 2.75rem;
+  --drive-gap-y: 4.25rem;
+  --drive-folder-gap: 1.75rem;
+  --drive-folder-h: 6rem;
+  --drive-row-h: 104px;
+}
+html[data-thumbs="s"] { --drive-thumb-h: 8.5rem; --drive-thumb-min: 220px; --drive-thumb-cols-mobile: 3; }
+html[data-thumbs="l"] { --drive-thumb-h: 15rem; --drive-thumb-min: 420px; --drive-thumb-cols-mobile: 1; }
+@media (min-width: 640px) {
+  :root { --drive-thumb-h: 12rem; --drive-row-h: 92px; }
+  html[data-density="compact"] { --drive-row-h: 64px; }
+  html[data-density="airy"] { --drive-row-h: 112px; }
+  html[data-thumbs="s"] { --drive-thumb-h: 9rem; }
+  html[data-thumbs="l"] { --drive-thumb-h: 17rem; }
+}
+
+.drive-files-grid {
+  display: grid;
+  gap: var(--drive-gap-y) var(--drive-gap-x);
+  grid-template-columns: repeat(var(--drive-thumb-cols-mobile), minmax(0, 1fr));
+}
+.drive-folders-grid {
+  display: grid;
+  gap: var(--drive-folder-gap);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 640px) {
+  .drive-files-grid { grid-template-columns: repeat(auto-fill, minmax(var(--drive-thumb-min), 1fr)); }
+  .drive-folders-grid { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+}
+
+/* Sans verre : des panneaux pleins, plus sobres et plus lisibles sur une image. */
+html[data-glass="off"] .cord-glass,
+html[data-glass="off"] .cord-button:not([data-primary]),
+html[data-glass="off"] .cord-search-field,
+html[data-glass="off"] .cord-topbar,
+html[data-glass="off"] body.drive-ui [data-slot="dialog-content"],
+html[data-glass="off"] body.drive-ui [data-slot="alert-dialog-content"],
+html[data-glass="off"] .drive-sheet {
+  background: var(--cord-ink-2) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ───────── Sobriété : aucun effet de « démo » dans le drive ─────────
+   Pas de reflet qui traverse les boutons, de mot en dégradé qui coule, de menu qui rebondit. */
+body.drive-ui .cord-button::after { display: none; }
+body.drive-ui .cord-accent { animation: none; }
+body.drive-ui .cord-word-inner { animation: none; }
+body.drive-ui .cord-menu-panel,
+body.drive-ui .cord-menu-panel a { animation: none; }
+body.drive-ui .cord-spot { display: none; }
