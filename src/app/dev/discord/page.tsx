@@ -150,7 +150,7 @@ export default function DevDiscordPage() {
 
       setStage("ready");
       toast.success(
-        `Upload OK : ${m.chunks.length} chunk(s) en ${elapsed.toFixed(1)}s — persisté`,
+        `Upload OK : ${m.chunks.length} chunk(s) en ${elapsed.toFixed(1)}s, persisté`,
       );
     } catch (err) {
       setStage("valid");
@@ -227,7 +227,7 @@ export default function DevDiscordPage() {
 
       <div className="space-y-2">
         <Badge variant="secondary" className="font-mono">
-          dev only — phases 2 + 3
+          dev only, phases 2 + 3
         </Badge>
         <h1 className="text-3xl font-bold tracking-tight">
           Test du client Discord
@@ -350,7 +350,7 @@ export default function DevDiscordPage() {
               <dt className="text-muted-foreground">Size</dt>
               <dd className="font-mono">{formatBytes(manifest.size)}</dd>
               <dt className="text-muted-foreground">MIME</dt>
-              <dd className="font-mono">{manifest.mimeType || "—"}</dd>
+              <dd className="font-mono">{manifest.mimeType || "-"}</dd>
               <dt className="text-muted-foreground">Chunks</dt>
               <dd className="font-mono">{manifest.chunks.length}</dd>
             </dl>
@@ -403,7 +403,7 @@ export default function DevDiscordPage() {
             {persistedFiles.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Aucun fichier persisté pour l&apos;instant. Upload-en un pour
-                qu&apos;il apparaisse ici — il survivra au rechargement de la
+                qu&apos;il apparaisse ici, il survivra au rechargement de la
                 page.
               </p>
             ) : (

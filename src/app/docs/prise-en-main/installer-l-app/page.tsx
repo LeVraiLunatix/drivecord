@@ -33,7 +33,7 @@ export default function Page() {
         <a href="/install">Installer l'app</a>.
       </Callout>
 
-      <DocH2>Méthode 1 — AltStore (recommandé)</DocH2>
+      <DocH2>Méthode 1 : AltStore (recommandé)</DocH2>
       <p>
         AltStore garde l'app à jour et la re-signe automatiquement. C'est la
         méthode la plus confortable.
@@ -67,7 +67,7 @@ export default function Page() {
         </Step>
       </Steps>
 
-      <DocH2>Méthode 2 — Sideloadly</DocH2>
+      <DocH2>Méthode 2 : Sideloadly</DocH2>
       <p>
         Installation manuelle à partir du fichier <code>.ipa</code>, à renouveler
         toi-même tous les 7 jours.
@@ -78,7 +78,7 @@ export default function Page() {
           <a href="/install">Installer l'app</a>.
         </Step>
         <Step title="Installe Sideloadly">
-          Sur PC (Windows) ou Mac — voir{" "}
+          Sur PC (Windows) ou Mac, voir{" "}
           <a href="https://sideloadly.io" target="_blank" rel="noopener noreferrer">
             sideloadly.io
           </a>

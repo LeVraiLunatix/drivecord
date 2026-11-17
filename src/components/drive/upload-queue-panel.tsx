@@ -169,7 +169,7 @@ const UploadRow = React.memo(function UploadRow({
       )}
       {it.status === "pending" && (
         <p className="mt-1 text-[10px] text-muted-foreground">
-          En attente — {formatBytes(it.fileSize)}
+          En attente, {formatBytes(it.fileSize)}
         </p>
       )}
     </li>

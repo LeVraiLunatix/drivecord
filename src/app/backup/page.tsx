@@ -105,7 +105,7 @@ export default function BackupPage() {
     if (!target) return;
     clearTracker(target);
     setBackedCount(0);
-    toast.success("Suivi réinitialisé — la prochaine sauvegarde renverra tout.");
+    toast.success("Suivi réinitialisé, la prochaine sauvegarde renverra tout.");
   };
 
   // `existing` = ids of folders that ACTUALLY still exist in the drive. A cached

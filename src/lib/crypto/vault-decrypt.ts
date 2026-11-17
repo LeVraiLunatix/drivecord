@@ -21,7 +21,7 @@ export async function maybeDecrypt(
   if (file.locked) {
     if (!file.encIv) return blob;
     const key = getVaultKey();
-    if (!key) throw new Error("Coffre verrouillé — entre ton code PIN pour lire ce fichier.");
+    if (!key) throw new Error("Coffre verrouillé, entre ton code PIN pour lire ce fichier.");
     return decryptBlob(blob, key, file.encIv);
   }
   if (!isE2eeFile(file) && !file.encIv) return blob;

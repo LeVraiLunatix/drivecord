@@ -64,7 +64,7 @@ export function BulkDeleteDialog({
               </p>
               {permanent && (
                 <p className="text-destructive">
-                  Suppression définitive — les fichiers Discord associés seront
+                  Suppression définitive, les fichiers Discord associés seront
                   également effacés. Cette action est irréversible.
                 </p>
               )}

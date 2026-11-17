@@ -236,7 +236,7 @@ export const DriveItemRow = React.memo(function DriveItemRow({
             <span className="hidden w-24 shrink-0 text-right text-sm text-[var(--cord-dim)] sm:block">
               {isFolder
                 ? childCount === undefined
-                  ? "—"
+                  ? "-"
                   : `${childCount} élém.`
                 : formatBytes(size ?? 0)}
             </span>

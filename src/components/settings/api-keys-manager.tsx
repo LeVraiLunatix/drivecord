@@ -185,7 +185,7 @@ export function ApiKeysManager() {
       {revealed && (
         <div className="space-y-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-3">
           <p className="text-xs font-medium text-violet-300">
-            Clé « {revealed.name} » créée — copie-la maintenant, elle ne sera
+            Clé « {revealed.name} » créée, copie-la maintenant, elle ne sera
             plus jamais affichée.
           </p>
           <div className="flex items-center gap-2">
@@ -274,7 +274,7 @@ export function ApiKeysManager() {
             <Label htmlFor="api-key-ips">Adresses IP autorisées (optionnel)</Label>
             <Input
               id="api-key-ips"
-              placeholder="ex. 203.0.113.7, 2001:db8::1 — vide = toutes"
+              placeholder="ex. 203.0.113.7, 2001:db8::1, vide = toutes"
               value={ips}
               onChange={(e) => setIps(e.target.value)}
             />
@@ -283,7 +283,7 @@ export function ApiKeysManager() {
             <Label htmlFor="api-key-origins">Origines web autorisées (optionnel)</Label>
             <Input
               id="api-key-origins"
-              placeholder="ex. https://monsite.fr — vide = toutes"
+              placeholder="ex. https://monsite.fr, vide = toutes"
               value={origins}
               onChange={(e) => setOrigins(e.target.value)}
             />

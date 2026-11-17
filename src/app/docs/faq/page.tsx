@@ -61,7 +61,7 @@ const FAQ: Group[] = [
                 <strong>Paramètres du salon → Intégrations → Webhooks</strong>).
               </li>
               <li>
-                Connecte-le à Drivecord — l'URL est{" "}
+                Connecte-le à Drivecord, l'URL est{" "}
                 <strong>hashée localement</strong>.
               </li>
               <li>Glisse tes fichiers et partage ✨</li>
@@ -74,7 +74,7 @@ const FAQ: Group[] = [
         a: (
           <p>
             Oui, <strong>100 % gratuit</strong>. Aucune carte bancaire, aucun
-            abonnement — le stockage est illimité grâce à Discord.
+            abonnement, le stockage est illimité grâce à Discord.
           </p>
         ),
       },
@@ -112,7 +112,7 @@ const FAQ: Group[] = [
         q: "Y a-t-il une limite de taille ?",
         a: (
           <p>
-            Non. Découpage en <em>chunks</em>{" "}+ upload en parallèle —
+            Non. Découpage en <em>chunks</em>{" "}+ upload en parallèle,
             ultra-rapide, sans aucune limite.
           </p>
         ),
@@ -121,7 +121,7 @@ const FAQ: Group[] = [
         q: "Quels fichiers puis-je prévisualiser ?",
         a: (
           <p>
-            Vidéos, PDF, audio et images directement dans l'app — même les{" "}
+            Vidéos, PDF, audio et images directement dans l'app, même les{" "}
             <code>.mov</code>{" "}et <code>.HEIC</code>.
           </p>
         ),

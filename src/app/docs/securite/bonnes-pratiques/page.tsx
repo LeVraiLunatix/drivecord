@@ -36,7 +36,7 @@ export default function Page() {
         Choisis un <strong>mot de passe</strong>{" "}de compte robuste et un{" "}
         <strong>code PIN</strong>{" "}de coffre que tu n&apos;utilises nulle part
         ailleurs. Le PIN ne peut pas être réinitialisé sans perdre l&apos;accès au
-        coffre — note-le en lieu sûr.
+        coffre, note-le en lieu sûr.
       </p>
 
       <DocH2>Partage avec discernement</DocH2>

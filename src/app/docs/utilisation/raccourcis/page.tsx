@@ -28,20 +28,20 @@ export default function Page() {
       <DocH2>Ce que tu peux faire</DocH2>
       <ul>
         <li>
-          <strong>Actions</strong>{" "}— uploader des fichiers, créer un dossier,
+          <strong>Actions</strong>{" "}: uploader des fichiers, créer un dossier,
           ajouter un drive.
         </li>
         <li>
-          <strong>Aller à</strong>{" "}— tous les fichiers, favoris, corbeille,
+          <strong>Aller à</strong>{" "}: tous les fichiers, favoris, corbeille,
           statistiques, liens partagés, paramètres, sauvegarde pellicule,
           page d&apos;installation.
         </li>
         <li>
-          <strong>Drives</strong>{" "}— basculer instantanément d&apos;un drive à
+          <strong>Drives</strong>{" "}: basculer instantanément d&apos;un drive à
           l&apos;autre.
         </li>
         <li>
-          <strong>Compte</strong>{" "}— se déconnecter.
+          <strong>Compte</strong>{" "}: se déconnecter.
         </li>
       </ul>
 

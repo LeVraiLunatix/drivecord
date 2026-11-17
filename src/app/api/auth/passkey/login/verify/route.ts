@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     req.cookies.get(AUTH_CHALLENGE_COOKIE)?.value,
   );
   if (!expectedChallenge) {
-    return NextResponse.json({ error: "Défi expiré — recommence." }, { status: 400 });
+    return NextResponse.json({ error: "Défi expiré, recommence." }, { status: 400 });
   }
 
   const authenticator = await prisma.authenticator.findUnique({

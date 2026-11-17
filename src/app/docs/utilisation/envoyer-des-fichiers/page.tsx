@@ -15,7 +15,7 @@ export default function Page() {
   return (
     <DocPage
       title="Envoyer des fichiers"
-      lead="Glisse tes fichiers, ils sont chiffrés puis découpés et envoyés en parallèle sur ton webhook — sans limite de taille."
+      lead="Glisse tes fichiers, ils sont chiffrés puis découpés et envoyés en parallèle sur ton webhook, sans limite de taille."
     >
       <DocH2>Glisser-déposer</DocH2>
       <p>

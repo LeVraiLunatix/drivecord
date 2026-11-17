@@ -21,7 +21,7 @@ export default function Page() {
       <p>
         Le contenu de tes fichiers est chiffré <strong>avant</strong>{" "}d&apos;être
         envoyé. Pour Discord, chaque chunk n&apos;est qu&apos;une pièce jointe
-        d&apos;octets aléatoires — <strong>impossible à lire</strong>{" "}sans ta clé.
+        d&apos;octets aléatoires, <strong>impossible à lire</strong>{" "}sans ta clé.
       </p>
 
       <DocH2>Ce que Discord sait quand même</DocH2>

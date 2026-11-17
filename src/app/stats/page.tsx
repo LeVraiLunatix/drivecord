@@ -46,7 +46,7 @@ type Stats = {
 };
 
 function fmtDate(ts: number | null): string {
-  return ts ? new Date(ts).toLocaleDateString("fr", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  return ts ? new Date(ts).toLocaleDateString("fr", { day: "numeric", month: "short", year: "numeric" }) : "-";
 }
 
 
@@ -166,7 +166,7 @@ export default function StatsPage() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Stockage illimité — la barre est seulement une échelle visuelle.
+                  Stockage illimité, la barre est seulement une échelle visuelle.
                 </p>
               </CardContent>
             </Card>

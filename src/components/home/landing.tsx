@@ -633,7 +633,7 @@ export function Landing() {
                 ))}
               </motion.div>
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                Code ouvert, primitives standard (AES-256-GCM, Argon2id), modèle de menace publié —{" "}
+                Code ouvert, primitives standard (AES-256-GCM, Argon2id), modèle de menace publié,{" "}
                 <Link href="/docs/securite/chiffrement" className="inline-flex min-h-11 items-center text-[var(--cord-light-mid)] underline-offset-4 hover:underline">voir comment ça marche</Link>.
               </p>
             </div>

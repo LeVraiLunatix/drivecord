@@ -15,20 +15,20 @@ export default function Page() {
   return (
     <DocPage
       title="Comptes & connexion"
-      lead="Comment ton compte protège tes accès — et pourquoi le chiffrement en dépend."
+      lead="Comment ton compte protège tes accès, et pourquoi le chiffrement en dépend."
     >
       <DocH2>Se connecter</DocH2>
       <p>
         Trois méthodes, toutes gratuites : <strong>email + mot de passe</strong>,
         <strong>Google</strong>{" "}ou <strong>Discord</strong>. Les mots de passe
-        sont <strong>hashés en bcrypt</strong>{" "}— jamais stockés en clair.
+        sont <strong>hashés en bcrypt</strong>{" "}: jamais stockés en clair.
       </p>
 
       <DocH2>Pourquoi le chiffrement nécessite un compte</DocH2>
       <p>
         La clé qui chiffre tes fichiers est <strong>sauvegardée sur ton compte</strong>
         {" "}(chiffrée). C&apos;est ce qui te permet de relire tes fichiers sur un
-        autre appareil. Sans compte, cette clé n&apos;existerait qu&apos;en local —
+        autre appareil. Sans compte, cette clé n&apos;existerait qu&apos;en local,
         et si ton navigateur était effacé, tes fichiers deviendraient{" "}
         <strong>illisibles pour toujours</strong>.
       </p>
@@ -42,7 +42,7 @@ export default function Page() {
         Le coffre-fort est protégé par un <strong>code PIN</strong>{" "}distinct de ton
         mot de passe. Son empreinte est hashée côté serveur, mais la{" "}
         <strong>clé de déchiffrement</strong>{" "}qui en dérive ne quitte jamais ton
-        appareil — le serveur ne peut donc pas ouvrir ton coffre.
+        appareil, le serveur ne peut donc pas ouvrir ton coffre.
       </p>
 
       <DocH2>Pour aller plus loin</DocH2>

@@ -122,7 +122,7 @@ export function CloseConfirm() {
                   <h2 className="text-base font-semibold">Fermer Drivecord&nbsp;?</h2>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                     En réduisant dans la zone de notification, la synchro du
-                    dossier reste active — imports et exports continuent sans la
+                    dossier reste active, imports et exports continuent sans la
                     fenêtre.
                   </p>
                 </div>

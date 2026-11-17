@@ -33,7 +33,7 @@ export default function Page() {
       <DocH2>Activité & top fichiers</DocH2>
       <p>
         Suis l&apos;<strong>activité</strong>{" "}de ton drive dans le temps et
-        repère tes <strong>plus gros fichiers</strong>{" "}en un coup d&apos;œil —
+        repère tes <strong>plus gros fichiers</strong>{" "}en un coup d&apos;œil,
         pratique pour faire le ménage.
       </p>
 

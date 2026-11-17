@@ -8,7 +8,7 @@ import { CardGrid, DocCard } from "@/components/docs/doc-cards";
 export const metadata: Metadata = {
   title: "Aperçu des fichiers",
   description:
-    "Visionne vidéos, PDF, audio, images, code et markdown directement dans l'app — même les .mov et .HEIC.",
+    "Visionne vidéos, PDF, audio, images, code et markdown directement dans l'app, même les .mov et .HEIC.",
 };
 
 export default function Page() {
@@ -21,7 +21,7 @@ export default function Page() {
       <p>
         <strong>Vidéos, audio, PDF et images</strong>{" "}se lisent directement dans
         une fenêtre d&apos;aperçu. Le contenu est <strong>streamé</strong>{" "}et
-        déchiffré à la volée — pas besoin de tout télécharger d&apos;abord.
+        déchiffré à la volée, pas besoin de tout télécharger d&apos;abord.
       </p>
 
       <DocH2>.mov et .HEIC</DocH2>

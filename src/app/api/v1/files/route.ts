@@ -181,7 +181,7 @@ async function finalizeChunkedUpload(req: NextRequest, auth: V1Auth): Promise<Re
     chunks = toChunkRefs(session.chunks);
     sessionId = session.id;
   } else {
-    console.warn("[api-v1] legacy chunk finalize (client-supplied chunks[]) — key", auth.apiKey.id);
+    console.warn("[api-v1] legacy chunk finalize (client-supplied chunks[]), key", auth.apiKey.id);
     chunks = await resolveLegacyChunks(DiscordClient.fromUrl(decryptUrl(auth.webhook.encryptedUrl)), body.chunks!);
   }
 

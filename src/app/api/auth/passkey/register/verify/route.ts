@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   );
   if (!expectedChallenge) {
     return NextResponse.json(
-      { error: "Défi expiré — recommence." },
+      { error: "Défi expiré, recommence." },
       { status: 400 },
     );
   }

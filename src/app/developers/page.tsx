@@ -64,7 +64,7 @@ export default function DevelopersPage() {
 
       {secret && (
         <div className="space-y-2 rounded-lg border border-violet-500/40 bg-violet-500/10 p-3" data-testid="client-secret">
-          <p className="text-xs font-medium text-violet-300">Secret client de « {secret.app} » — copie-le maintenant, il ne sera plus jamais affiché.</p>
+          <p className="text-xs font-medium text-violet-300">Secret client de « {secret.app} », copie-le maintenant, il ne sera plus jamais affiché.</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded bg-background/60 px-2 py-1.5 text-xs">{secret.value}</code>
             <Button size="icon" variant="ghost" className="size-8" onClick={() => copy(secret.value)} aria-label="Copier"><Copy className="size-4" /></Button>
@@ -82,7 +82,7 @@ export default function DevelopersPage() {
             <textarea id="redir" className="min-h-16 w-full rounded-md border border-border bg-background px-3 py-2 text-sm" value={form.redirectUris} onChange={(e) => setForm({ ...form, redirectUris: e.target.value })} placeholder="https://wavecast.fm/oauth/callback" /></div>
           <div className="space-y-1.5"><Label htmlFor="orig">Origines autorisées (SDK / appels navigateur)</Label>
             <Input id="orig" value={form.allowedOrigins} onChange={(e) => setForm({ ...form, allowedOrigins: e.target.value })} placeholder="https://wavecast.fm" /></div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.confidential} onChange={(e) => setForm({ ...form, confidential: e.target.checked })} /> Client confidentiel (génère un secret — pour un serveur)</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.confidential} onChange={(e) => setForm({ ...form, confidential: e.target.checked })} /> Client confidentiel (génère un secret, pour un serveur)</label>
           <Button onClick={create} disabled={busy || !form.name.trim() || !form.redirectUris.trim()}>{busy && <Loader2 className="size-4 animate-spin" />} Créer</Button>
         </CardContent>
       </Card>

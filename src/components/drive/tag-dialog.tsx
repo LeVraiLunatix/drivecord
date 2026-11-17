@@ -85,7 +85,7 @@ export function TagDialog({ item, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="size-4 text-muted-foreground" />
-            Tags — {item.filename}
+            Tags, {item.filename}
           </DialogTitle>
         </DialogHeader>
 

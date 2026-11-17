@@ -119,7 +119,7 @@ const sideloadlySteps: Step[] = [
     body: (
       <>
         Connecte l&apos;iPhone en USB et fais <strong>« Se fier »</strong> à l&apos;ordinateur.
-        Ouvre Sideloadly — ton appareil apparaît en haut.
+        Ouvre Sideloadly, ton appareil apparaît en haut.
       </>
     ),
   },
@@ -278,14 +278,14 @@ export default function InstallPage() {
 
           <TabsContent value="altstore">
             <p className="px-1 pt-3 text-xs text-muted-foreground">
-              ✅ Recommandé — l&apos;app se met à jour et se re-signe toute seule.
+              ✅ Recommandé, l&apos;app se met à jour et se re-signe toute seule.
             </p>
             {renderSteps(altstoreSteps)}
           </TabsContent>
 
           <TabsContent value="sideloadly">
             <p className="px-1 pt-3 text-xs text-muted-foreground">
-              🔧 Install manuelle avec l&apos;IPA — à renouveler tous les 7 jours toi-même.
+              🔧 Install manuelle avec l&apos;IPA, à renouveler tous les 7 jours toi-même.
             </p>
             {renderSteps(sideloadlySteps)}
           </TabsContent>

@@ -185,7 +185,7 @@ export function loginErrorMessage(
         ? {
             title: "Connexion avec Cord annulée",
             description:
-              "Tu as refusé l’accès ou fermé la page Cord. Rien n’a été modifié — tu peux réessayer quand tu veux.",
+              "Tu as refusé l’accès ou fermé la page Cord. Rien n’a été modifié, tu peux réessayer quand tu veux.",
           }
         : {
             title: "Connexion annulée",

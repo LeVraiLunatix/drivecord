@@ -64,7 +64,7 @@ export function ConditionsContent() {
           kicker="Mentions légales"
           title="Conditions & mentions légales"
           accent="légales"
-          lede="Les trucs chiants que personne ne lit — mais qu'il faut quand même."
+          lede="Les trucs chiants que personne ne lit, mais qu'il faut quand même."
         />
       </motion.div>
 

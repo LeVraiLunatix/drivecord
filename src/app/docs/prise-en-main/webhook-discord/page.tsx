@@ -84,7 +84,7 @@ export default function Page() {
           Colle l'URL copiée dans le champ, puis valide.
         </Step>
         <Step title="C'est prêt">
-          Ton drive s'ouvre. Tu peux commencer à glisser des fichiers — ils sont
+          Ton drive s'ouvre. Tu peux commencer à glisser des fichiers, ils sont
           chiffrés puis uploadés automatiquement.
         </Step>
       </Steps>
