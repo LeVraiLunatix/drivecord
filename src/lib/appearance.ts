@@ -7,7 +7,7 @@ import { persist } from "zustand/middleware";
 /**
  * Personnalisation du drive, gratuite pour tout le monde. Tout est enregistré sur l'appareil
  * (localStorage) : rien ne part sur un serveur. Par défaut, tout le monde a le même fond :
- * un noir uni, sans animation. Les styles animés restent un bonus Patreon (theme-studio.ts).
+ * un noir uni avec la lumière du bas de KitCord, sans animation. Les styles animés restent un bonus Patreon (theme-studio.ts).
  */
 
 export type BgKind = "solid" | "gradient" | "image";
@@ -33,6 +33,8 @@ export type Appearance = {
   thumbs: ThumbSize;
   /** Panneaux en verre dépoli (sinon, panneaux pleins : plus sobre, plus lisible). */
   glass: boolean;
+  /** La lumière du bas de KitCord, derrière le drive. */
+  light: boolean;
   startPage: StartPage;
 };
 
@@ -49,7 +51,8 @@ export const DEFAULT_APPEARANCE: Appearance = {
   density: "normal",
   thumbs: "m",
   glass: true,
-  startPage: "files",
+  light: true,
+  startPage: "home",
 };
 
 /** Fonds unis proposés (le premier est celui de tout le monde au départ). */
@@ -114,6 +117,7 @@ export function sanitize(a: Partial<Appearance> | undefined): Appearance {
     density: pick(x.density, ["compact", "normal", "airy"], d.density),
     thumbs: pick(x.thumbs, ["s", "m", "l"], d.thumbs),
     glass: typeof x.glass === "boolean" ? x.glass : d.glass,
+    light: typeof x.light === "boolean" ? x.light : d.light,
     startPage: pick(x.startPage, ["files", "home"], d.startPage),
   };
 }
@@ -131,7 +135,12 @@ export const useAppearance = create<{
     }),
     {
       name: "drivecord-appearance",
-      version: 1,
+      // v2 : on arrive par défaut sur l'Accueil (la recherche d'abord) et la lumière du bas est de retour.
+      version: 2,
+      migrate: (old) => {
+        const a = (old as { appearance?: Partial<Appearance> } | undefined)?.appearance ?? {};
+        return { appearance: sanitize({ ...a, startPage: "home", light: true }) };
+      },
       merge: (persisted, current) => ({
         ...current,
         appearance: sanitize((persisted as { appearance?: Partial<Appearance> } | undefined)?.appearance),

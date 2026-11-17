@@ -10,7 +10,8 @@
 ## Personnalise ton drive, et fini les effets en trop
 
 🎨 **Un fond identique pour tout le monde, et toi tu choisis le tien.**
-- Le drive démarre sur un **noir uni, fixe** : plus d'étoiles, d'aurore ni de nappes qui bougent.
+- Le drive démarre sur un **noir uni** avec la **lumière du bas de KitCord** (fixe, qui s'estompe quand tu descends) : plus d'étoiles, d'aurore ni de nappes qui bougent. Tu peux l'éteindre dans Mon drive.
+- **Tu arrives directement sur l'Accueil** (« Que cherchez-vous ? »). Tu peux choisir « Mes fichiers » à la place dans Réglages.
 - **Réglages › Apparence › Mon drive** (gratuit pour tous, avec aperçu en direct) : fond **uni**, **dégradé** ou **ta propre image** (avec voile sombre et flou), **couleur d'accent** libre, **angles** (arrondi, doux, net), **panneaux** en verre ou pleins, **espacement** (serré, normal, aéré), **taille des vignettes** et **page d'ouverture** (Mes fichiers ou Accueil).
 - Les mécènes Patreon gardent leurs **fonds animés** (poussière, constellation, grille néon, rubans, étoiles filantes) : ils se posent par-dessus ton fond, et seulement si tu les choisis.
 - **Un seul thème : KitCord, sombre.** Les thèmes Clair, Système, Aurora et Or nocturne sont retirés : empilés sur KitCord, ils donnaient un rendu mélangé. Pour une autre ambiance, utilise le fond et la couleur de Mon drive.
